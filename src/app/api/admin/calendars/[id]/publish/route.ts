@@ -1,25 +1,26 @@
-// POST /api/admin/calendars/:id/publish
-// Publica um calendário e marca a solicitação como entregue.
+import { publishCalendar } from "@/lib/db";
+import { getEnv } from "@/lib/cf";
 
-import { publishCalendar } from "../../../../../src/lib/db";
-
-interface Env {
-  DB: D1Database;
-}
+export const runtime = "edge";
 
 interface PublishBody {
   admin_id: number;
 }
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const calendarId = Number(context.params.id);
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+export async function POST(request: Request, context: RouteContext) {
+  const { id } = await context.params;
+  const calendarId = Number(id);
   if (!Number.isInteger(calendarId) || calendarId <= 0) {
     return Response.json({ error: "Invalid calendar id" }, { status: 400 });
   }
 
   let body: PublishBody;
   try {
-    body = await context.request.json<PublishBody>();
+    body = await request.json();
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -32,7 +33,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    const calendar = await publishCalendar(context.env.DB, {
+    const calendar = await publishCalendar(getEnv().DB, {
       calendar_id: calendarId,
       admin_id: body.admin_id,
     });
@@ -43,4 +44,4 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { status: 500 },
     );
   }
-};
+}

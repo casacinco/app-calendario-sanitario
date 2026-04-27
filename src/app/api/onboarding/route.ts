@@ -1,17 +1,13 @@
-// POST /api/onboarding
-// Cria (ou reaproveita) usuário, fazenda, questionário e solicitação.
-
 import {
   createCalendarRequest,
   createFarm,
   createHealthQuestionnaire,
   createUser,
   getUserByEmail,
-} from "../../src/lib/db";
+} from "@/lib/db";
+import { getEnv } from "@/lib/cf";
 
-interface Env {
-  DB: D1Database;
-}
+export const runtime = "edge";
 
 interface OnboardingBody {
   user: { email: string; name: string };
@@ -36,10 +32,10 @@ interface OnboardingBody {
   notes?: string;
 }
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
+export async function POST(request: Request) {
   let body: OnboardingBody;
   try {
-    body = await context.request.json<OnboardingBody>();
+    body = await request.json();
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -51,7 +47,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
   }
 
-  const db = context.env.DB;
+  const db = getEnv().DB;
 
   try {
     let user = await getUserByEmail(db, body.user.email);
@@ -66,7 +62,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         })
       : null;
 
-    const request = await createCalendarRequest(db, {
+    const calendarRequest = await createCalendarRequest(db, {
       user_id: user.id,
       farm_id: farm.id,
       deadline: body.deadline,
@@ -74,7 +70,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
 
     return Response.json(
-      { user, farm, questionnaire, request },
+      { user, farm, questionnaire, request: calendarRequest },
       { status: 201 },
     );
   } catch (err) {
@@ -83,4 +79,4 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { status: 500 },
     );
   }
-};
+}

@@ -18,9 +18,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Adapt build for Cloudflare Pages
+        run: npx @cloudflare/next-on-pages
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: pages deploy . --project-name app-calendario-sanitario --branch main --commit-dirty=true
+          command: pages deploy .vercel/output/static --project-name app-calendario-sanitario --branch main --commit-dirty=true

@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark Premium tokens (HSL para suporte a opacity utilities) */
+    --bg: 0 0% 4%;          /* #0B0B0B */
+    --card: 0 0% 10%;       /* #1A1A1A */
+    --border: 0 0% 16%;     /* #2A2A2A */
+    --text: 0 0% 96%;       /* #F5F5F5 */
+    --text-muted: 0 0% 60%; /* #9A9A9A */
+    --red: 0 100% 58%;      /* #FF2B2B */
+    --green: 138 58% 40%;   /* #2BA152 */
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body {
+    background: hsl(var(--bg));
+    color: hsl(var(--text));
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}

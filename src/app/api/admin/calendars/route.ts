@@ -1,11 +1,7 @@
-// POST /api/admin/calendars
-// Cria um calendário (draft) a partir de uma solicitação.
+import { createCalendarFromRequest } from "@/lib/db";
+import { getEnv } from "@/lib/cf";
 
-import { createCalendarFromRequest } from "../../../src/lib/db";
-
-interface Env {
-  DB: D1Database;
-}
+export const runtime = "edge";
 
 interface CreateCalendarBody {
   request_id: number;
@@ -13,10 +9,10 @@ interface CreateCalendarBody {
   template_id?: number;
 }
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
+export async function POST(request: Request) {
   let body: CreateCalendarBody;
   try {
-    body = await context.request.json<CreateCalendarBody>();
+    body = await request.json();
   } catch {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
@@ -29,7 +25,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   try {
-    const calendar = await createCalendarFromRequest(context.env.DB, body);
+    const calendar = await createCalendarFromRequest(getEnv().DB, body);
     return Response.json({ calendar }, { status: 201 });
   } catch (err) {
     return Response.json(
@@ -37,4 +33,4 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { status: 500 },
     );
   }
-};
+}
