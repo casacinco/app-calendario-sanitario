@@ -1,1 +1,7 @@
-# Projeto App Calendário\n\nEste repositório contém um projeto inicial para deploy automático no Cloudflare Pages a partir de GitHub.\n\n## Estrutura\n- `index.html` — página inicial do app\n- `styles.css` — estilos básicos\n- `README.md` — instruções do projeto\n- `.gitignore` — arquivos ignorados\n\n## Próximos passos\n1. Criar um repositório no GitHub.\n2. Adicionar o remote e fazer push.\n3. Conectar o repositório ao Cloudflare Pages para deploy automático.\n
+# app-calendario-sanitario
+
+CalendÃ¡rio SanitÃ¡rio â€” hospedado no Cloudflare Pages com deploy automÃ¡tico via GitHub.
+
+## Deploy
+
+Qualquer push na branch `main` dispara um deploy automÃ¡tico no Cloudflare Pages.
