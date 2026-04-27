@@ -1,5 +1,11 @@
 node_modules/
 .env
 .env.local
+.env.*.local
 dist/
+.next/
+.vercel/
 .wrangler/
+*.tsbuildinfo
+.claude/
+plano_mestre_claude_code_vpc.md

@@ -1,0 +1,13 @@
+name = "app-calendario-sanitario"
+compatibility_date = "2026-04-27"
+compatibility_flags = ["nodejs_compat"]
+
+# Output do build do Next.js (será preenchido na etapa de setup do Next.js)
+# pages_build_output_dir = ".vercel/output/static"
+
+# Pasta de migrations do D1
+[[d1_databases]]
+binding = "DB"
+database_name = "app-calendario-sanitario-db"
+database_id = "0c5d5bd8-4e48-4e75-a536-d49499475675"
+migrations_dir = "migrations"
