@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  secrets: write
 
 concurrency:
   group: cloudflare-deploy
@@ -19,41 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Refresh Cloudflare OAuth token
-        id: cf_token
-        run: |
-          RESPONSE=$(curl -s -X POST "https://dash.cloudflare.com/oauth2/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            --data "grant_type=refresh_token&refresh_token=${{ secrets.CF_REFRESH_TOKEN }}&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7")
-
-          ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-          NEW_REFRESH=$(echo "$RESPONSE" | jq -r '.refresh_token')
-
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "Erro ao obter token: $RESPONSE"
-            exit 1
-          fi
-
-          echo "::add-mask::$ACCESS_TOKEN"
-          echo "::add-mask::$NEW_REFRESH"
-          echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
-          echo "new_refresh=$NEW_REFRESH" >> $GITHUB_OUTPUT
-
-      - name: Rotate refresh token secret
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "${{ steps.cf_token.outputs.new_refresh }}" | gh secret set CF_REFRESH_TOKEN --repo ${{ github.repository }}
-
-      - name: Configure Wrangler auth
-        run: |
-          mkdir -p ~/.config/.wrangler/config
-          printf 'oauth_token = "%s"\nexpiration_time = "2099-01-01T00:00:00.000Z"\nrefresh_token = "%s"\n' \
-            "${{ steps.cf_token.outputs.access_token }}" \
-            "${{ steps.cf_token.outputs.new_refresh }}" \
-            > ~/.config/.wrangler/config/default.toml
-
       - name: Deploy to Cloudflare Pages
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        run: npx wrangler pages deploy . --project-name app-calendario-sanitario --branch main --commit-dirty=true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy . --project-name app-calendario-sanitario --branch main --commit-dirty=true
