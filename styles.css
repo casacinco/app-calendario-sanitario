@@ -1,0 +1,1 @@
+body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; color: #111827; display: grid; place-items: center; min-height: 100vh; } main { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12); max-width: 34rem; text-align: center; } h1 { margin-bottom: 0.5rem; color: #0f172a; } p { line-height: 1.75; }
