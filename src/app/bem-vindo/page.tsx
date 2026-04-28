@@ -17,7 +17,7 @@ export default function BemVindoPage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem("rb_user");
-      if (raw) setUser(JSON.parse(raw));
+      if (raw) setUser(JSON.parse(raw) as RbUser);
     } catch {
       // ignore
     }

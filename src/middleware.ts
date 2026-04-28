@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PROTECTED = ["/bem-vindo", "/formulario", "/sucesso"];
+const PROTECTED = ["/bem-vindo", "/formulario", "/sucesso", "/dashboard"];
 const AUTH_REDIRECT = ["/auth"];
 
 export function middleware(req: NextRequest) {
@@ -19,5 +19,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/auth", "/bem-vindo/:path*", "/formulario/:path*", "/sucesso/:path*"],
+  matcher: ["/auth", "/bem-vindo/:path*", "/formulario/:path*", "/sucesso/:path*", "/dashboard/:path*"],
 };

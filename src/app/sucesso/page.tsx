@@ -51,7 +51,7 @@ function SucessoContent() {
 
         {/* Actions */}
         <button
-          onClick={() => router.push("/bem-vindo")}
+          onClick={() => router.push("/dashboard")}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[hsl(var(--border))] text-white/70 text-sm font-medium hover:text-white hover:border-white/30 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
