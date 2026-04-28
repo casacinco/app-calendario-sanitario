@@ -96,14 +96,23 @@ export default function AuthPage() {
       <div className="w-full max-w-[340px] flex flex-col items-center gap-6">
 
         {/* Logo oficial */}
-        <Image
-          src="/logo-rb.png"
-          alt="Rebanho Blindado"
-          width={180}
-          height={180}
-          style={{ width: 180, height: "auto" }}
-          priority
-        />
+        <div
+          style={{
+            background: "#111111",
+            borderRadius: 20,
+            padding: "12px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(255,43,43,0.12)",
+          }}
+        >
+          <Image
+            src="/logo-rb.png"
+            alt="Rebanho Blindado"
+            width={180}
+            height={180}
+            style={{ width: 180, height: "auto", display: "block", borderRadius: 10 }}
+            priority
+          />
+        </div>
 
         {/* Card */}
         <div className="w-full bg-[#141414] border border-white/8 rounded-2xl p-6 space-y-5">
