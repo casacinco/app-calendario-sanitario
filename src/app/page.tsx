@@ -11,12 +11,12 @@ export default function Home() {
             Calendário Sanitário VPC
           </h1>
           <p className="mt-3 text-text-muted">
-            Sistema de produção de calendários sanitários para avicultura
+            Sistema de produção de calendários sanitários para ovinocultura
           </p>
         </header>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Link href="/aluno" className="group">
+          <Link href="/auth" className="group">
             <Card className="h-full transition-colors group-hover:border-text-muted">
               <CardHeader>
                 <CalendarDays className="h-6 w-6 text-text-muted mb-3" />

@@ -208,6 +208,44 @@ export async function getUserByEmail(
     .first<User>();
 }
 
+export async function getUserById(
+  db: D1Database,
+  userId: number,
+): Promise<User | null> {
+  return db
+    .prepare(`SELECT * FROM users WHERE id = ?1`)
+    .bind(userId)
+    .first<User>();
+}
+
+export interface UserWithHash extends User {
+  password_hash: string | null;
+}
+
+export async function getUserByEmailWithHash(
+  db: D1Database,
+  email: string,
+): Promise<UserWithHash | null> {
+  return db
+    .prepare(`SELECT * FROM users WHERE email = ?1`)
+    .bind(email)
+    .first<UserWithHash>();
+}
+
+export async function createUserWithPassword(
+  db: D1Database,
+  input: { email: string; name: string; password_hash: string },
+): Promise<User> {
+  return insertReturning<User>(
+    db,
+    `INSERT INTO users (email, name, role, password_hash)
+     VALUES (?1, ?2, 'user', ?3)
+     RETURNING id, email, name, role, created_at, updated_at`,
+    [input.email, input.name, input.password_hash],
+    "create user with password",
+  );
+}
+
 const SYSTEM_ADMIN_EMAIL = "system@vpc.local";
 
 export async function getOrCreateSystemAdmin(db: D1Database): Promise<User> {
