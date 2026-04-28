@@ -611,6 +611,120 @@ export async function createCalendarFromRequest(
   return calendar;
 }
 
+export interface CreateBarInput {
+  calendar_row_id: number;
+  start_month: number;
+  end_month: number;
+  label?: string | null;
+  color?: string;
+  alert?: boolean;
+  position?: number;
+}
+
+export async function createBar(
+  db: D1Database,
+  input: CreateBarInput,
+): Promise<CalendarBar> {
+  if (input.start_month < 1 || input.start_month > 12)
+    throw new DbError("start_month must be between 1 and 12");
+  if (input.end_month < 1 || input.end_month > 12)
+    throw new DbError("end_month must be between 1 and 12");
+  if (input.start_month > input.end_month)
+    throw new DbError("start_month must be <= end_month");
+
+  return insertReturning<CalendarBar>(
+    db,
+    `INSERT INTO calendar_bars
+       (calendar_row_id, start_month, end_month, label, color, alert, position)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+     RETURNING *`,
+    [
+      input.calendar_row_id,
+      input.start_month,
+      input.end_month,
+      input.label ?? null,
+      input.color ?? "#2BA152",
+      input.alert ? 1 : 0,
+      input.position ?? 0,
+    ],
+    "create bar",
+  );
+}
+
+export interface UpdateBarInput {
+  start_month?: number;
+  end_month?: number;
+  label?: string | null;
+  color?: string;
+  alert?: boolean;
+}
+
+export async function updateBar(
+  db: D1Database,
+  barId: number,
+  input: UpdateBarInput,
+): Promise<CalendarBar> {
+  const existing = await db
+    .prepare(`SELECT * FROM calendar_bars WHERE id = ?1`)
+    .bind(barId)
+    .first<CalendarBar>();
+  if (!existing) throw new DbError("Bar not found");
+
+  const start = input.start_month ?? existing.start_month;
+  const end = input.end_month ?? existing.end_month;
+  if (start < 1 || start > 12 || end < 1 || end > 12)
+    throw new DbError("months must be between 1 and 12");
+  if (start > end) throw new DbError("start_month must be <= end_month");
+
+  const updated = await db
+    .prepare(
+      `UPDATE calendar_bars
+       SET start_month = ?1,
+           end_month   = ?2,
+           label       = ?3,
+           color       = ?4,
+           alert       = ?5
+       WHERE id = ?6
+       RETURNING *`,
+    )
+    .bind(
+      start,
+      end,
+      input.label !== undefined ? input.label : existing.label,
+      input.color ?? existing.color,
+      input.alert !== undefined ? (input.alert ? 1 : 0) : existing.alert,
+      barId,
+    )
+    .first<CalendarBar>();
+  if (!updated) throw new DbError("Failed to update bar");
+  return updated;
+}
+
+export async function deleteBar(db: D1Database, barId: number): Promise<void> {
+  const result = await db
+    .prepare(`DELETE FROM calendar_bars WHERE id = ?1`)
+    .bind(barId)
+    .run();
+  if (result.meta.changes === 0) throw new DbError("Bar not found");
+}
+
+export async function toggleCalendarRow(
+  db: D1Database,
+  rowId: number,
+): Promise<CalendarRow> {
+  const updated = await db
+    .prepare(
+      `UPDATE calendar_rows
+       SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END
+       WHERE id = ?1
+       RETURNING *`,
+    )
+    .bind(rowId)
+    .first<CalendarRow>();
+  if (!updated) throw new DbError("Row not found");
+  return updated;
+}
+
 export async function publishCalendar(
   db: D1Database,
   input: { calendar_id: number; admin_id: number },

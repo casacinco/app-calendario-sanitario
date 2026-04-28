@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CalendarGrid } from "@/components/calendar-grid";
+import { CalendarEditor } from "@/components/calendar-editor";
+import { PublishButton } from "@/components/publish-button";
 import { getCalendarFullDetails } from "@/lib/db";
 import { getEnv } from "@/lib/cf";
 import { formatDateBR } from "@/lib/format";
@@ -72,9 +73,12 @@ export default async function CalendarPage({ params }: PageProps) {
             {totalBars} barras
           </p>
         </div>
+        {calendar.status === "draft" && (
+          <PublishButton calendarId={calendar.id} />
+        )}
       </header>
 
-      <CalendarGrid blocks={blocks} />
+      <CalendarEditor initialBlocks={blocks} />
     </div>
   );
 }
