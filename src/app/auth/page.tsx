@@ -2,27 +2,37 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Crossed syringes — replicating the Rebanho Blindado logo icon
+// Crossed syringes matching the Rebanho Blindado logo
+// Syringe 1: plunger left → needle right → rotate +45° → plunger upper-left, needle lower-right
+// Syringe 2: needle left → plunger right (mirrored) → rotate -45° → plunger upper-right, needle lower-left
 function BrandIcon() {
   return (
-    <div className="w-[84px] h-[84px] bg-black rounded-2xl flex items-center justify-center shadow-lg">
-      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Syringe 1: top-right → bottom-left */}
-        <g transform="rotate(45, 26, 26)">
-          <rect x="10" y="23" width="26" height="6" rx="3" fill="white"/>
-          <path d="M36 23.5L43 26L36 28.5Z" fill="white"/>
-          <rect x="6" y="21" width="4" height="10" rx="2" fill="white"/>
-          <rect x="3" y="23.5" width="6" height="5" rx="1.5" fill="white"/>
+    <div className="w-[88px] h-[88px] bg-black rounded-[22px] flex items-center justify-center shadow-xl">
+      <svg width="54" height="54" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {/* Syringe 1: plunger at left, needle at right — rotated clockwise 45° */}
+        <g transform="rotate(45, 27, 27)">
+          {/* T-bar handle */}
+          <rect x="2" y="22" width="3" height="10" rx="1.5" fill="white"/>
+          {/* Plunger rod */}
+          <rect x="5" y="24" width="5" height="6" rx="1.5" fill="white"/>
+          {/* Barrel */}
+          <rect x="10" y="23" width="31" height="8" rx="3" fill="white"/>
+          {/* Needle tip */}
+          <path d="M41,23 L41,31 L52,27 Z" fill="white"/>
         </g>
-        {/* Syringe 2: top-left → bottom-right */}
-        <g transform="rotate(-45, 26, 26)">
-          <rect x="10" y="23" width="26" height="6" rx="3" fill="white"/>
-          <path d="M36 23.5L43 26L36 28.5Z" fill="white"/>
-          <rect x="6" y="21" width="4" height="10" rx="2" fill="white"/>
-          <rect x="3" y="23.5" width="6" height="5" rx="1.5" fill="white"/>
+        {/* Syringe 2: needle at left, plunger at right (mirror) — rotated counter-clockwise 45° */}
+        <g transform="rotate(-45, 27, 27)">
+          {/* Needle tip (pointing left) */}
+          <path d="M13,23 L13,31 L2,27 Z" fill="white"/>
+          {/* Barrel */}
+          <rect x="13" y="23" width="31" height="8" rx="3" fill="white"/>
+          {/* Plunger rod */}
+          <rect x="44" y="24" width="5" height="6" rx="1.5" fill="white"/>
+          {/* T-bar handle */}
+          <rect x="49" y="22" width="3" height="10" rx="1.5" fill="white"/>
         </g>
       </svg>
     </div>
@@ -122,38 +132,36 @@ export default function AuthPage() {
         <div className="flex flex-col items-center gap-2">
           <BrandIcon />
           <div className="text-center leading-none mt-1">
-            <p className="text-[9px] tracking-[0.3em] uppercase text-white/50 mb-0.5">
+            <p className="text-[9px] tracking-[0.3em] uppercase text-white/50 mb-1">
               Programa
             </p>
-            <p className="text-[26px] font-black tracking-tight text-white leading-none">
+            <p className="text-[28px] font-black tracking-tight text-white leading-none">
               REBANHO
             </p>
-            <p className="text-[26px] font-black tracking-tight text-[hsl(var(--red))] leading-none">
+            <p className="text-[28px] font-black tracking-tight text-[hsl(var(--red))] leading-none">
               BLINDADO
             </p>
           </div>
         </div>
 
-        {/* Tagline */}
-        <div className="text-center">
-          <p className="text-[15px] font-semibold text-white leading-snug">
-            Blinde seu rebanho
-          </p>
-          <p className="text-[15px] font-semibold text-white leading-snug">
-            e aumente seu lucro
-          </p>
-        </div>
-
         {/* Card */}
         <div className="w-full bg-[#141414] border border-white/8 rounded-2xl p-6 space-y-5">
-          <div className="space-y-1">
+          <div className="space-y-1 text-center">
             <h1 className="text-xl font-bold text-white">
               {mode === "login" ? "Acesse sua conta" : "Crie sua conta"}
             </h1>
             <p className="text-xs text-white/45 leading-relaxed">
-              {mode === "login"
-                ? "Entre para acompanhar seu Calendário Sanitário personalizado"
-                : "Cadastre-se para solicitar seu Calendário Sanitário"}
+              {mode === "login" ? (
+                <>
+                  Entre para acompanhar seu<br />
+                  Calendário Sanitário personalizado
+                </>
+              ) : (
+                <>
+                  Cadastre-se para solicitar seu<br />
+                  Calendário Sanitário personalizado
+                </>
+              )}
             </p>
           </div>
 
@@ -203,7 +211,6 @@ export default function AuthPage() {
             </button>
           </form>
 
-          {/* Mode toggle */}
           <p className="text-xs text-center text-white/40">
             {mode === "login" ? (
               <>
@@ -230,15 +237,6 @@ export default function AuthPage() {
             )}
           </p>
         </div>
-
-        {/* Back */}
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
-        >
-          <ArrowLeft className="h-3 w-3" /> Voltar
-        </button>
 
       </div>
     </div>
