@@ -1,6 +1,7 @@
 import {
   createCalendarRequest,
   createFarm,
+  createFlockData,
   createHealthQuestionnaire,
   createUser,
   getUserByEmail,
@@ -15,6 +16,13 @@ interface OnboardingBody {
     name: string;
     city?: string;
     state?: string;
+    notes?: string;
+  };
+  flock?: {
+    species: string;
+    total_animals?: number;
+    housing_type?: string;
+    age_groups?: string;
     notes?: string;
   };
   questionnaire?: {
@@ -55,6 +63,10 @@ export async function POST(request: Request) {
 
     const farm = await createFarm(db, { ...body.farm, user_id: user.id });
 
+    const flock = body.flock
+      ? await createFlockData(db, { farm_id: farm.id, ...body.flock })
+      : null;
+
     const questionnaire = body.questionnaire
       ? await createHealthQuestionnaire(db, {
           farm_id: farm.id,
@@ -70,7 +82,7 @@ export async function POST(request: Request) {
     });
 
     return Response.json(
-      { user, farm, questionnaire, request: calendarRequest },
+      { user, farm, flock, questionnaire, request: calendarRequest },
       { status: 201 },
     );
   } catch (err) {

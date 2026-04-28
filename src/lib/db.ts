@@ -36,6 +36,18 @@ export interface Farm {
   updated_at: string;
 }
 
+export interface FlockData {
+  id: number;
+  farm_id: number;
+  species: string;
+  total_animals: number | null;
+  housing_type: string | null;
+  age_groups: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HealthQuestionnaire {
   id: number;
   farm_id: number;
@@ -110,6 +122,15 @@ export interface CreateFarmInput {
   name: string;
   city?: string | null;
   state?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateFlockDataInput {
+  farm_id: number;
+  species: string;
+  total_animals?: number | null;
+  housing_type?: string | null;
+  age_groups?: string | null;
   notes?: string | null;
 }
 
@@ -208,6 +229,31 @@ export async function createFarm(
       input.notes ?? null,
     ],
     "create farm",
+  );
+}
+
+// =====================================================
+// FLOCK DATA
+// =====================================================
+
+export async function createFlockData(
+  db: D1Database,
+  input: CreateFlockDataInput,
+): Promise<FlockData> {
+  return insertReturning<FlockData>(
+    db,
+    `INSERT INTO flock_data (farm_id, species, total_animals, housing_type, age_groups, notes)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+     RETURNING *`,
+    [
+      input.farm_id,
+      input.species,
+      input.total_animals ?? null,
+      input.housing_type ?? null,
+      input.age_groups ?? null,
+      input.notes ?? null,
+    ],
+    "create flock data",
   );
 }
 
