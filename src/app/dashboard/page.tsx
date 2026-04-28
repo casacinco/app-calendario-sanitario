@@ -5,6 +5,7 @@ import { Clock, CheckCircle2, BookOpen, Stethoscope, ShieldAlert, Lock } from "l
 import { getEnv } from "@/lib/cf";
 import { getUserById } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
+import { LogoutButton } from "@/components/logout-button";
 import type { RequestStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -70,18 +71,21 @@ export default async function DashboardPage() {
 
       {/* Header */}
       <header className="border-b border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <Image
             src="/logo-rb.png"
             alt="Rebanho Blindado"
-            width={80}
-            height={80}
-            style={{ width: 80, height: "auto" }}
+            width={44}
+            height={44}
+            style={{ width: 44, height: "auto", borderRadius: 8, flexShrink: 0 }}
             priority
           />
-          <span className="text-sm text-white/60">
-            Olá, <span className="text-white font-medium">{firstName}</span>
-          </span>
+          <div className="flex items-center gap-3 ml-auto">
+            <span className="text-sm text-white/60">
+              Olá, <span className="text-white font-semibold">{firstName}</span>
+            </span>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
