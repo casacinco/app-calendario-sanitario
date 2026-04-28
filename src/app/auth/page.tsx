@@ -3,41 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
-
-// Crossed syringes matching the Rebanho Blindado logo
-// Syringe 1: plunger left → needle right → rotate +45° → plunger upper-left, needle lower-right
-// Syringe 2: needle left → plunger right (mirrored) → rotate -45° → plunger upper-right, needle lower-left
-function BrandIcon() {
-  return (
-    <div className="w-[88px] h-[88px] bg-black rounded-[22px] flex items-center justify-center shadow-xl">
-      <svg width="54" height="54" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Syringe 1: plunger at left, needle at right — rotated clockwise 45° */}
-        <g transform="rotate(45, 27, 27)">
-          {/* T-bar handle */}
-          <rect x="2" y="22" width="3" height="10" rx="1.5" fill="white"/>
-          {/* Plunger rod */}
-          <rect x="5" y="24" width="5" height="6" rx="1.5" fill="white"/>
-          {/* Barrel */}
-          <rect x="10" y="23" width="31" height="8" rx="3" fill="white"/>
-          {/* Needle tip */}
-          <path d="M41,23 L41,31 L52,27 Z" fill="white"/>
-        </g>
-        {/* Syringe 2: needle at left, plunger at right (mirror) — rotated counter-clockwise 45° */}
-        <g transform="rotate(-45, 27, 27)">
-          {/* Needle tip (pointing left) */}
-          <path d="M13,23 L13,31 L2,27 Z" fill="white"/>
-          {/* Barrel */}
-          <rect x="13" y="23" width="31" height="8" rx="3" fill="white"/>
-          {/* Plunger rod */}
-          <rect x="44" y="24" width="5" height="6" rx="1.5" fill="white"/>
-          {/* T-bar handle */}
-          <rect x="49" y="22" width="3" height="10" rx="1.5" fill="white"/>
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 function Field({
   label,
@@ -128,21 +95,15 @@ export default function AuthPage() {
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-[340px] flex flex-col items-center gap-6">
 
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <BrandIcon />
-          <div className="text-center leading-none mt-1">
-            <p className="text-[9px] tracking-[0.3em] uppercase text-white/50 mb-1">
-              Programa
-            </p>
-            <p className="text-[28px] font-black tracking-tight text-white leading-none">
-              REBANHO
-            </p>
-            <p className="text-[28px] font-black tracking-tight text-[hsl(var(--red))] leading-none">
-              BLINDADO
-            </p>
-          </div>
-        </div>
+        {/* Logo oficial */}
+        <Image
+          src="/logo-rb.png"
+          alt="Rebanho Blindado"
+          width={180}
+          height={180}
+          style={{ width: 180, height: "auto" }}
+          priority
+        />
 
         {/* Card */}
         <div className="w-full bg-[#141414] border border-white/8 rounded-2xl p-6 space-y-5">
