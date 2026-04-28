@@ -11,7 +11,24 @@ const MESES = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV"
 const RACAS_REPR = ["Dorper","White Dorper","Santa Inês","Somális","Morada Nova","Mestiços","Textel","Merino","Outro"];
 const RACAS_MATR = ["Dorper","White Dorper","Santa Inês","Somális","Morada Nova","Mestiças","Textel","Merino","Outro"];
 
-const SISTEMAS = ["Intensivo","Semi-intensivo","Extensivo","Confinamento"];
+const SISTEMAS: { label: string; desc: string }[] = [
+  {
+    label: "CICLO COMPLETO - 100% pasto",
+    desc: "Rebanho criado a pasto durante todo o ciclo produtivo.",
+  },
+  {
+    label: "CICLO COMPLETO - Pasto e parte do ano confinado ou semi-confinamento",
+    desc: "Rebanho criado a pasto, com uso de confinamento ou semi-confinamento em alguns períodos.",
+  },
+  {
+    label: "CICLO COMPLETO - 100% confinado",
+    desc: "Todas as categorias permanecem em sistema confinado durante o ciclo produtivo.",
+  },
+  {
+    label: "100% Confinamento de cordeiro",
+    desc: "Apenas os cordeiros são terminados em confinamento.",
+  },
+];
 
 const ESTADOS_BR = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -85,13 +102,19 @@ function FInput({
 }: {
   value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
 }) {
+  const filled = value.length > 0;
   return (
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-[#111111] border border-[hsl(var(--border))] rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/40 transition-colors"
+      className={cn(
+        "w-full border rounded-lg px-4 py-3 text-sm placeholder:text-white/30 focus:outline-none transition-colors",
+        filled
+          ? "bg-white text-black border-white/40 placeholder:text-black/30"
+          : "bg-[#111111] text-white border-[hsl(var(--border))] focus:bg-white focus:text-black focus:border-white/40 focus:placeholder:text-black/30",
+      )}
     />
   );
 }
@@ -101,13 +124,19 @@ function FTextarea({
 }: {
   value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
 }) {
+  const filled = value.length > 0;
   return (
     <textarea
       rows={rows}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-[#111111] border border-[hsl(var(--border))] rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/40 resize-none transition-colors"
+      className={cn(
+        "w-full border rounded-lg px-4 py-3 text-sm placeholder:text-white/30 focus:outline-none resize-none transition-colors",
+        filled
+          ? "bg-white text-black border-white/40 placeholder:text-black/30"
+          : "bg-[#111111] text-white border-[hsl(var(--border))] focus:bg-white focus:text-black focus:border-white/40 focus:placeholder:text-black/30",
+      )}
     />
   );
 }
@@ -131,25 +160,28 @@ function FSelect({
   );
 }
 
-function RadioOpt({ label, checked, onSelect }: { label: string; checked: boolean; onSelect: () => void }) {
+function RadioOpt({ label, desc, checked, onSelect }: { label: string; desc?: string; checked: boolean; onSelect: () => void }) {
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex items-center gap-3 w-full px-4 py-3 rounded-lg border text-left transition-colors",
+        "flex items-start gap-3 w-full px-4 py-3 rounded-lg border text-left transition-colors",
         checked
-          ? "border-white/50 bg-white/5"
+          ? "border-[hsl(var(--red))] bg-[hsl(var(--red))]/5"
           : "border-[hsl(var(--border))] hover:border-white/25",
       )}
     >
       <span className={cn(
-        "h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-        checked ? "border-white" : "border-white/40",
+        "h-5 w-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5",
+        checked ? "border-[hsl(var(--red))]" : "border-white/40",
       )}>
-        {checked && <span className="h-2.5 w-2.5 rounded-full bg-white block" />}
+        {checked && <span className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--red))] block" />}
       </span>
-      <span className="text-sm text-white">{label}</span>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-white">{label}</span>
+        {desc && <p className="text-xs text-white/40 mt-0.5">{desc}</p>}
+      </div>
     </button>
   );
 }
@@ -162,15 +194,15 @@ function CheckOpt({ label, checked, onToggle }: { label: string; checked: boolea
       className={cn(
         "flex items-center gap-3 w-full px-4 py-3 rounded-lg border text-left transition-colors",
         checked
-          ? "border-white/50 bg-white/5"
+          ? "border-[hsl(var(--red))] bg-[hsl(var(--red))]/5"
           : "border-[hsl(var(--border))] hover:border-white/25",
       )}
     >
       <span className={cn(
         "h-5 w-5 rounded border-2 flex items-center justify-center flex-shrink-0",
-        checked ? "border-white bg-white" : "border-white/40",
+        checked ? "border-[hsl(var(--red))] bg-[hsl(var(--red))]" : "border-white/40",
       )}>
-        {checked && <Check className="h-3 w-3 text-black" />}
+        {checked && <Check className="h-3 w-3 text-white" />}
       </span>
       <span className="text-sm text-white">{label}</span>
     </button>
@@ -388,7 +420,7 @@ export default function OnboardingPage() {
               <FLabel text="Sistema de criação" required />
               <div className="space-y-2">
                 {SISTEMAS.map((s) => (
-                  <RadioOpt key={s} label={s} checked={f.sistema_criacao === s} onSelect={() => set("sistema_criacao", s)} />
+                  <RadioOpt key={s.label} label={s.label} desc={s.desc} checked={f.sistema_criacao === s.label} onSelect={() => set("sistema_criacao", s.label)} />
                 ))}
               </div>
             </div>
@@ -419,8 +451,9 @@ export default function OnboardingPage() {
               </div>
             )}
             <div>
-              <FLabel text="Propriedades vizinhas" />
-              <FInput value={f.propriedades_vizinhas} onChange={(v) => set("propriedades_vizinhas", v)} placeholder="Descreva brevemente" />
+              <FLabel text="Propriedades vizinhas desenvolvem ovinocultura, caprinocultura ou bovinocultura?" />
+              <p className="text-xs text-white/40 mb-2">Descreva livremente.</p>
+              <FTextarea value={f.propriedades_vizinhas} onChange={(v) => set("propriedades_vizinhas", v)} />
             </div>
           </div>
         );
@@ -504,23 +537,23 @@ export default function OnboardingPage() {
             </div>
             <div>
               <FLabel text="O que leva você a tomar a decisão de comprar um produto para o rebanho?" required />
-              <FTextarea value={f.decisao_compra} onChange={(v) => set("decisao_compra", v)} />
+              <FTextarea value={f.decisao_compra} onChange={(v) => set("decisao_compra", v)} placeholder="Conte o que motivou essa decisão neste momento." />
             </div>
             <div>
               <FLabel text="Qual a sua mortalidade atual?" required />
-              <FTextarea value={f.mortalidade_atual} onChange={(v) => set("mortalidade_atual", v)} />
+              <FTextarea value={f.mortalidade_atual} onChange={(v) => set("mortalidade_atual", v)} placeholder="Ex.: tenho 40 animais e perdi 5 esse ano" />
             </div>
             <div>
               <FLabel text="O que você já tentou para resolver o problema?" required />
-              <FTextarea value={f.ja_tentou} onChange={(v) => set("ja_tentou", v)} />
+              <FTextarea value={f.ja_tentou} onChange={(v) => set("ja_tentou", v)} placeholder="Descreva manejos, produtos ou estratégias que não trouxeram o resultado esperado." />
             </div>
             <div>
               <FLabel text="Informações adicionais" />
-              <FTextarea value={f.info_adicionais} onChange={(v) => set("info_adicionais", v)} />
+              <FTextarea value={f.info_adicionais} onChange={(v) => set("info_adicionais", v)} placeholder="Descreva aqui algo que deseje informar ao Léo e que não foi contemplado nas perguntas anteriores." />
             </div>
             <div>
               <FLabel text="O que você espera alcançar com o calendário sanitário?" required />
-              <FTextarea value={f.espera_alcancar} onChange={(v) => set("espera_alcancar", v)} />
+              <FTextarea value={f.espera_alcancar} onChange={(v) => set("espera_alcancar", v)} placeholder="Compartilhe o resultado que você espera obter." />
             </div>
           </div>
         );
