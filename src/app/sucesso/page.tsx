@@ -1,12 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Shield, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Shield, ArrowLeft } from "lucide-react";
 
 function SucessoContent() {
   const router = useRouter();
-  const params = useSearchParams();
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,14 +16,6 @@ function SucessoContent() {
       // ignore
     }
   }, []);
-
-  const requestId = params.get("id");
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    localStorage.removeItem("rb_user");
-    router.push("/auth");
-  }
 
   return (
     <div className="min-h-screen bg-[hsl(var(--bg))] flex flex-col items-center justify-center px-4 py-12">
@@ -47,31 +38,24 @@ function SucessoContent() {
             Solicitação enviada!
           </h2>
 
-          <p className="text-sm text-white/60 leading-relaxed">
-            {userName && (
-              <>
-                <span className="text-white font-medium">{userName}</span>,{" "}
-              </>
-            )}
-            recebemos sua solicitação
-            {requestId && (
-              <>
-                {" "}
-                <span className="text-white font-medium">#{requestId}</span>
-              </>
-            )}
-            . Em breve nossa equipe técnica irá analisar os dados e produzir
-            seu calendário sanitário personalizado.
+          {userName && (
+            <p className="text-sm text-white/60">
+              <span className="text-white font-medium">{userName}</span>, recebemos sua solicitação.
+            </p>
+          )}
+
+          <p className="text-base font-bold text-white leading-relaxed">
+            Em breve Léo Pinto irá analisar os dados e produzir seu calendário sanitário personalizado.
           </p>
         </div>
 
         {/* Actions */}
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[hsl(var(--border))] text-white/50 text-sm hover:text-white hover:border-white/30 transition-colors"
+          onClick={() => router.push("/bem-vindo")}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[hsl(var(--border))] text-white/70 text-sm font-medium hover:text-white hover:border-white/30 transition-colors"
         >
-          <LogOut className="h-4 w-4" />
-          Sair
+          <ArrowLeft className="h-4 w-4" />
+          Voltar à tela de início
         </button>
 
       </div>
