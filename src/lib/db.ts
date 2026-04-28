@@ -208,6 +208,18 @@ export async function getUserByEmail(
     .first<User>();
 }
 
+const SYSTEM_ADMIN_EMAIL = "system@vpc.local";
+
+export async function getOrCreateSystemAdmin(db: D1Database): Promise<User> {
+  const existing = await getUserByEmail(db, SYSTEM_ADMIN_EMAIL);
+  if (existing) return existing;
+  return createUser(db, {
+    email: SYSTEM_ADMIN_EMAIL,
+    name: "Sistema VPC",
+    role: "admin",
+  });
+}
+
 // =====================================================
 // FARMS
 // =====================================================
@@ -323,6 +335,57 @@ export async function createCalendarRequest(
 // =====================================================
 // ADMIN — listagens
 // =====================================================
+
+export interface RequestFullDetails {
+  request: CalendarRequest;
+  user: User;
+  farm: Farm;
+  flock: FlockData | null;
+  questionnaire: HealthQuestionnaire | null;
+  calendar: Calendar | null;
+}
+
+export async function getRequestFullDetails(
+  db: D1Database,
+  requestId: number,
+): Promise<RequestFullDetails | null> {
+  const request = await db
+    .prepare(`SELECT * FROM calendar_requests WHERE id = ?1`)
+    .bind(requestId)
+    .first<CalendarRequest>();
+  if (!request) return null;
+
+  const [user, farm, flock, questionnaire, calendar] = await Promise.all([
+    db
+      .prepare(`SELECT * FROM users WHERE id = ?1`)
+      .bind(request.user_id)
+      .first<User>(),
+    db
+      .prepare(`SELECT * FROM farms WHERE id = ?1`)
+      .bind(request.farm_id)
+      .first<Farm>(),
+    db
+      .prepare(
+        `SELECT * FROM flock_data WHERE farm_id = ?1 ORDER BY id DESC LIMIT 1`,
+      )
+      .bind(request.farm_id)
+      .first<FlockData>(),
+    db
+      .prepare(
+        `SELECT * FROM health_questionnaire WHERE farm_id = ?1 ORDER BY id DESC LIMIT 1`,
+      )
+      .bind(request.farm_id)
+      .first<HealthQuestionnaire>(),
+    db
+      .prepare(`SELECT * FROM calendars WHERE request_id = ?1`)
+      .bind(requestId)
+      .first<Calendar>(),
+  ]);
+
+  if (!user || !farm) throw new DbError("Inconsistent data: user or farm missing");
+
+  return { request, user, farm, flock, questionnaire, calendar };
+}
 
 export async function listRequestsWithDetails(
   db: D1Database,

@@ -1,11 +1,11 @@
-import { createCalendarFromRequest } from "@/lib/db";
+import { createCalendarFromRequest, getOrCreateSystemAdmin } from "@/lib/db";
 import { getEnv } from "@/lib/cf";
 
 export const runtime = "edge";
 
 interface CreateCalendarBody {
   request_id: number;
-  admin_id: number;
+  admin_id?: number;
   template_id?: number;
 }
 
@@ -17,15 +17,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (!body?.request_id || !body?.admin_id) {
+  if (!body?.request_id) {
     return Response.json(
-      { error: "Missing required fields: request_id, admin_id" },
+      { error: "Missing required field: request_id" },
       { status: 400 },
     );
   }
 
   try {
-    const calendar = await createCalendarFromRequest(getEnv().DB, body);
+    const db = getEnv().DB;
+    const adminId = body.admin_id ?? (await getOrCreateSystemAdmin(db)).id;
+    const calendar = await createCalendarFromRequest(db, {
+      request_id: body.request_id,
+      admin_id: adminId,
+      template_id: body.template_id,
+    });
     return Response.json({ calendar }, { status: 201 });
   } catch (err) {
     return Response.json(

@@ -1,10 +1,10 @@
-import { publishCalendar } from "@/lib/db";
+import { getOrCreateSystemAdmin, publishCalendar } from "@/lib/db";
 import { getEnv } from "@/lib/cf";
 
 export const runtime = "edge";
 
 interface PublishBody {
-  admin_id: number;
+  admin_id?: number;
 }
 
 interface RouteContext {
@@ -18,24 +18,19 @@ export async function POST(request: Request, context: RouteContext) {
     return Response.json({ error: "Invalid calendar id" }, { status: 400 });
   }
 
-  let body: PublishBody;
+  let body: PublishBody = {};
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  if (!body?.admin_id) {
-    return Response.json(
-      { error: "Missing required field: admin_id" },
-      { status: 400 },
-    );
+    // Body opcional para publicação
   }
 
   try {
-    const calendar = await publishCalendar(getEnv().DB, {
+    const db = getEnv().DB;
+    const adminId = body.admin_id ?? (await getOrCreateSystemAdmin(db)).id;
+    const calendar = await publishCalendar(db, {
       calendar_id: calendarId,
-      admin_id: body.admin_id,
+      admin_id: adminId,
     });
     return Response.json({ calendar });
   } catch (err) {
