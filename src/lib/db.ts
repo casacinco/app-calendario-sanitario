@@ -336,6 +336,117 @@ export async function createCalendarRequest(
 // ADMIN — listagens
 // =====================================================
 
+export interface CalendarBar {
+  id: number;
+  calendar_row_id: number;
+  start_month: number;
+  end_month: number;
+  label: string | null;
+  color: string;
+  alert: number;
+  position: number;
+  created_at: string;
+}
+
+export interface CalendarRowWithBars extends CalendarRow {
+  bars: CalendarBar[];
+}
+
+export interface CalendarBlockGroup {
+  block_name: string;
+  block_position: number;
+  rows: CalendarRowWithBars[];
+}
+
+export interface CalendarFullDetails {
+  calendar: Calendar;
+  request: CalendarRequest;
+  user: User;
+  farm: Farm;
+  blocks: CalendarBlockGroup[];
+}
+
+export async function getCalendarFullDetails(
+  db: D1Database,
+  calendarId: number,
+): Promise<CalendarFullDetails | null> {
+  const calendar = await db
+    .prepare(`SELECT * FROM calendars WHERE id = ?1`)
+    .bind(calendarId)
+    .first<Calendar>();
+  if (!calendar) return null;
+
+  const [request, rowsResult, barsResult] = await Promise.all([
+    db
+      .prepare(`SELECT * FROM calendar_requests WHERE id = ?1`)
+      .bind(calendar.request_id)
+      .first<CalendarRequest>(),
+    db
+      .prepare(
+        `SELECT * FROM calendar_rows
+         WHERE calendar_id = ?1
+         ORDER BY block_position, row_position`,
+      )
+      .bind(calendarId)
+      .all<CalendarRow>(),
+    db
+      .prepare(
+        `SELECT b.*
+         FROM calendar_bars b
+         JOIN calendar_rows r ON r.id = b.calendar_row_id
+         WHERE r.calendar_id = ?1
+         ORDER BY b.position, b.id`,
+      )
+      .bind(calendarId)
+      .all<CalendarBar>(),
+  ]);
+  if (!request) throw new DbError("Inconsistent data: request missing");
+
+  const [user, farm] = await Promise.all([
+    db
+      .prepare(`SELECT * FROM users WHERE id = ?1`)
+      .bind(request.user_id)
+      .first<User>(),
+    db
+      .prepare(`SELECT * FROM farms WHERE id = ?1`)
+      .bind(request.farm_id)
+      .first<Farm>(),
+  ]);
+  if (!user || !farm)
+    throw new DbError("Inconsistent data: user or farm missing");
+
+  const barsByRow = new Map<number, CalendarBar[]>();
+  for (const bar of barsResult.results) {
+    const list = barsByRow.get(bar.calendar_row_id) ?? [];
+    list.push(bar);
+    barsByRow.set(bar.calendar_row_id, list);
+  }
+
+  const blocksMap = new Map<string, CalendarBlockGroup>();
+  for (const row of rowsResult.results) {
+    const key = `${row.block_position}|${row.block_name}`;
+    let group = blocksMap.get(key);
+    if (!group) {
+      group = {
+        block_name: row.block_name,
+        block_position: row.block_position,
+        rows: [],
+      };
+      blocksMap.set(key, group);
+    }
+    group.rows.push({
+      ...row,
+      bars: barsByRow.get(row.id) ?? [],
+    });
+  }
+
+  const blocks = Array.from(blocksMap.values()).sort(
+    (a, b) => a.block_position - b.block_position,
+  );
+
+  return { calendar, request, user, farm, blocks };
+}
+
 export interface RequestFullDetails {
   request: CalendarRequest;
   user: User;
