@@ -3,7 +3,7 @@ import { CalendarDays, Plus } from "lucide-react";
 
 const navItems = [
   { href: "/aluno", label: "Meu calendário", icon: CalendarDays },
-  { href: "/aluno/onboarding", label: "Nova solicitação", icon: Plus },
+  { href: "/onboarding", label: "Nova solicitação", icon: Plus },
 ];
 
 export default function AlunoLayout({
