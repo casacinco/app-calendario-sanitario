@@ -69,29 +69,29 @@ function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
     }`}>
       <div>
         <div className="flex items-start justify-between gap-2 mb-0.5">
-          <p className="font-semibold text-sm text-white leading-snug">{r.user_name}</p>
+          <p className="font-semibold text-sm text-gray-900 leading-snug">{r.user_name}</p>
           <StatusPill cs={cs} />
         </div>
-        <p className="text-xs text-white/50">{r.farm_name}</p>
-        {location && <p className="text-xs text-white/35">{location}</p>}
+        <p className="text-xs text-gray-500">{r.farm_name}</p>
+        {location && <p className="text-xs text-gray-400">{location}</p>}
       </div>
 
       <div className="space-y-1">
         <div className="flex items-center gap-1.5 text-xs">
-          <Clock className="h-3 w-3 text-white/30 flex-shrink-0" />
-          <span className="text-white/40">Prazo:</span>
-          <span className={cs === "late" ? "text-red-400 font-medium" : "text-white/60"}>
+          <Clock className="h-3 w-3 text-gray-300 flex-shrink-0" />
+          <span className="text-gray-400">Prazo:</span>
+          <span className={cs === "late" ? "text-red-500 font-medium" : "text-gray-600"}>
             {formatDateBR(r.deadline)}
           </span>
         </div>
         {phone !== "—" && (
-          <p className="text-xs text-white/40 pl-4">{phone}</p>
+          <p className="text-xs text-gray-400 pl-4">{phone}</p>
         )}
       </div>
 
       <Link
         href={`/admin/requests/${r.id}`}
-        className="block w-full text-center text-xs font-medium border border-white/12 rounded-lg py-1.5 text-white/50 hover:text-white hover:border-white/25 transition-colors"
+        className="block w-full text-center text-xs font-medium border border-gray-200 rounded-lg py-1.5 text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors"
       >
         Ver detalhes
       </Link>
