@@ -404,6 +404,7 @@ export interface CalendarFullDetails {
   user: User;
   farm: Farm;
   blocks: CalendarBlockGroup[];
+  rawResponses: string | null;
 }
 
 export async function getCalendarFullDetails(
@@ -455,6 +456,14 @@ export async function getCalendarFullDetails(
   if (!user || !farm)
     throw new DbError("Inconsistent data: user or farm missing");
 
+  const questionnaireRow = await db
+    .prepare(
+      `SELECT raw_responses FROM health_questionnaire WHERE farm_id = ?1 ORDER BY id DESC LIMIT 1`,
+    )
+    .bind(farm.id)
+    .first<{ raw_responses: string | null }>();
+  const rawResponses = questionnaireRow?.raw_responses ?? null;
+
   const barsByRow = new Map<number, CalendarBar[]>();
   for (const bar of barsResult.results) {
     const list = barsByRow.get(bar.calendar_row_id) ?? [];
@@ -484,7 +493,7 @@ export async function getCalendarFullDetails(
     (a, b) => a.block_position - b.block_position,
   );
 
-  return { calendar, request, user, farm, blocks };
+  return { calendar, request, user, farm, blocks, rawResponses };
 }
 
 export interface RequestFullDetails {
