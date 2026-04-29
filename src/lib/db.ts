@@ -543,6 +543,7 @@ export interface AdminRequestRow {
   status: RequestStatus;
   deadline: string | null;
   created_at: string;
+  delivered_at: string | null;
   user_name: string;
   user_email: string;
   farm_name: string;
@@ -561,6 +562,7 @@ export async function listAdminRequests(
       `SELECT
          cr.id, cr.user_id, cr.farm_id, cr.status, cr.deadline,
          cr.created_at,
+         c.published_at AS delivered_at,
          u.name  AS user_name,
          u.email AS user_email,
          f.name  AS farm_name,
@@ -575,6 +577,7 @@ export async function listAdminRequests(
        FROM calendar_requests cr
        JOIN users u ON cr.user_id = u.id
        JOIN farms f ON cr.farm_id = f.id
+       LEFT JOIN calendars c ON c.request_id = cr.id
        ORDER BY cr.created_at DESC`,
     )
     .all<AdminRequestRow>();

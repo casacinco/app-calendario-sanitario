@@ -74,11 +74,20 @@ export default async function RequestDetailPage({ params }: PageProps) {
               ? ` · ${[farm.city, farm.state].filter(Boolean).join("/")}`
               : ""}
           </p>
-          <p className="text-text-muted text-xs">
-            Solicitação #{request.id} · criada em{" "}
-            {formatDateBR(request.created_at)}
-            {request.deadline ? ` · prazo ${formatDateBR(request.deadline)}` : ""}
-          </p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-text-muted">
+            <span>
+              <span className="font-medium text-text-muted/70 uppercase tracking-wide text-[10px]">Solicitação</span>{" "}
+              {formatDateBR(request.created_at)}
+            </span>
+            <span>
+              <span className="font-medium text-text-muted/70 uppercase tracking-wide text-[10px]">Prazo</span>{" "}
+              {request.deadline ? formatDateBR(request.deadline) : "—"}
+            </span>
+            <span>
+              <span className="font-medium text-text-muted/70 uppercase tracking-wide text-[10px]">Entrega</span>{" "}
+              {calendar?.published_at ? formatDateBR(calendar.published_at) : "—"}
+            </span>
+          </div>
         </div>
 
         <div>

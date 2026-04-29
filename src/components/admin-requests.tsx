@@ -192,7 +192,12 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
           <table className="w-full text-sm min-w-[750px]">
             <thead>
               <tr className="border-b border-white/8">
-                {["Nome", "E-mail", "Telefone", "Rebanho", "Cidade/UF", "Envio", "Prazo", "Status"].map((h) => (
+                {[
+                  "Nome", "E-mail", "Telefone", "Rebanho", "Cidade/UF",
+                  "Solicitação", "Prazo",
+                  ...(tab === "entregues" ? ["Entrega"] : []),
+                  "Status",
+                ].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-white/40 whitespace-nowrap">
                     {h}
                   </th>
@@ -221,6 +226,11 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
                         {formatDateBR(r.deadline)}
                       </span>
                     </td>
+                    {tab === "entregues" && (
+                      <td className="px-4 py-3 text-xs text-green-400 whitespace-nowrap">
+                        {r.delivered_at ? formatDateBR(r.delivered_at) : "—"}
+                      </td>
+                    )}
                     <td className="px-4 py-3"><StatusPill cs={cs} /></td>
                   </tr>
                 );
@@ -330,7 +340,7 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
           </select>
 
           <label className="flex items-center gap-1.5 text-xs text-white/40 whitespace-nowrap">
-            Envio:
+            Solicitação:
             <input type="date" value={createdStart}
               onChange={(e) => { setCreatedStart(e.target.value); resetPage(); }}
               className={inputCls}
