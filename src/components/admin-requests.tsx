@@ -45,8 +45,8 @@ function sortByDeadline(a: AdminRequestRow, b: AdminRequestRow) {
 function StatusPill({ cs }: { cs: CardStatus }) {
   const map: Record<CardStatus, { label: string; cls: string }> = {
     pending:   { label: "Aguardando", cls: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25" },
-    late:      { label: "Atrasado",   cls: "bg-red-500/15  text-red-400    border border-red-500/25" },
-    delivered: { label: "Entregue",   cls: "bg-green-500/15 text-green-400 border border-green-500/25" },
+    late:      { label: "Atrasado",   cls: "bg-red/15 text-red border border-red/30" },
+    delivered: { label: "Entregue",   cls: "bg-green/15 text-green border border-green/30" },
   };
   const { label, cls } = map[cs];
   return (
