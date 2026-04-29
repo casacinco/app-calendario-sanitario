@@ -83,7 +83,6 @@ export interface BarFormValue {
   end_month: number;
   label: string;
   color: string;
-  alert: boolean;
   description: string;
   animal_category: string;
 }
@@ -324,17 +323,6 @@ export function BarEditorDialog({
             ))}
           </div>
         </div>
-
-        {/* Alerta */}
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={value.alert}
-            onChange={(e) => setValue({ ...value, alert: e.target.checked })}
-            className="h-4 w-4 rounded border-border bg-bg accent-red"
-          />
-          <span>Marcar como alerta crítico</span>
-        </label>
 
         {error && (
           <p className="text-sm text-red border border-red/30 bg-red/10 rounded-md px-3 py-2">

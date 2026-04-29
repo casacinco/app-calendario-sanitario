@@ -129,7 +129,6 @@ export function CalendarEditor({
         end_month:       dialog.bar.end_month,
         label:           dialog.bar.label ?? "",
         color:           dialog.bar.color,
-        alert:           dialog.bar.alert === 1,
         description:     dialog.bar.description ?? "",
         animal_category: dialog.bar.animal_category ?? "",
       }
@@ -138,7 +137,6 @@ export function CalendarEditor({
         end_month:       1,
         label:           "",
         color:           "#2BA152",
-        alert:           false,
         description:     "",
         animal_category: "",
       };
@@ -251,6 +249,12 @@ export function CalendarEditor({
                         const span = bar.end_month - bar.start_month + 1;
                         const left = (startCol / 12) * 100;
                         const width = (span / 12) * 100;
+                        const displayText = bar.description ?? bar.label;
+                        const density = (displayText?.length ?? 0) / span;
+                        const fontSize =
+                          density > 8 ? "8px" :
+                          density > 6 ? "9px" :
+                          density > 4 ? "10px" : "11px";
                         return (
                           <button
                             key={bar.id}
@@ -260,22 +264,18 @@ export function CalendarEditor({
                               openEdit(row.id, bar);
                             }}
                             disabled={readOnly}
-                            className="absolute top-1.5 bottom-1.5 rounded-sm flex items-center justify-center px-2 text-[11px] font-medium overflow-hidden hover:ring-2 hover:ring-white/40 transition-all"
+                            className="absolute top-1.5 bottom-1.5 rounded-sm flex items-center justify-center px-2 font-medium overflow-hidden hover:ring-2 hover:ring-white/40 transition-all"
                             style={{
                               left: `calc(${left}% + 2px)`,
                               width: `calc(${width}% - 4px)`,
-                              background: bar.alert
-                                ? "hsl(var(--red))"
-                                : bar.color,
-                              color: bar.alert ? "white" : "rgba(0,0,0,0.85)",
+                              background: bar.color,
+                              color: "rgba(0,0,0,0.85)",
+                              fontSize,
+                              whiteSpace: "nowrap",
                             }}
-                            title={
-                              bar.label ?? `Mês ${bar.start_month}-${bar.end_month}`
-                            }
+                            title={displayText ?? `Mês ${bar.start_month}-${bar.end_month}`}
                           >
-                            {bar.label && (
-                              <span className="truncate">{bar.label}</span>
-                            )}
+                            {displayText && <span>{displayText}</span>}
                           </button>
                         );
                       })}
