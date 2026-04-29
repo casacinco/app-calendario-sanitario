@@ -64,10 +64,8 @@ function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
   const location = [r.farm_city, r.farm_state].filter(Boolean).join("/");
 
   return (
-    <div className={`rounded-xl border p-4 space-y-3 ${
-      cs === "late"
-        ? "border-red-500/30 bg-red-500/5"
-        : "border-white/8 bg-[hsl(var(--card))]"
+    <div className={`rounded-xl border p-4 space-y-3 bg-white ${
+      cs === "late" ? "border-red-500/30" : "border-white/8"
     }`}>
       <div>
         <div className="flex items-start justify-between gap-2 mb-0.5">
