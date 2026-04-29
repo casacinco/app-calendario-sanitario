@@ -72,20 +72,20 @@ function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
           <p className="font-semibold text-sm text-gray-900 leading-snug">{r.user_name}</p>
           <StatusPill cs={cs} />
         </div>
-        <p className="text-xs text-gray-500">{r.farm_name}</p>
-        {location && <p className="text-xs text-gray-400">{location}</p>}
+        <p className="text-xs text-gray-800">{r.farm_name}</p>
+        {location && <p className="text-xs text-gray-700">{location}</p>}
       </div>
 
       <div className="space-y-1">
         <div className="flex items-center gap-1.5 text-xs">
-          <Clock className="h-3 w-3 text-gray-300 flex-shrink-0" />
-          <span className="text-gray-400">Prazo:</span>
-          <span className={cs === "late" ? "text-red-500 font-medium" : "text-gray-600"}>
+          <Clock className="h-3 w-3 text-gray-600 flex-shrink-0" />
+          <span className="text-gray-700">Prazo:</span>
+          <span className={cs === "late" ? "text-red-500 font-medium" : "text-gray-900"}>
             {formatDateBR(r.deadline)}
           </span>
         </div>
         {phone !== "—" && (
-          <p className="text-xs text-gray-400 pl-4">{phone}</p>
+          <p className="text-xs text-gray-700 pl-4">{phone}</p>
         )}
       </div>
 
