@@ -536,6 +536,51 @@ export async function getRequestFullDetails(
   return { request, user, farm, flock, questionnaire, calendar };
 }
 
+export interface AdminRequestRow {
+  id: number;
+  user_id: number;
+  farm_id: number;
+  status: RequestStatus;
+  deadline: string | null;
+  created_at: string;
+  user_name: string;
+  user_email: string;
+  farm_name: string;
+  farm_city: string | null;
+  farm_state: string | null;
+  flock_species: string | null;
+  flock_total: number | null;
+  raw_responses: string | null;
+}
+
+export async function listAdminRequests(
+  db: D1Database,
+): Promise<AdminRequestRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+         cr.id, cr.user_id, cr.farm_id, cr.status, cr.deadline,
+         cr.created_at,
+         u.name  AS user_name,
+         u.email AS user_email,
+         f.name  AS farm_name,
+         f.city  AS farm_city,
+         f.state AS farm_state,
+         (SELECT species FROM flock_data
+          WHERE farm_id = f.id ORDER BY id DESC LIMIT 1) AS flock_species,
+         (SELECT total_animals FROM flock_data
+          WHERE farm_id = f.id ORDER BY id DESC LIMIT 1) AS flock_total,
+         (SELECT raw_responses FROM health_questionnaire
+          WHERE farm_id = f.id ORDER BY id DESC LIMIT 1) AS raw_responses
+       FROM calendar_requests cr
+       JOIN users u ON cr.user_id = u.id
+       JOIN farms f ON cr.farm_id = f.id
+       ORDER BY cr.created_at DESC`,
+    )
+    .all<AdminRequestRow>();
+  return result.results;
+}
+
 export async function listRequestsWithDetails(
   db: D1Database,
 ): Promise<RequestWithDetails[]> {
