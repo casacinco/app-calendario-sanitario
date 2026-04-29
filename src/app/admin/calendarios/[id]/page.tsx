@@ -33,6 +33,11 @@ interface ProducerContext {
   qtd_reprodutores?: string;
   qtd_matrizes?: string;
   mortalidade_atual?: string;
+  decisao_compra?: string;
+  ja_tentou?: string;
+  info_adicionais?: string;
+  propriedades_vizinhas?: string;
+  idade_apartacao?: string;
 }
 
 function parseContext(raw: string | null): ProducerContext {
@@ -92,16 +97,6 @@ function PrimaryField({ label, value }: { label: string; value: string | null | 
   );
 }
 
-function MortalidadeField({ value }: { value: string | undefined }) {
-  if (!value?.trim()) return null;
-  return (
-    <div className="rounded-md bg-red/10 border border-red/30 px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-red/70 mb-0.5">Mortalidade atual</p>
-      <p className="text-sm font-semibold text-red">{value}</p>
-    </div>
-  );
-}
-
 function PrimaryChips({
   label,
   items,
@@ -152,6 +147,18 @@ function SecChips({ label, items }: { label: string; items: string[] | null | un
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── Texto livre do produtor ─────────────────────────────────────────────────
+
+function TextoField({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value?.trim()) return null;
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{label}</p>
+      <p className="text-xs text-text leading-relaxed">&ldquo;{value}&rdquo;</p>
     </div>
   );
 }
@@ -282,7 +289,6 @@ export default async function CalendarPage({ params }: PageProps) {
             <div className="px-4 py-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-3">
                 <PrimaryField label="Sistema de criação" value={ctx.sistema_criacao} />
-                <MortalidadeField value={ctx.mortalidade_atual} />
               </div>
               <div className="space-y-3">
                 <PrimaryChips
@@ -316,6 +322,20 @@ export default async function CalendarPage({ params }: PageProps) {
                 <SecChips label="Vacinas já utilizadas" items={ctx.vacinas} />
               </div>
             </div>
+
+            {/* Texto livre do produtor */}
+            {(ctx.decisao_compra || ctx.ja_tentou || ctx.info_adicionais || ctx.propriedades_vizinhas || ctx.idade_apartacao) && (
+              <div className="px-4 py-4 space-y-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Texto do produtor</p>
+                <div className="space-y-3">
+                  <TextoField label="Decisão de compra" value={ctx.decisao_compra} />
+                  <TextoField label="O que já tentou" value={ctx.ja_tentou} />
+                  <TextoField label="Informações adicionais" value={ctx.info_adicionais} />
+                  <TextoField label="Propriedades vizinhas" value={ctx.propriedades_vizinhas} />
+                  <TextoField label="Idade de apartação" value={ctx.idade_apartacao} />
+                </div>
+              </div>
+            )}
 
           </div>
         </details>
