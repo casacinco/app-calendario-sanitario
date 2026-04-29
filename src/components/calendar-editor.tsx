@@ -12,6 +12,7 @@ interface DialogState {
   open: boolean;
   mode: "create" | "edit";
   rowId: number;
+  blockPosition?: number;
   bar?: CalendarBar;
 }
 
@@ -103,14 +104,23 @@ export function CalendarEditor({
     );
   }
 
+  function findBlockPosition(rowId: number): number | undefined {
+    for (const block of blocks) {
+      for (const row of block.rows) {
+        if (row.id === rowId) return block.block_position;
+      }
+    }
+    return undefined;
+  }
+
   function openCreate(rowId: number) {
     if (readOnly) return;
-    setDialog({ open: true, mode: "create", rowId });
+    setDialog({ open: true, mode: "create", rowId, blockPosition: findBlockPosition(rowId) });
   }
 
   function openEdit(rowId: number, bar: CalendarBar) {
     if (readOnly) return;
-    setDialog({ open: true, mode: "edit", rowId, bar });
+    setDialog({ open: true, mode: "edit", rowId, blockPosition: findBlockPosition(rowId), bar });
   }
 
   const initial: BarFormValue = dialog.bar
@@ -206,6 +216,7 @@ export function CalendarEditor({
                                     open: true,
                                     mode: "create",
                                     rowId: row.id,
+                                    blockPosition: block.block_position,
                                     bar: {
                                       id: 0,
                                       calendar_row_id: row.id,
@@ -289,6 +300,7 @@ export function CalendarEditor({
         open={dialog.open}
         mode={dialog.mode}
         initial={initial}
+        blockPosition={dialog.blockPosition}
         onClose={() => setDialog({ ...dialog, open: false })}
         onSubmit={(value) =>
           dialog.mode === "create"

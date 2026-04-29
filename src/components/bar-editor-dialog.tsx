@@ -23,6 +23,61 @@ const MONTH_LABELS = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
 
+// ─── Presets de recomendação por bloco ───────────────────────────────────────
+
+interface Preset {
+  label: string;
+  description: string;
+}
+
+const PRESETS_BY_BLOCK: Record<number, Preset[]> = {
+  3: [ // Vacinação
+    { label: "Dose",                                     description: "Dose" },
+    { label: "Dose + Reforço",                           description: "Dose + Reforço" },
+    { label: "1ª Dose (30–60 dias) + Reforço (30 dias)", description: "1ª dose: 30–60 dias de vida. Reforço: 30 dias após a 1ª dose." },
+    { label: "1ª Dose (60 dias) + Reforço (30 dias)",    description: "1ª dose: 60 dias de vida. Reforço: 30 dias após a 1ª dose." },
+    { label: "1ª Dose (90 dias) + Reforço (30 dias)",    description: "1ª dose: 90 dias de vida. Reforço: 30 dias após a 1ª dose." },
+    { label: "1ª Dose (150 dias) + Reforço (30 dias)",   description: "1ª dose: 150 dias de vida. Reforço: 30 dias após a 1ª dose." },
+  ],
+  4: [ // Neonato
+    { label: "Cura umbigo + Probezerro + Catofós", description: "Cura umbigo + Probezerro + Catofós" },
+    { label: "Prevenção de eimeriose",             description: "Prevenção de eimeriose" },
+  ],
+  5: [ // Vermifugação
+    { label: "Dose",                           description: "Dose" },
+    { label: "Dose + Reforço",                 description: "Dose + Reforço" },
+    { label: "Dose + Reforço + Apartação",     description: "Dose + Reforço + Apartação" },
+    { label: "Terço final gestação + Reforço", description: "Terço final gestação + Reforço" },
+  ],
+};
+
+const OUTRO = "__outro__";
+
+function localKey(blockPosition: number) {
+  return `rec_custom_${blockPosition}`;
+}
+
+function loadCustomPresets(blockPosition: number): string[] {
+  try {
+    const raw = localStorage.getItem(localKey(blockPosition));
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomPreset(blockPosition: number, description: string) {
+  try {
+    const existing = loadCustomPresets(blockPosition);
+    const trimmed = description.trim();
+    if (trimmed && !existing.includes(trimmed)) {
+      localStorage.setItem(localKey(blockPosition), JSON.stringify([...existing, trimmed]));
+    }
+  } catch { /* ignore */ }
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface BarFormValue {
   start_month: number;
   end_month: number;
@@ -37,15 +92,19 @@ interface Props {
   open: boolean;
   mode: "create" | "edit";
   initial: BarFormValue;
+  blockPosition?: number;
   onClose: () => void;
   onSubmit: (value: BarFormValue) => Promise<void> | void;
   onDelete?: () => Promise<void> | void;
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function BarEditorDialog({
   open,
   mode,
   initial,
+  blockPosition,
   onClose,
   onSubmit,
   onDelete,
@@ -54,12 +113,40 @@ export function BarEditorDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [recommendation, setRecommendation] = useState("");
+  const [saveAsRec, setSaveAsRec] = useState(false);
+  const [customPresets, setCustomPresets] = useState<string[]>([]);
+
   useEffect(() => {
     if (open) {
       setValue(initial);
       setError(null);
+      setRecommendation("");
+      setSaveAsRec(false);
+      if (blockPosition) {
+        setCustomPresets(loadCustomPresets(blockPosition));
+      }
     }
-  }, [open, initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const builtinPresets = blockPosition ? (PRESETS_BY_BLOCK[blockPosition] ?? []) : [];
+  const hasPresets = builtinPresets.length > 0 || customPresets.length > 0;
+
+  function handleRecommendationChange(selected: string) {
+    setRecommendation(selected);
+    if (!selected || selected === OUTRO) return;
+
+    if (customPresets.includes(selected)) {
+      setValue((v) => ({ ...v, description: selected }));
+      return;
+    }
+
+    const preset = builtinPresets.find((p) => p.label === selected);
+    if (preset) {
+      setValue((v) => ({ ...v, description: preset.description }));
+    }
+  }
 
   const valid = value.start_month <= value.end_month;
 
@@ -67,6 +154,9 @@ export function BarEditorDialog({
     if (!valid) {
       setError("Mês inicial deve ser ≤ mês final");
       return;
+    }
+    if (saveAsRec && blockPosition && value.description.trim()) {
+      saveCustomPreset(blockPosition, value.description);
     }
     setSubmitting(true);
     try {
@@ -144,6 +234,46 @@ export function BarEditorDialog({
             placeholder="Ex.: Clostridiose (1ª dose)"
           />
         </div>
+
+        {/* Recomendação (presets por bloco) */}
+        {hasPresets && (
+          <div className="space-y-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="bar-recommendation">Recomendação</Label>
+              <select
+                id="bar-recommendation"
+                value={recommendation}
+                onChange={(e) => handleRecommendationChange(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus-visible:outline-none focus-visible:border-text-muted"
+              >
+                <option value="">Selecionar recomendação...</option>
+                {customPresets.length > 0 && (
+                  <optgroup label="Salvas">
+                    {customPresets.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Padrão">
+                  {builtinPresets.map((p) => (
+                    <option key={p.label} value={p.label}>{p.label}</option>
+                  ))}
+                </optgroup>
+                <option value={OUTRO}>Outro</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer">
+              <input
+                type="checkbox"
+                checked={saveAsRec}
+                onChange={(e) => setSaveAsRec(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-border bg-bg"
+              />
+              <span>Salvar como recomendação</span>
+            </label>
+          </div>
+        )}
 
         {/* Descrição técnica */}
         <div className="space-y-1.5">
