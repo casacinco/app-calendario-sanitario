@@ -13,6 +13,8 @@ interface UpdateBarBody {
   label?: string | null;
   color?: string;
   alert?: boolean;
+  description?: string | null;
+  animal_category?: string | null;
 }
 
 function parseId(value: string): number | null {

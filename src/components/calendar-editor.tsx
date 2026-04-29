@@ -115,18 +115,22 @@ export function CalendarEditor({
 
   const initial: BarFormValue = dialog.bar
     ? {
-        start_month: dialog.bar.start_month,
-        end_month: dialog.bar.end_month,
-        label: dialog.bar.label ?? "",
-        color: dialog.bar.color,
-        alert: dialog.bar.alert === 1,
+        start_month:     dialog.bar.start_month,
+        end_month:       dialog.bar.end_month,
+        label:           dialog.bar.label ?? "",
+        color:           dialog.bar.color,
+        alert:           dialog.bar.alert === 1,
+        description:     dialog.bar.description ?? "",
+        animal_category: dialog.bar.animal_category ?? "",
       }
     : {
-        start_month: 1,
-        end_month: 1,
-        label: "",
-        color: "#2BA152",
-        alert: false,
+        start_month:     1,
+        end_month:       1,
+        label:           "",
+        color:           "#2BA152",
+        alert:           false,
+        description:     "",
+        animal_category: "",
       };
 
   return (
@@ -211,6 +215,8 @@ export function CalendarEditor({
                                       color: "#2BA152",
                                       alert: 0,
                                       position: 0,
+                                      description: null,
+                                      animal_category: null,
                                       created_at: "",
                                     },
                                   });

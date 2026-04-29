@@ -383,6 +383,8 @@ export interface CalendarBar {
   color: string;
   alert: number;
   position: number;
+  description: string | null;
+  animal_category: string | null;
   created_at: string;
 }
 
@@ -705,6 +707,8 @@ export interface CreateBarInput {
   color?: string;
   alert?: boolean;
   position?: number;
+  description?: string | null;
+  animal_category?: string | null;
 }
 
 export async function createBar(
@@ -721,8 +725,8 @@ export async function createBar(
   return insertReturning<CalendarBar>(
     db,
     `INSERT INTO calendar_bars
-       (calendar_row_id, start_month, end_month, label, color, alert, position)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+       (calendar_row_id, start_month, end_month, label, color, alert, position, description, animal_category)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
      RETURNING *`,
     [
       input.calendar_row_id,
@@ -732,6 +736,8 @@ export async function createBar(
       input.color ?? "#2BA152",
       input.alert ? 1 : 0,
       input.position ?? 0,
+      input.description ?? null,
+      input.animal_category ?? null,
     ],
     "create bar",
   );
@@ -743,6 +749,8 @@ export interface UpdateBarInput {
   label?: string | null;
   color?: string;
   alert?: boolean;
+  description?: string | null;
+  animal_category?: string | null;
 }
 
 export async function updateBar(
@@ -765,12 +773,14 @@ export async function updateBar(
   const updated = await db
     .prepare(
       `UPDATE calendar_bars
-       SET start_month = ?1,
-           end_month   = ?2,
-           label       = ?3,
-           color       = ?4,
-           alert       = ?5
-       WHERE id = ?6
+       SET start_month      = ?1,
+           end_month        = ?2,
+           label            = ?3,
+           color            = ?4,
+           alert            = ?5,
+           description      = ?6,
+           animal_category  = ?7
+       WHERE id = ?8
        RETURNING *`,
     )
     .bind(
@@ -779,6 +789,8 @@ export async function updateBar(
       input.label !== undefined ? input.label : existing.label,
       input.color ?? existing.color,
       input.alert !== undefined ? (input.alert ? 1 : 0) : existing.alert,
+      input.description !== undefined ? input.description : existing.description,
+      input.animal_category !== undefined ? input.animal_category : existing.animal_category,
       barId,
     )
     .first<CalendarBar>();

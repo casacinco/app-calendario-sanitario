@@ -10,6 +10,8 @@ interface CreateBarBody {
   label?: string | null;
   color?: string;
   alert?: boolean;
+  description?: string | null;
+  animal_category?: string | null;
 }
 
 export async function POST(request: Request) {

@@ -29,6 +29,8 @@ export interface BarFormValue {
   label: string;
   color: string;
   alert: boolean;
+  description: string;
+  animal_category: string;
 }
 
 interface Props {
@@ -97,16 +99,8 @@ export function BarEditorDialog({
       title={mode === "create" ? "Adicionar barra" : "Editar barra"}
     >
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="bar-label">Descrição</Label>
-          <Input
-            id="bar-label"
-            value={value.label}
-            onChange={(e) => setValue({ ...value, label: e.target.value })}
-            placeholder="Ex.: Newcastle (1ª dose)"
-          />
-        </div>
 
+        {/* Período */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="bar-start">Mês inicial</Label>
@@ -119,9 +113,7 @@ export function BarEditorDialog({
               className="flex h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus-visible:outline-none focus-visible:border-text-muted"
             >
               {MONTH_LABELS.map((m, i) => (
-                <option key={i} value={i + 1}>
-                  {m}
-                </option>
+                <option key={i} value={i + 1}>{m}</option>
               ))}
             </select>
           </div>
@@ -136,14 +128,54 @@ export function BarEditorDialog({
               className="flex h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus-visible:outline-none focus-visible:border-text-muted"
             >
               {MONTH_LABELS.map((m, i) => (
-                <option key={i} value={i + 1}>
-                  {m}
-                </option>
+                <option key={i} value={i + 1}>{m}</option>
               ))}
             </select>
           </div>
         </div>
 
+        {/* Rótulo exibido na barra */}
+        <div className="space-y-1.5">
+          <Label htmlFor="bar-label">Rótulo da barra</Label>
+          <Input
+            id="bar-label"
+            value={value.label}
+            onChange={(e) => setValue({ ...value, label: e.target.value })}
+            placeholder="Ex.: Clostridiose (1ª dose)"
+          />
+        </div>
+
+        {/* Descrição técnica */}
+        <div className="space-y-1.5">
+          <Label htmlFor="bar-description">
+            Descrição técnica
+            <span className="ml-1 text-text-muted text-xs font-normal">(recomendada)</span>
+          </Label>
+          <textarea
+            id="bar-description"
+            rows={3}
+            value={value.description}
+            onChange={(e) => setValue({ ...value, description: e.target.value })}
+            placeholder="Ex.: Vacinar SC, 2 mL/animal. Revacinação 21 dias após a 1ª dose em cordeiros."
+            className="flex w-full rounded-md border border-border bg-bg px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:border-text-muted placeholder:text-text-muted/50"
+          />
+        </div>
+
+        {/* Categoria animal */}
+        <div className="space-y-1.5">
+          <Label htmlFor="bar-category">
+            Categoria animal
+            <span className="ml-1 text-text-muted text-xs font-normal">(opcional)</span>
+          </Label>
+          <Input
+            id="bar-category"
+            value={value.animal_category}
+            onChange={(e) => setValue({ ...value, animal_category: e.target.value })}
+            placeholder="Ex.: Cordeiros, Matrizes, Adultos, Reprodutores"
+          />
+        </div>
+
+        {/* Cor */}
         <div className="space-y-1.5">
           <Label>Cor</Label>
           <div className="flex flex-wrap gap-2">
@@ -163,6 +195,7 @@ export function BarEditorDialog({
           </div>
         </div>
 
+        {/* Alerta */}
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
