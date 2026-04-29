@@ -9,8 +9,9 @@ const badgeVariants = cva(
       variant: {
         default: "border border-border bg-card text-text-muted",
         success: "bg-green/15 text-green border border-green/30",
-        danger: "bg-red/15 text-red border border-red/30",
-        muted: "bg-text/5 text-text-muted",
+        danger:  "bg-red/15 text-red border border-red/30",
+        warning: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25",
+        muted:   "bg-text/5 text-text-muted",
       },
     },
     defaultVariants: { variant: "default" },

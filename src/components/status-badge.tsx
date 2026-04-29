@@ -2,20 +2,20 @@ import { Badge } from "@/components/ui/badge";
 import type { RequestStatus } from "@/lib/db";
 
 const labels: Record<RequestStatus, string> = {
-  pending: "Pendente",
+  pending:     "Aguardando",
   in_progress: "Em produção",
-  delivered: "Entregue",
-  archived: "Arquivado",
+  delivered:   "Entregue",
+  archived:    "Arquivado",
 };
 
 const variants: Record<
   RequestStatus,
-  "default" | "muted" | "success" | "danger"
+  "default" | "muted" | "success" | "danger" | "warning"
 > = {
-  pending: "default",
-  in_progress: "default",
-  delivered: "success",
-  archived: "muted",
+  pending:     "warning",
+  in_progress: "warning",
+  delivered:   "success",
+  archived:    "muted",
 };
 
 export function RequestStatusBadge({ status }: { status: RequestStatus }) {
