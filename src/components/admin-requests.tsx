@@ -80,7 +80,7 @@ function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
         <div className="flex items-center gap-1.5 text-xs">
           <Clock className="h-3 w-3 text-gray-600 flex-shrink-0" />
           <span className="text-gray-700">Prazo:</span>
-          <span className={cs === "late" ? "text-red-500 font-medium" : "text-gray-900"}>
+          <span className="text-gray-900 font-medium">
             {formatDateBR(r.deadline)}
           </span>
         </div>
