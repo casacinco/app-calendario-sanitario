@@ -341,7 +341,7 @@ export default async function CalendarPage({ params }: PageProps) {
         </details>
       )}
 
-      <CalendarEditor initialBlocks={blocks} />
+      <CalendarEditor initialBlocks={blocks} calendarId={calendar.id} />
     </div>
   );
 }

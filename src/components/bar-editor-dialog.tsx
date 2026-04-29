@@ -115,6 +115,8 @@ export function BarEditorDialog({
   const [recommendation, setRecommendation] = useState("");
   const [saveAsRec, setSaveAsRec] = useState(false);
   const [customPresets, setCustomPresets] = useState<string[]>([]);
+  const [newRecValue, setNewRecValue] = useState("");
+  const [showNewRec, setShowNewRec] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -122,6 +124,8 @@ export function BarEditorDialog({
       setError(null);
       setRecommendation("");
       setSaveAsRec(false);
+      setShowNewRec(false);
+      setNewRecValue("");
       if (blockPosition) {
         setCustomPresets(loadCustomPresets(blockPosition));
       }
@@ -133,7 +137,13 @@ export function BarEditorDialog({
   const hasPresets = builtinPresets.length > 0 || customPresets.length > 0;
 
   function handleRecommendationChange(selected: string) {
+    if (selected === "__new__") {
+      setShowNewRec(true);
+      setRecommendation("");
+      return;
+    }
     setRecommendation(selected);
+    setShowNewRec(false);
     if (!selected || selected === OUTRO) return;
 
     if (customPresets.includes(selected)) {
@@ -145,6 +155,17 @@ export function BarEditorDialog({
     if (preset) {
       setValue((v) => ({ ...v, description: preset.description }));
     }
+  }
+
+  function saveNewRecommendation() {
+    if (!newRecValue.trim() || !blockPosition) return;
+    saveCustomPreset(blockPosition, newRecValue.trim());
+    const updated = loadCustomPresets(blockPosition);
+    setCustomPresets(updated);
+    setRecommendation(newRecValue.trim());
+    setValue((v) => ({ ...v, description: newRecValue.trim() }));
+    setNewRecValue("");
+    setShowNewRec(false);
   }
 
   const valid = value.start_month <= value.end_month;
@@ -259,8 +280,39 @@ export function BarEditorDialog({
                   ))}
                 </optgroup>
                 <option value={OUTRO}>Outro</option>
+                <option value="__new__">+ Criar nova recomendação</option>
               </select>
             </div>
+
+            {showNewRec && (
+              <div className="flex gap-2 items-center">
+                <input
+                  autoFocus
+                  value={newRecValue}
+                  onChange={(e) => setNewRecValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveNewRecommendation();
+                    if (e.key === "Escape") setShowNewRec(false);
+                  }}
+                  placeholder="Nome da recomendação..."
+                  className="flex h-8 flex-1 rounded-md border border-border bg-bg px-2 text-sm focus-visible:outline-none focus-visible:border-text-muted"
+                />
+                <button
+                  type="button"
+                  onClick={saveNewRecommendation}
+                  className="text-xs px-2 h-8 rounded-md bg-text/5 border border-border hover:bg-text/10"
+                >
+                  Salvar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowNewRec(false); setNewRecValue(""); }}
+                  className="text-xs px-2 h-8 rounded-md border border-border hover:bg-text/5 text-text-muted"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
 
             <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer">
               <input

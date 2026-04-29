@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff, Plus } from "lucide-react";
-import type { CalendarBar, CalendarBlockGroup } from "@/lib/db";
+import { Eye, EyeOff, Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import type { CalendarBar, CalendarBlockGroup, CalendarRow } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { BarEditorDialog, type BarFormValue } from "@/components/bar-editor-dialog";
 
@@ -16,25 +16,44 @@ interface DialogState {
   bar?: CalendarBar;
 }
 
+type CalendarRowWithBars = CalendarRow & { bars: CalendarBar[] };
+
 export function CalendarEditor({
   initialBlocks,
   readOnly = false,
+  calendarId,
 }: {
   initialBlocks: CalendarBlockGroup[];
   readOnly?: boolean;
+  calendarId?: number;
 }) {
   const [blocks, setBlocks] = useState<CalendarBlockGroup[]>(initialBlocks);
-  const [dialog, setDialog] = useState<DialogState>({
-    open: false,
-    mode: "create",
-    rowId: 0,
-  });
+  const [dialog, setDialog] = useState<DialogState>({ open: false, mode: "create", rowId: 0 });
 
-  function patchBlocks(
-    updater: (blocks: CalendarBlockGroup[]) => CalendarBlockGroup[],
-  ) {
+  // Inline editing state
+  const [editingRow, setEditingRow]       = useState<{ id: number; name: string } | null>(null);
+  const [editingBlock, setEditingBlock]   = useState<{ position: number; name: string } | null>(null);
+  const [newRowState, setNewRowState]     = useState<{ blockPosition: number; blockName: string; value: string } | null>(null);
+  const [newBlockName, setNewBlockName]   = useState<string | null>(null); // null = hidden
+
+  const canEdit = !readOnly && !!calendarId;
+
+  // ─── Block helpers ──────────────────────────────────────────────────────────
+
+  function patchBlocks(updater: (b: CalendarBlockGroup[]) => CalendarBlockGroup[]) {
     setBlocks((prev) => updater(prev));
   }
+
+  function findBlockPosition(rowId: number): number | undefined {
+    for (const block of blocks) {
+      for (const row of block.rows) {
+        if (row.id === rowId) return block.block_position;
+      }
+    }
+    return undefined;
+  }
+
+  // ─── Bar mutations (existing) ───────────────────────────────────────────────
 
   async function toggleRow(rowId: number) {
     const res = await fetch(`/api/admin/rows/${rowId}/toggle`, { method: "POST" });
@@ -104,14 +123,100 @@ export function CalendarEditor({
     );
   }
 
-  function findBlockPosition(rowId: number): number | undefined {
-    for (const block of blocks) {
-      for (const row of block.rows) {
-        if (row.id === rowId) return block.block_position;
+  // ─── Row mutations (new) ────────────────────────────────────────────────────
+
+  async function createRow(blockPosition: number, blockName: string, rowName: string) {
+    const existingBlock = blocks.find((b) => b.block_position === blockPosition);
+    const rowPosition = (existingBlock?.rows.reduce((m, r) => Math.max(m, r.row_position), 0) ?? 0) + 1;
+
+    const res = await fetch("/api/admin/rows", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ calendar_id: calendarId, block_name: blockName, block_position: blockPosition, row_name: rowName, row_position: rowPosition }),
+    });
+    const data = await res.json<{ row?: CalendarRow; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+
+    const newRow: CalendarRowWithBars = { ...data.row!, bars: [] };
+    patchBlocks((prev) => {
+      const exists = prev.some((b) => b.block_position === blockPosition);
+      if (exists) {
+        return prev.map((b) =>
+          b.block_position === blockPosition ? { ...b, rows: [...b.rows, newRow] } : b,
+        );
       }
-    }
-    return undefined;
+      return [...prev, { block_name: blockName, block_position: blockPosition, rows: [newRow] }]
+        .sort((a, b) => a.block_position - b.block_position);
+    });
   }
+
+  async function renameRow(rowId: number, newName: string) {
+    const res = await fetch(`/api/admin/rows/${rowId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
+    const data = await res.json<{ row?: CalendarRow; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+    patchBlocks((prev) =>
+      prev.map((b) => ({
+        ...b,
+        rows: b.rows.map((r) => (r.id === rowId ? { ...r, row_name: data.row!.row_name } : r)),
+      })),
+    );
+  }
+
+  async function doDeleteRow(rowId: number) {
+    if (!window.confirm("Remover este manejo? As barras associadas também serão removidas.")) return;
+    const res = await fetch(`/api/admin/rows/${rowId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json<{ error?: string }>();
+      throw new Error(data.error ?? "Erro");
+    }
+    patchBlocks((prev) =>
+      prev
+        .map((b) => ({ ...b, rows: b.rows.filter((r) => r.id !== rowId) }))
+        .filter((b) => b.rows.length > 0),
+    );
+  }
+
+  // ─── Block mutations (new) ──────────────────────────────────────────────────
+
+  async function renameBlock(blockPosition: number, newName: string) {
+    const res = await fetch(`/api/admin/calendars/${calendarId}/blocks/${blockPosition}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
+    if (!res.ok) {
+      const data = await res.json<{ error?: string }>();
+      throw new Error(data.error ?? "Erro");
+    }
+    patchBlocks((prev) =>
+      prev.map((b) => (b.block_position === blockPosition ? { ...b, block_name: newName } : b)),
+    );
+  }
+
+  async function doDeleteBlock(blockPosition: number) {
+    const block = blocks.find((b) => b.block_position === blockPosition);
+    if (!block) return;
+    if (!window.confirm(`Remover o bloco "${block.block_name}"? Todos os manejos e barras serão removidos.`)) return;
+
+    // Local-only block (no DB rows yet)
+    if (block.rows.length === 0) {
+      patchBlocks((prev) => prev.filter((b) => b.block_position !== blockPosition));
+      return;
+    }
+
+    const res = await fetch(`/api/admin/calendars/${calendarId}/blocks/${blockPosition}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json<{ error?: string }>();
+      throw new Error(data.error ?? "Erro");
+    }
+    patchBlocks((prev) => prev.filter((b) => b.block_position !== blockPosition));
+  }
+
+  // ─── Dialog helpers ─────────────────────────────────────────────────────────
 
   function openCreate(rowId: number) {
     if (readOnly) return;
@@ -141,35 +246,100 @@ export function CalendarEditor({
         animal_category: "",
       };
 
+  // ─── Inline edit submit helpers ─────────────────────────────────────────────
+
+  function submitEditRow() {
+    if (!editingRow || !editingRow.name.trim()) { setEditingRow(null); return; }
+    renameRow(editingRow.id, editingRow.name.trim()).catch(() => null);
+    setEditingRow(null);
+  }
+
+  function submitEditBlock() {
+    if (!editingBlock || !editingBlock.name.trim()) { setEditingBlock(null); return; }
+    renameBlock(editingBlock.position, editingBlock.name.trim()).catch(() => null);
+    setEditingBlock(null);
+  }
+
+  function submitNewRow() {
+    if (!newRowState || !newRowState.value.trim()) { setNewRowState(null); return; }
+    createRow(newRowState.blockPosition, newRowState.blockName, newRowState.value.trim()).catch(() => null);
+    setNewRowState(null);
+  }
+
+  function submitNewBlock() {
+    if (newBlockName === null || !newBlockName.trim()) { setNewBlockName(null); return; }
+    const name = newBlockName.trim();
+    const newPos = blocks.reduce((m, b) => Math.max(m, b.block_position), 0) + 1;
+    patchBlocks((prev) => [...prev, { block_name: name, block_position: newPos, rows: [] }]);
+    setNewBlockName(null);
+    setNewRowState({ blockPosition: newPos, blockName: name, value: "" });
+  }
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <>
       <div className="overflow-x-auto -mx-4 md:mx-0">
         <div className="min-w-[640px] px-4 md:px-0 space-y-6">
+
           {blocks.map((block) => (
             <section key={block.block_position}>
-              <header className="mb-2 flex items-baseline gap-3">
-                <h2 className="text-base font-semibold tracking-tight">
-                  {block.block_position}. {block.block_name}
-                </h2>
-                <span className="text-xs text-text-muted">
-                  {block.rows.filter((r) => r.is_active).length} /{" "}
-                  {block.rows.length} ativas
-                </span>
+
+              {/* Block header */}
+              <header className="mb-2 flex items-center justify-between gap-3">
+                <div className="flex items-baseline gap-3 min-w-0">
+                  {canEdit && editingBlock?.position === block.block_position ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={editingBlock.name}
+                        onChange={(e) => setEditingBlock({ ...editingBlock, name: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === "Enter") submitEditBlock(); if (e.key === "Escape") setEditingBlock(null); }}
+                        className="text-base font-semibold bg-bg border border-border rounded px-2 py-0.5 focus:outline-none focus:border-text-muted w-48"
+                      />
+                      <button onClick={submitEditBlock} className="text-green hover:opacity-80"><Check className="h-4 w-4" /></button>
+                      <button onClick={() => setEditingBlock(null)} className="text-text-muted hover:text-text"><X className="h-4 w-4" /></button>
+                    </div>
+                  ) : (
+                    <h2 className="text-base font-semibold tracking-tight">
+                      {block.block_position}. {block.block_name}
+                    </h2>
+                  )}
+                  <span className="text-xs text-text-muted shrink-0">
+                    {block.rows.filter((r) => r.is_active).length} / {block.rows.length} ativas
+                  </span>
+                </div>
+
+                {canEdit && editingBlock?.position !== block.block_position && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setEditingBlock({ position: block.block_position, name: block.block_name })}
+                      className="text-text-muted hover:text-text p-1"
+                      title="Renomear bloco"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => doDeleteBlock(block.block_position).catch(() => null)}
+                      className="text-text-muted hover:text-red p-1"
+                      title="Remover bloco"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </header>
 
               <div className="rounded-lg border border-border bg-card overflow-hidden">
+                {/* Month headers */}
                 <div className="grid grid-cols-[200px_repeat(12,1fr)] border-b border-border bg-text/[0.02] text-xs text-text-muted">
                   <div className="px-3 py-2">Linha</div>
                   {MONTHS.map((m, i) => (
-                    <div
-                      key={i}
-                      className="px-1 py-2 text-center border-l border-border"
-                    >
-                      {m}
-                    </div>
+                    <div key={i} className="px-1 py-2 text-center border-l border-border">{m}</div>
                   ))}
                 </div>
 
+                {/* Rows */}
                 {block.rows.map((row) => (
                   <div
                     key={row.id}
@@ -178,23 +348,55 @@ export function CalendarEditor({
                       !row.is_active && "opacity-50",
                     )}
                   >
-                    <div className="px-3 py-2.5 text-sm flex items-center gap-2">
-                      <span className="truncate flex-1">{row.row_name}</span>
-                      {!readOnly && (
-                        <button
-                          onClick={() => toggleRow(row.id)}
-                          className="text-text-muted hover:text-text"
-                          title={row.is_active ? "Desativar linha" : "Ativar linha"}
-                        >
-                          {row.is_active ? (
-                            <Eye className="h-3.5 w-3.5" />
-                          ) : (
-                            <EyeOff className="h-3.5 w-3.5" />
+                    {/* Row name cell */}
+                    <div className="px-3 py-2.5 text-sm flex items-center gap-1.5">
+                      {canEdit && editingRow?.id === row.id ? (
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                          <input
+                            autoFocus
+                            value={editingRow.name}
+                            onChange={(e) => setEditingRow({ ...editingRow, name: e.target.value })}
+                            onKeyDown={(e) => { if (e.key === "Enter") submitEditRow(); if (e.key === "Escape") setEditingRow(null); }}
+                            className="text-sm bg-bg border border-border rounded px-1.5 py-0.5 focus:outline-none focus:border-text-muted w-full"
+                          />
+                          <button onClick={submitEditRow} className="text-green hover:opacity-80 shrink-0"><Check className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => setEditingRow(null)} className="text-text-muted hover:text-text shrink-0"><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="truncate flex-1">{row.row_name}</span>
+                          {!readOnly && (
+                            <button
+                              onClick={() => toggleRow(row.id)}
+                              className="text-text-muted hover:text-text shrink-0"
+                              title={row.is_active ? "Desativar linha" : "Ativar linha"}
+                            >
+                              {row.is_active ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                            </button>
                           )}
-                        </button>
+                          {canEdit && (
+                            <>
+                              <button
+                                onClick={() => setEditingRow({ id: row.id, name: row.row_name })}
+                                className="text-text-muted hover:text-text shrink-0 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                title="Renomear"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => doDeleteRow(row.id).catch(() => null)}
+                                className="text-text-muted hover:text-red shrink-0 opacity-0 group-hover/row:opacity-100 transition-opacity"
+                                title="Remover"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
 
+                    {/* Month grid + bars */}
                     <div className="col-span-12 relative h-10 border-l border-border">
                       <div className="absolute inset-0 grid grid-cols-12">
                         {Array.from({ length: 12 }).map((_, i) => (
@@ -204,11 +406,7 @@ export function CalendarEditor({
                             onClick={() => {
                               if (!readOnly && row.is_active) {
                                 openCreate(row.id);
-                                setDialog((d) => ({
-                                  ...d,
-                                  bar: undefined,
-                                }));
-                                // Pré-popular start/end com o mês clicado
+                                setDialog((d) => ({ ...d, bar: undefined }));
                                 setTimeout(() => {
                                   setDialog({
                                     open: true,
@@ -235,9 +433,7 @@ export function CalendarEditor({
                             disabled={readOnly || !row.is_active}
                             className={cn(
                               "border-l border-border first:border-l-0 transition-colors",
-                              !readOnly &&
-                                row.is_active &&
-                                "hover:bg-text/[0.03] cursor-pointer",
+                              !readOnly && row.is_active && "hover:bg-text/[0.03] cursor-pointer",
                             )}
                             aria-label={`Adicionar barra em ${MONTHS[i]}`}
                           />
@@ -259,10 +455,7 @@ export function CalendarEditor({
                           <button
                             key={bar.id}
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEdit(row.id, bar);
-                            }}
+                            onClick={(e) => { e.stopPropagation(); openEdit(row.id, bar); }}
                             disabled={readOnly}
                             className="absolute top-1.5 bottom-1.5 rounded-sm flex items-center justify-center px-2 font-medium overflow-hidden hover:ring-2 hover:ring-white/40 transition-all"
                             style={{
@@ -282,17 +475,75 @@ export function CalendarEditor({
                     </div>
                   </div>
                 ))}
+
+                {/* New row input */}
+                {canEdit && newRowState?.blockPosition === block.block_position && (
+                  <div className="grid grid-cols-[200px_repeat(12,1fr)] border-t border-border bg-text/[0.02]">
+                    <div className="px-3 py-2 flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={newRowState.value}
+                        onChange={(e) => setNewRowState({ ...newRowState, value: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === "Enter") submitNewRow(); if (e.key === "Escape") setNewRowState(null); }}
+                        placeholder="Nome do manejo..."
+                        className="text-sm bg-bg border border-border rounded px-2 py-1 focus:outline-none focus:border-text-muted flex-1 min-w-0"
+                      />
+                      <button onClick={submitNewRow} className="text-green hover:opacity-80 shrink-0"><Check className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setNewRowState(null)} className="text-text-muted hover:text-text shrink-0"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                    <div className="col-span-12 border-l border-border" />
+                  </div>
+                )}
               </div>
+
+              {/* Add row button */}
+              {canEdit && newRowState?.blockPosition !== block.block_position && (
+                <button
+                  onClick={() => setNewRowState({ blockPosition: block.block_position, blockName: block.block_name, value: "" })}
+                  className="mt-1.5 text-xs text-text-muted hover:text-text flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" /> Adicionar manejo
+                </button>
+              )}
             </section>
           ))}
 
-          {!readOnly && (
-            <p className="text-xs text-text-muted flex items-center gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              Clique em qualquer mês de uma linha para adicionar uma barra. Clique
-              em uma barra para editar ou excluir.
-            </p>
+          {/* New block name input */}
+          {canEdit && newBlockName !== null && (
+            <section>
+              <header className="mb-2 flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={newBlockName}
+                  onChange={(e) => setNewBlockName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") submitNewBlock(); if (e.key === "Escape") setNewBlockName(null); }}
+                  placeholder="Nome do bloco..."
+                  className="text-base font-semibold bg-bg border border-border rounded px-2 py-0.5 focus:outline-none focus:border-text-muted w-56"
+                />
+                <button onClick={submitNewBlock} className="text-green hover:opacity-80"><Check className="h-4 w-4" /></button>
+                <button onClick={() => setNewBlockName(null)} className="text-text-muted hover:text-text"><X className="h-4 w-4" /></button>
+              </header>
+            </section>
           )}
+
+          {/* Bottom actions */}
+          <div className={cn("flex items-center", canEdit ? "justify-between" : "justify-start")}>
+            {!readOnly && (
+              <p className="text-xs text-text-muted flex items-center gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Clique em qualquer mês de uma linha para adicionar uma barra. Clique em uma barra para editar ou excluir.
+              </p>
+            )}
+            {canEdit && newBlockName === null && (
+              <button
+                onClick={() => setNewBlockName("")}
+                className="text-xs text-text-muted hover:text-text flex items-center gap-1.5 shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" /> Adicionar bloco
+              </button>
+            )}
+          </div>
+
         </div>
       </div>
 

@@ -832,6 +832,94 @@ export async function toggleCalendarRow(
   return updated;
 }
 
+// =====================================================
+// CALENDAR ROWS — create / rename / delete
+// =====================================================
+
+export async function createCalendarRow(
+  db: D1Database,
+  input: {
+    calendar_id: number;
+    block_name: string;
+    block_position: number;
+    row_name: string;
+    row_position: number;
+  },
+): Promise<CalendarRow> {
+  return insertReturning<CalendarRow>(
+    db,
+    `INSERT INTO calendar_rows
+       (calendar_id, template_row_id, block_name, row_name, block_position, row_position, is_active)
+     VALUES (?1, 0, ?2, ?3, ?4, ?5, 1)
+     RETURNING *`,
+    [input.calendar_id, input.block_name, input.row_name, input.block_position, input.row_position],
+    "create calendar row",
+  );
+}
+
+export async function updateCalendarRowName(
+  db: D1Database,
+  rowId: number,
+  name: string,
+): Promise<CalendarRow> {
+  const updated = await db
+    .prepare(`UPDATE calendar_rows SET row_name = ?2 WHERE id = ?1 RETURNING *`)
+    .bind(rowId, name)
+    .first<CalendarRow>();
+  if (!updated) throw new DbError("Row not found");
+  return updated;
+}
+
+export async function deleteCalendarRow(
+  db: D1Database,
+  rowId: number,
+): Promise<void> {
+  await db
+    .prepare(`DELETE FROM calendar_bars WHERE calendar_row_id = ?1`)
+    .bind(rowId)
+    .run();
+  const result = await db
+    .prepare(`DELETE FROM calendar_rows WHERE id = ?1`)
+    .bind(rowId)
+    .run();
+  if (result.meta.changes === 0) throw new DbError("Row not found");
+}
+
+export async function renameCalendarBlock(
+  db: D1Database,
+  input: { calendar_id: number; block_position: number; new_name: string },
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE calendar_rows SET block_name = ?3
+       WHERE calendar_id = ?1 AND block_position = ?2`,
+    )
+    .bind(input.calendar_id, input.block_position, input.new_name)
+    .run();
+}
+
+export async function deleteCalendarBlock(
+  db: D1Database,
+  input: { calendar_id: number; block_position: number },
+): Promise<void> {
+  await db
+    .prepare(
+      `DELETE FROM calendar_bars
+       WHERE calendar_row_id IN (
+         SELECT id FROM calendar_rows
+         WHERE calendar_id = ?1 AND block_position = ?2
+       )`,
+    )
+    .bind(input.calendar_id, input.block_position)
+    .run();
+  await db
+    .prepare(
+      `DELETE FROM calendar_rows WHERE calendar_id = ?1 AND block_position = ?2`,
+    )
+    .bind(input.calendar_id, input.block_position)
+    .run();
+}
+
 export async function publishCalendar(
   db: D1Database,
   input: { calendar_id: number; admin_id: number },
