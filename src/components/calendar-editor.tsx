@@ -585,26 +585,28 @@ export function CalendarEditor({
                         );
                       }
 
-                      // Grouped: disease header + sub-rows
+                      // Grouped: disease cell spans height via flex, category sub-rows beside it
+                      // disease(100px) + category(120px) = 220px = single-row name col → month cols align
                       return (
-                        <div key={group.disease}>
-                          {/* Disease header */}
-                          <div className={cn(GRID, "bg-text/[0.03] divide-y divide-border/60")}>
-                            <div className="px-3 py-1.5 text-xs font-semibold text-text-muted tracking-wide flex items-center gap-2">
-                              <span className="w-0.5 h-3 rounded-full bg-border inline-block shrink-0" />
+                        <div key={group.disease} className="flex">
+                          {/* Disease name — single merged cell spanning all sub-rows */}
+                          <div className="w-[100px] shrink-0 flex items-center justify-center px-2 py-2 border-r border-border">
+                            <span className="text-xs font-medium text-text leading-snug text-center">
                               {group.disease}
-                            </div>
-                            <div className="col-span-12 border-l border-border/40" />
+                            </span>
                           </div>
 
-                          {/* Sub-rows */}
-                          <div className="divide-y divide-border">
+                          {/* Category sub-rows */}
+                          <div className="flex-1 min-w-0 divide-y divide-border">
                             {group.rows.map((row) => (
                               <div
                                 key={row.id}
-                                className={cn(GRID, "group/row", !row.is_active && "opacity-50")}
+                                className={cn(
+                                  "grid grid-cols-[120px_repeat(12,1fr)] group/row",
+                                  !row.is_active && "opacity-50",
+                                )}
                               >
-                                {renderRowNameCell(row, categoryName(row.row_name), true)}
+                                {renderRowNameCell(row, categoryName(row.row_name))}
                                 {renderMonthGrid(row, block.block_position)}
                               </div>
                             ))}
