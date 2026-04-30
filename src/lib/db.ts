@@ -392,10 +392,21 @@ export interface CalendarRowWithBars extends CalendarRow {
   bars: CalendarBar[];
 }
 
+export interface CalendarBlockNote {
+  id: number;
+  calendar_id: number;
+  block_position: number;
+  text: string;
+  is_visible: number;
+  position: number;
+  created_at: string;
+}
+
 export interface CalendarBlockGroup {
   block_name: string;
   block_position: number;
   rows: CalendarRowWithBars[];
+  notes?: CalendarBlockNote[];
 }
 
 export interface CalendarFullDetails {
@@ -417,7 +428,7 @@ export async function getCalendarFullDetails(
     .first<Calendar>();
   if (!calendar) return null;
 
-  const [request, rowsResult, barsResult] = await Promise.all([
+  const [request, rowsResult, barsResult, notesResult] = await Promise.all([
     db
       .prepare(`SELECT * FROM calendar_requests WHERE id = ?1`)
       .bind(calendar.request_id)
@@ -440,6 +451,14 @@ export async function getCalendarFullDetails(
       )
       .bind(calendarId)
       .all<CalendarBar>(),
+    db
+      .prepare(
+        `SELECT * FROM calendar_block_notes
+         WHERE calendar_id = ?1
+         ORDER BY block_position, position`,
+      )
+      .bind(calendarId)
+      .all<CalendarBlockNote>(),
   ]);
   if (!request) throw new DbError("Inconsistent data: request missing");
 
@@ -471,6 +490,13 @@ export async function getCalendarFullDetails(
     barsByRow.set(bar.calendar_row_id, list);
   }
 
+  const notesByBlock = new Map<number, CalendarBlockNote[]>();
+  for (const note of notesResult.results) {
+    const list = notesByBlock.get(note.block_position) ?? [];
+    list.push(note);
+    notesByBlock.set(note.block_position, list);
+  }
+
   const blocksMap = new Map<string, CalendarBlockGroup>();
   for (const row of rowsResult.results) {
     const key = `${row.block_position}|${row.block_name}`;
@@ -480,6 +506,7 @@ export async function getCalendarFullDetails(
         block_name: row.block_name,
         block_position: row.block_position,
         rows: [],
+        notes: notesByBlock.get(row.block_position) ?? [],
       };
       blocksMap.set(key, group);
     }
@@ -705,6 +732,8 @@ export async function createCalendarFromRequest(
     .bind(input.request_id)
     .run();
 
+  await insertDefaultBlockNotes(db, calendar.id);
+
   return calendar;
 }
 
@@ -918,6 +947,91 @@ export async function deleteCalendarBlock(
     )
     .bind(input.calendar_id, input.block_position)
     .run();
+}
+
+// =====================================================
+// CALENDAR BLOCK NOTES — create / update / delete
+// =====================================================
+
+const DEFAULT_BLOCK_NOTES: { block_position: number; text: string; position: number }[] = [
+  { block_position: 3, position: 1, text: "As doses reforço das vacinas devem ser administradas entre 21 e 30 dias após a 1ª dose;" },
+  { block_position: 3, position: 2, text: "A vacinação contra LINFADEITE CASEOSA não deve ser realizada em animais que já possuam a enfermidade, vacinar apenas os animais que tenham sido imunizados quando cordeiros;" },
+  { block_position: 3, position: 3, text: "A vacina contra leptospirose tem sua indicação de uso em todos os animais destinados à reprodução, entretanto, animais destinados ao abate, se mantidos junto ao rebanho, também devem ser vacinados;" },
+  { block_position: 3, position: 4, text: "ATENÇÃO: A dose reforço é obrigatória para todos os animais PRIMOVACINADOS (1ª vez). A partir do segundo ano, se já receberam a mesma vacina no ano anterior, não é necessário reforço em adultos;" },
+  { block_position: 3, position: 5, text: "OBS: Se mudar a marca da vacina, é obrigatório fazer dose reforço." },
+  { block_position: 4, position: 1, text: "Realizar a cura do umbigo com iodo 10% logo após o nascimento ou produto compatível + PROBEZERRO + CATOFÓS;" },
+  { block_position: 4, position: 2, text: "Recomendação de tratamento preventivo contra EIMERIOSE com uma dose entre 21 e 30 dias após o nascimento (produtos à base de Toltrazuril)." },
+  { block_position: 5, position: 1, text: "ATENÇÃO ao vermifugar ovelhas com prenhez positiva: usar droga compatível com a categoria." },
+];
+
+export async function insertDefaultBlockNotes(
+  db: D1Database,
+  calendarId: number,
+): Promise<void> {
+  const posResult = await db
+    .prepare(`SELECT DISTINCT block_position FROM calendar_rows WHERE calendar_id = ?1`)
+    .bind(calendarId)
+    .all<{ block_position: number }>();
+  const existing = new Set(posResult.results.map((r) => r.block_position));
+  const toInsert = DEFAULT_BLOCK_NOTES.filter((n) => existing.has(n.block_position));
+  if (toInsert.length === 0) return;
+  const stmt = db.prepare(
+    `INSERT INTO calendar_block_notes (calendar_id, block_position, text, is_visible, position)
+     VALUES (?1, ?2, ?3, 1, ?4)`,
+  );
+  await db.batch(toInsert.map((n) => stmt.bind(calendarId, n.block_position, n.text, n.position)));
+}
+
+export async function createCalendarBlockNote(
+  db: D1Database,
+  input: { calendar_id: number; block_position: number; text: string; position: number },
+): Promise<CalendarBlockNote> {
+  return insertReturning<CalendarBlockNote>(
+    db,
+    `INSERT INTO calendar_block_notes (calendar_id, block_position, text, is_visible, position)
+     VALUES (?1, ?2, ?3, 1, ?4)
+     RETURNING *`,
+    [input.calendar_id, input.block_position, input.text, input.position],
+    "create block note",
+  );
+}
+
+export async function updateCalendarBlockNote(
+  db: D1Database,
+  noteId: number,
+  input: { text?: string; is_visible?: number },
+): Promise<CalendarBlockNote> {
+  const existing = await db
+    .prepare(`SELECT * FROM calendar_block_notes WHERE id = ?1`)
+    .bind(noteId)
+    .first<CalendarBlockNote>();
+  if (!existing) throw new DbError("Note not found");
+  const updated = await db
+    .prepare(
+      `UPDATE calendar_block_notes
+       SET text = ?2, is_visible = ?3
+       WHERE id = ?1
+       RETURNING *`,
+    )
+    .bind(
+      noteId,
+      input.text !== undefined ? input.text : existing.text,
+      input.is_visible !== undefined ? input.is_visible : existing.is_visible,
+    )
+    .first<CalendarBlockNote>();
+  if (!updated) throw new DbError("Failed to update note");
+  return updated;
+}
+
+export async function deleteCalendarBlockNote(
+  db: D1Database,
+  noteId: number,
+): Promise<void> {
+  const result = await db
+    .prepare(`DELETE FROM calendar_block_notes WHERE id = ?1`)
+    .bind(noteId)
+    .run();
+  if (result.meta.changes === 0) throw new DbError("Note not found");
 }
 
 export async function publishCalendar(

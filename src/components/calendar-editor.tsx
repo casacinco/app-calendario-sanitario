@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, EyeOff, Plus, Pencil, Trash2, Check, X } from "lucide-react";
-import type { CalendarBar, CalendarBlockGroup, CalendarRow } from "@/lib/db";
+import type { CalendarBar, CalendarBlockGroup, CalendarBlockNote, CalendarRow } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { BarEditorDialog, type BarFormValue } from "@/components/bar-editor-dialog";
 
@@ -85,6 +85,9 @@ export function CalendarEditor({
   const [editingBlock, setEditingBlock] = useState<{ position: number; name: string } | null>(null);
   const [newRowState, setNewRowState]   = useState<{ blockPosition: number; blockName: string; value: string } | null>(null);
   const [newBlockName, setNewBlockName] = useState<string | null>(null);
+
+  const [editingNote, setEditingNote] = useState<{ id: number; text: string } | null>(null);
+  const [newNote, setNewNote]         = useState<{ blockPos: number; text: string } | null>(null);
 
   const canEdit = !readOnly && !!calendarId;
 
@@ -283,6 +286,67 @@ export function CalendarEditor({
       throw new Error(data.error ?? "Erro");
     }
     patchBlocks((prev) => prev.filter((b) => b.block_position !== blockPosition));
+  }
+
+  // ─── Note mutations ────────────────────────────────────────────────────────
+
+  function patchNotes(updater: (notes: CalendarBlockNote[], blockPos: number) => CalendarBlockNote[]) {
+    setBlocks((prev) =>
+      prev.map((b) => ({ ...b, notes: updater(b.notes ?? [], b.block_position) })),
+    );
+  }
+
+  async function createNote(blockPos: number, text: string) {
+    const block = blocks.find((b) => b.block_position === blockPos);
+    const maxPos = (block?.notes ?? []).reduce((m, n) => Math.max(m, n.position), 0);
+    const res = await fetch(`/api/admin/calendars/${calendarId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ block_position: blockPos, text, position: maxPos + 1 }),
+    });
+    const data = await res.json<{ note?: CalendarBlockNote; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+    setBlocks((prev) =>
+      prev.map((b) =>
+        b.block_position === blockPos
+          ? { ...b, notes: [...(b.notes ?? []), data.note!] }
+          : b,
+      ),
+    );
+  }
+
+  async function updateNote(noteId: number, patch: { text?: string; is_visible?: number }) {
+    const res = await fetch(`/api/admin/notes/${noteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const data = await res.json<{ note?: CalendarBlockNote; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+    const updated = data.note!;
+    patchNotes((notes) => notes.map((n) => (n.id === updated.id ? updated : n)));
+  }
+
+  async function doDeleteNote(noteId: number) {
+    if (!window.confirm("Remover esta observação?")) return;
+    const res = await fetch(`/api/admin/notes/${noteId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json<{ error?: string }>();
+      throw new Error(data.error ?? "Erro");
+    }
+    patchNotes((notes) => notes.filter((n) => n.id !== noteId));
+  }
+
+  function submitNewNote() {
+    if (!newNote?.text.trim()) { setNewNote(null); return; }
+    createNote(newNote.blockPos, newNote.text.trim()).catch(() => null);
+    setNewNote(null);
+  }
+
+  function submitEditNote() {
+    if (!editingNote?.text.trim()) { setEditingNote(null); return; }
+    updateNote(editingNote.id, { text: editingNote.text.trim() }).catch(() => null);
+    setEditingNote(null);
   }
 
   // ─── Dialog helpers ─────────────────────────────────────────────────────────
@@ -655,6 +719,128 @@ export function CalendarEditor({
                     <Plus className="h-3 w-3" /> Adicionar manejo
                   </button>
                 )}
+
+                {/* Observações do bloco */}
+                {(() => {
+                  const visibleNotes = canEdit
+                    ? (block.notes ?? [])
+                    : (block.notes ?? []).filter((n) => n.is_visible === 1);
+                  if (visibleNotes.length === 0 && !canEdit) return null;
+                  return (
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
+                        Observações do bloco
+                      </p>
+                      <div className="space-y-1">
+                        {visibleNotes.map((note) => (
+                          <div key={note.id} className="flex items-start gap-2 group/note">
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => updateNote(note.id, { is_visible: note.is_visible === 1 ? 0 : 1 }).catch(() => null)}
+                                className={cn(
+                                  "mt-0.5 shrink-0 transition-colors",
+                                  note.is_visible ? "text-text-muted hover:text-text" : "text-text-muted/30 hover:text-text-muted",
+                                )}
+                                title={note.is_visible ? "Ocultar do cliente" : "Mostrar ao cliente"}
+                              >
+                                {note.is_visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                              </button>
+                            )}
+
+                            {canEdit && editingNote?.id === note.id ? (
+                              <div className="flex items-start gap-1 flex-1">
+                                <textarea
+                                  autoFocus
+                                  rows={3}
+                                  value={editingNote.text}
+                                  onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Escape") setEditingNote(null);
+                                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitEditNote();
+                                  }}
+                                  className="flex-1 text-xs bg-bg border border-border rounded px-2 py-1 resize-none focus:outline-none focus:border-text-muted"
+                                />
+                                <div className="flex flex-col gap-1 shrink-0 pt-0.5">
+                                  <button type="button" onClick={submitEditNote} className="text-green hover:opacity-80">
+                                    <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button type="button" onClick={() => setEditingNote(null)} className="text-text-muted hover:text-text">
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className={cn(
+                                  "flex-1 text-xs leading-relaxed",
+                                  note.is_visible ? "text-text" : "text-text-muted/40",
+                                )}>
+                                  {note.text}
+                                </p>
+                                {canEdit && (
+                                  <div className="flex gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingNote({ id: note.id, text: note.text })}
+                                      className="text-text-muted hover:text-text"
+                                      title="Editar"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => doDeleteNote(note.id).catch(() => null)}
+                                      className="text-text-muted hover:text-red"
+                                      title="Remover"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {canEdit && (
+                        newNote?.blockPos === block.block_position ? (
+                          <div className="flex items-start gap-1.5 pt-0.5">
+                            <textarea
+                              autoFocus
+                              rows={2}
+                              value={newNote.text}
+                              onChange={(e) => setNewNote({ ...newNote, text: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape") setNewNote(null);
+                                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitNewNote();
+                              }}
+                              placeholder="Texto da observação..."
+                              className="flex-1 text-xs bg-bg border border-border rounded px-2 py-1 resize-none focus:outline-none focus:border-text-muted"
+                            />
+                            <div className="flex flex-col gap-1 shrink-0 pt-0.5">
+                              <button type="button" onClick={submitNewNote} className="text-green hover:opacity-80">
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button type="button" onClick={() => setNewNote(null)} className="text-text-muted hover:text-text">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setNewNote({ blockPos: block.block_position, text: "" })}
+                            className="text-xs text-text-muted hover:text-text flex items-center gap-1 pt-0.5"
+                          >
+                            <Plus className="h-3 w-3" /> Adicionar observação
+                          </button>
+                        )
+                      )}
+                    </div>
+                  );
+                })()}
               </section>
             );
           })}
