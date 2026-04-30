@@ -708,6 +708,128 @@ export function CalendarEditor({
                       </div>
                     )}
                   </div>
+
+                  {/* Observações do bloco */}
+                  {(() => {
+                    const visibleNotes = canEdit
+                      ? (block.notes ?? [])
+                      : (block.notes ?? []).filter((n) => n.is_visible === 1);
+                    if (visibleNotes.length === 0 && !canEdit) return null;
+                    return (
+                      <div className="border-t border-border px-4 py-3 space-y-2.5">
+                        <p className="text-xs font-medium text-text-muted">
+                          Observações do bloco
+                        </p>
+                        <div className="space-y-1.5">
+                          {visibleNotes.map((note) => (
+                            <div key={note.id} className="flex items-start gap-2 group/note">
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateNote(note.id, { is_visible: note.is_visible === 1 ? 0 : 1 }).catch(() => null)}
+                                  className={cn(
+                                    "mt-0.5 shrink-0 transition-colors",
+                                    note.is_visible ? "text-text-muted hover:text-text" : "text-text-muted/30 hover:text-text-muted",
+                                  )}
+                                  title={note.is_visible ? "Ocultar do cliente" : "Mostrar ao cliente"}
+                                >
+                                  {note.is_visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                                </button>
+                              )}
+
+                              {canEdit && editingNote?.id === note.id ? (
+                                <div className="flex items-start gap-1 flex-1">
+                                  <textarea
+                                    autoFocus
+                                    rows={3}
+                                    value={editingNote.text}
+                                    onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") setEditingNote(null);
+                                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitEditNote();
+                                    }}
+                                    className="flex-1 text-xs bg-bg border border-border rounded px-2 py-1 resize-none focus:outline-none focus:border-text-muted"
+                                  />
+                                  <div className="flex flex-col gap-1 shrink-0 pt-0.5">
+                                    <button type="button" onClick={submitEditNote} className="text-green hover:opacity-80">
+                                      <Check className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button type="button" onClick={() => setEditingNote(null)} className="text-text-muted hover:text-text">
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className={cn(
+                                    "flex-1 text-xs leading-relaxed",
+                                    note.is_visible ? "text-text" : "text-text-muted/40",
+                                  )}>
+                                    {note.text}
+                                  </p>
+                                  {canEdit && (
+                                    <div className="flex gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingNote({ id: note.id, text: note.text })}
+                                        className="text-text-muted hover:text-text"
+                                        title="Editar"
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => doDeleteNote(note.id).catch(() => null)}
+                                        className="text-text-muted hover:text-red"
+                                        title="Remover"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {canEdit && (
+                          newNote?.blockPos === block.block_position ? (
+                            <div className="flex items-start gap-1.5">
+                              <textarea
+                                autoFocus
+                                rows={2}
+                                value={newNote.text}
+                                onChange={(e) => setNewNote({ ...newNote, text: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Escape") setNewNote(null);
+                                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitNewNote();
+                                }}
+                                placeholder="Texto da observação..."
+                                className="flex-1 text-xs bg-bg border border-border rounded px-2 py-1 resize-none focus:outline-none focus:border-text-muted"
+                              />
+                              <div className="flex flex-col gap-1 shrink-0 pt-0.5">
+                                <button type="button" onClick={submitNewNote} className="text-green hover:opacity-80">
+                                  <Check className="h-3.5 w-3.5" />
+                                </button>
+                                <button type="button" onClick={() => setNewNote(null)} className="text-text-muted hover:text-text">
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setNewNote({ blockPos: block.block_position, text: "" })}
+                              className="text-xs text-text-muted hover:text-text flex items-center gap-1"
+                            >
+                              <Plus className="h-3 w-3" /> Adicionar observação
+                            </button>
+                          )
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Add row button */}
@@ -720,127 +842,6 @@ export function CalendarEditor({
                   </button>
                 )}
 
-                {/* Observações do bloco */}
-                {(() => {
-                  const visibleNotes = canEdit
-                    ? (block.notes ?? [])
-                    : (block.notes ?? []).filter((n) => n.is_visible === 1);
-                  if (visibleNotes.length === 0 && !canEdit) return null;
-                  return (
-                    <div className="mt-3 space-y-1.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
-                        Observações do bloco
-                      </p>
-                      <div className="space-y-1">
-                        {visibleNotes.map((note) => (
-                          <div key={note.id} className="flex items-start gap-2 group/note">
-                            {canEdit && (
-                              <button
-                                type="button"
-                                onClick={() => updateNote(note.id, { is_visible: note.is_visible === 1 ? 0 : 1 }).catch(() => null)}
-                                className={cn(
-                                  "mt-0.5 shrink-0 transition-colors",
-                                  note.is_visible ? "text-text-muted hover:text-text" : "text-text-muted/30 hover:text-text-muted",
-                                )}
-                                title={note.is_visible ? "Ocultar do cliente" : "Mostrar ao cliente"}
-                              >
-                                {note.is_visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                              </button>
-                            )}
-
-                            {canEdit && editingNote?.id === note.id ? (
-                              <div className="flex items-start gap-1 flex-1">
-                                <textarea
-                                  autoFocus
-                                  rows={3}
-                                  value={editingNote.text}
-                                  onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Escape") setEditingNote(null);
-                                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitEditNote();
-                                  }}
-                                  className="flex-1 text-xs bg-bg border border-border rounded px-2 py-1 resize-none focus:outline-none focus:border-text-muted"
-                                />
-                                <div className="flex flex-col gap-1 shrink-0 pt-0.5">
-                                  <button type="button" onClick={submitEditNote} className="text-green hover:opacity-80">
-                                    <Check className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button type="button" onClick={() => setEditingNote(null)} className="text-text-muted hover:text-text">
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <p className={cn(
-                                  "flex-1 text-xs leading-relaxed",
-                                  note.is_visible ? "text-text" : "text-text-muted/40",
-                                )}>
-                                  {note.text}
-                                </p>
-                                {canEdit && (
-                                  <div className="flex gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity shrink-0 mt-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingNote({ id: note.id, text: note.text })}
-                                      className="text-text-muted hover:text-text"
-                                      title="Editar"
-                                    >
-                                      <Pencil className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => doDeleteNote(note.id).catch(() => null)}
-                                      className="text-text-muted hover:text-red"
-                                      title="Remover"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {canEdit && (
-                        newNote?.blockPos === block.block_position ? (
-                          <div className="flex items-start gap-1.5 pt-0.5">
-                            <textarea
-                              autoFocus
-                              rows={2}
-                              value={newNote.text}
-                              onChange={(e) => setNewNote({ ...newNote, text: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === "Escape") setNewNote(null);
-                                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submitNewNote();
-                              }}
-                              placeholder="Texto da observação..."
-                              className="flex-1 text-xs bg-bg border border-border rounded px-2 py-1 resize-none focus:outline-none focus:border-text-muted"
-                            />
-                            <div className="flex flex-col gap-1 shrink-0 pt-0.5">
-                              <button type="button" onClick={submitNewNote} className="text-green hover:opacity-80">
-                                <Check className="h-3.5 w-3.5" />
-                              </button>
-                              <button type="button" onClick={() => setNewNote(null)} className="text-text-muted hover:text-text">
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setNewNote({ blockPos: block.block_position, text: "" })}
-                            className="text-xs text-text-muted hover:text-text flex items-center gap-1 pt-0.5"
-                          >
-                            <Plus className="h-3 w-3" /> Adicionar observação
-                          </button>
-                        )
-                      )}
-                    </div>
-                  );
-                })()}
               </section>
             );
           })}
