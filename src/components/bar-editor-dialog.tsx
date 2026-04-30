@@ -8,14 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const COLORS = [
-  "#2BA152", // verde
-  "#FF2B2B", // vermelho
-  "#3B82F6", // azul
-  "#F59E0B", // âmbar
-  "#8B5CF6", // roxo
-  "#EC4899", // pink
-  "#06B6D4", // ciano
-  "#9CA3AF", // cinza
+  "#5FAF3E", // verde
+  "#E67E22", // laranja
+  "#6C3BFF", // roxo
+  "#E53935", // vermelho
+  "#2D9CDB", // azul
+  "#4F4F4F", // cinza escuro
+  "#FF5C5C", // vermifugação
 ];
 
 const MONTH_LABELS = [

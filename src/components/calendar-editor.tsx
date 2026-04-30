@@ -5,6 +5,7 @@ import { Eye, EyeOff, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import type { CalendarBar, CalendarBlockGroup, CalendarBlockNote, CalendarRow } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { BarEditorDialog, type BarFormValue } from "@/components/bar-editor-dialog";
+import { rowColor } from "@/lib/row-colors";
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const SEP = /^(.+?)\s*—\s*(.+)$/;
@@ -104,6 +105,14 @@ export function CalendarEditor({
       }
     }
     return undefined;
+  }
+
+  function findRowInfo(rowId: number): { rowName: string; blockName: string } | null {
+    for (const block of blocks) {
+      const row = block.rows.find((r) => r.id === rowId);
+      if (row) return { rowName: row.row_name, blockName: block.block_name };
+    }
+    return null;
   }
 
   // ─── Bar mutations ──────────────────────────────────────────────────────────
@@ -374,7 +383,10 @@ export function CalendarEditor({
         start_month:     1,
         end_month:       1,
         label:           "",
-        color:           "#2BA152",
+        color:           (() => {
+          const info = findRowInfo(dialog.rowId);
+          return info ? rowColor(info.rowName, info.blockName).bg : "#4F4F4F";
+        })(),
         description:     "",
         animal_category: "",
       };
@@ -434,7 +446,7 @@ export function CalendarEditor({
                         start_month: i + 1,
                         end_month: i + 1,
                         label: null,
-                        color: "#2BA152",
+                        color: rowColor(row.row_name, block.block_name).bg,
                         alert: 0,
                         position: 0,
                         description: null,

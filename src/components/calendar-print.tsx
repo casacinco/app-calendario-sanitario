@@ -1,51 +1,11 @@
 import type { CalendarBar, CalendarBlockGroup } from "@/lib/db";
 import { PrintButton } from "@/components/print-button";
+import { diseaseColor, rowColor, type LabelStyle } from "@/lib/row-colors";
 
 // ─── Meses ────────────────────────────────────────────────────────────────────
 
 const MONTHS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 const SEP    = /^(.+?)\s*—\s*(.+)$/;
-
-// ─── Sistema de cores ─────────────────────────────────────────────────────────
-
-type LabelStyle = { bg: string; text: string };
-
-// Cor de uma doença (vacina). Retorna null se não reconhecer.
-function diseaseColor(name: string): LabelStyle | null {
-  const n = name.toUpperCase().trim();
-  if (n.includes("PASTEUREL"))               return { bg: "#5FAF3E", text: "#FFFFFF" };
-  if (n.includes("CLOSTRIDI"))               return { bg: "#E67E22", text: "#FFFFFF" };
-  if (n.includes("LEPTOSPIR"))               return { bg: "#6C3BFF", text: "#FFFFFF" };
-  if (n === "RAIVA" || n.startsWith("RAIVA"))return { bg: "#E53935", text: "#FFFFFF" };
-  if (n.includes("LINFADENIT")||n.includes("CASEOSA")) return { bg: "#2D9CDB", text: "#FFFFFF" };
-  return null;
-}
-
-// Cor de uma linha independente (sem herança de doença).
-function rowColor(rowName: string, blockName: string): LabelStyle {
-  const r = rowName.toUpperCase().trim();
-  const b = blockName.toUpperCase();
-
-  // Pode ser uma doença ela mesma (ex: linha única "Raiva")
-  const dc = diseaseColor(r);
-  if (dc) return dc;
-
-  // Programação reprodutiva
-  if (r.includes("ESTAÇÃO DE MONTA") || r.includes("ESTACAO DE MONTA") || r.includes("MONTA"))
-    return { bg: "#5FAF3E", text: "#FFFFFF" };
-  if (r.includes("NASCIMENTO"))  return { bg: "#2D9CDB", text: "#FFFFFF" };
-  if (r.includes("DESMAMA"))     return { bg: "#E53935", text: "#FFFFFF" };
-
-  // Manejo neonato
-  if (r.includes("UMBIGO") || r.includes("CURA"))   return { bg: "#4F4F4F", text: "#FFFFFF" };
-  if (r.includes("EIMERIOSE"))                       return { bg: "#6C3BFF", text: "#FFFFFF" };
-
-  // Vermifugação — todas as linhas do bloco, inclusive Cordeiros/Adultos/Ovelhas
-  if (b.includes("VERMIF")) return { bg: "#FF5C5C", text: "#FFFFFF" };
-
-  // Fallback técnico (sem cinza neutro)
-  return { bg: "#4F4F4F", text: "#FFFFFF" };
-}
 
 // ─── Rótulo da primeira coluna por bloco ─────────────────────────────────────
 
