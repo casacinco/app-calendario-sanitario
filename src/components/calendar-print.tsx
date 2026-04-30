@@ -103,14 +103,6 @@ function catName(rowName: string): string {
 
 // ─── Barra ────────────────────────────────────────────────────────────────────
 
-function barFontSize(label: string, spanMonths: number): string {
-  const density = label.length / spanMonths;
-  if (density > 18) return "5px";
-  if (density > 12) return "6px";
-  if (density > 8)  return "6.5px";
-  return "7px";
-}
-
 function BarTrack({ bars }: { bars: CalendarBar[] }) {
   return (
     <div style={{ position: "relative", height: "100%", minHeight: "18px" }}>
@@ -121,12 +113,19 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
         ))}
       </div>
 
-      {/* Barras */}
+      {/* Barras — usa o mesmo campo que o editor: description ?? label */}
       {bars.map((bar) => {
-        const left  = ((bar.start_month - 1) / 12) * 100;
-        const width = ((bar.end_month - bar.start_month + 1) / 12) * 100;
-        const span  = bar.end_month - bar.start_month + 1;
-        const fs    = bar.label ? barFontSize(bar.label, span) : "7px";
+        const left        = ((bar.start_month - 1) / 12) * 100;
+        const width       = ((bar.end_month - bar.start_month + 1) / 12) * 100;
+        const span        = bar.end_month - bar.start_month + 1;
+        const displayText = bar.description ?? bar.label;
+        const density     = (displayText?.length ?? 0) / span;
+        const fontSize    =
+          density > 20 ? "7px"  :
+          density > 14 ? "8px"  :
+          density > 10 ? "9px"  :
+          density > 8  ? "10px" :
+          density > 6  ? "11px" : "12px";
         return (
           <div
             key={bar.id}
@@ -144,15 +143,14 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
               zIndex: 1,
             }}
           >
-            {bar.label && (
+            {displayText && (
               <span style={{
-                fontSize: fs,
+                fontSize,
                 fontWeight: "700",
                 color: bar.alert ? "#fff" : "rgba(0,0,0,0.85)",
                 lineHeight: 1,
-                letterSpacing: 0,
               }}>
-                {bar.label}
+                {displayText}
               </span>
             )}
           </div>
