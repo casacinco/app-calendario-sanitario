@@ -422,7 +422,7 @@ export function CalendarEditor({
 
   // ─── Row cell renderers ─────────────────────────────────────────────────────
 
-  function renderMonthGrid(row: CalendarRowWithBars, blockPosition: number) {
+  function renderMonthGrid(row: CalendarRowWithBars, blockPosition: number, blockName: string) {
     return (
       <div className="col-span-12 relative min-h-10 border-l border-border">
         <div className="absolute inset-0 grid grid-cols-12">
@@ -446,7 +446,7 @@ export function CalendarEditor({
                         start_month: i + 1,
                         end_month: i + 1,
                         label: null,
-                        color: rowColor(row.row_name, block.block_name).bg,
+                        color: rowColor(row.row_name, blockName).bg,
                         alert: 0,
                         position: 0,
                         description: null,
@@ -659,7 +659,7 @@ export function CalendarEditor({
                             )}
                           >
                             {renderRowNameCell(row, row.row_name)}
-                            {renderMonthGrid(row, block.block_position)}
+                            {renderMonthGrid(row, block.block_position, block.block_name)}
                           </div>
                         );
                       }
@@ -686,7 +686,7 @@ export function CalendarEditor({
                                 )}
                               >
                                 {renderRowNameCell(row, categoryName(row.row_name))}
-                                {renderMonthGrid(row, block.block_position)}
+                                {renderMonthGrid(row, block.block_position, block.block_name)}
                               </div>
                             ))}
                           </div>
