@@ -399,16 +399,19 @@ export function CalendarEditor({
           const displayText = bar.description ?? bar.label;
           const density = (displayText?.length ?? 0) / span;
           const fontSize =
-            density > 8 ? "8px" :
-            density > 6 ? "9px" :
-            density > 4 ? "10px" : "11px";
+            density > 20 ? "5px" :
+            density > 14 ? "6px" :
+            density > 10 ? "7px" :
+            density > 8  ? "8px" :
+            density > 6  ? "9px" :
+            density > 4  ? "10px" : "11px";
           return (
             <button
               key={bar.id}
               type="button"
               onClick={(e) => { e.stopPropagation(); openEdit(row.id, bar); }}
               disabled={readOnly}
-              className="absolute top-1.5 bottom-1.5 rounded-sm flex items-center justify-center px-2 font-medium overflow-hidden hover:ring-2 hover:ring-white/40 transition-all"
+              className="absolute top-1.5 bottom-1.5 rounded-sm flex items-center justify-center px-1 font-medium hover:ring-2 hover:ring-white/40 transition-all z-10"
               style={{
                 left: `calc(${left}% + 2px)`,
                 width: `calc(${width}% - 4px)`,

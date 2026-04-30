@@ -44,10 +44,11 @@ const PRESETS_BY_BLOCK: Record<number, Preset[]> = {
     { label: "Prevenção de eimeriose",             description: "Prevenção de eimeriose" },
   ],
   5: [ // Vermifugação
-    { label: "Dose",                           description: "Dose" },
-    { label: "Dose + Reforço",                 description: "Dose + Reforço" },
-    { label: "Dose + Reforço + Apartação",     description: "Dose + Reforço + Apartação" },
-    { label: "Terço final gestação + Reforço", description: "Terço final gestação + Reforço" },
+    { label: "DOSE",                           description: "DOSE" },
+    { label: "DOSE + REFORÇO",                 description: "DOSE + REFORÇO" },
+    { label: "DOSE + REFORÇO AOS 30 DIAS",     description: "DOSE + REFORÇO AOS 30 DIAS" },
+    { label: "DOSE + REFORÇO + APARTAÇÃO",     description: "DOSE + REFORÇO + APARTAÇÃO" },
+    { label: "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)", description: "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)" },
   ],
 };
 
