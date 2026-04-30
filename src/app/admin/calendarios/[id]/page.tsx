@@ -228,9 +228,18 @@ export default async function CalendarPage({ params }: PageProps) {
             {totalBars} barras
           </p>
         </div>
-        {calendar.status === "draft" && (
-          <PublishButton calendarId={calendar.id} />
-        )}
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/calendarios/${calendar.id}/print`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-text-muted hover:text-text hover:border-text/30 transition-colors"
+          >
+            Imprimir / Ver calendário ↗
+          </Link>
+          {calendar.status === "draft" && (
+            <PublishButton calendarId={calendar.id} />
+          )}
+        </div>
       </header>
 
       {/* Contexto do produtor */}
