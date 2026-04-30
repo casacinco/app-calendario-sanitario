@@ -1,80 +1,72 @@
 import type { CalendarBar, CalendarBlockGroup } from "@/lib/db";
 import { PrintButton } from "@/components/print-button";
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// ─── Meses ────────────────────────────────────────────────────────────────────
 
 const MONTHS = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
-const SEP = /^(.+?)\s*—\s*(.+)$/;
+const SEP    = /^(.+?)\s*—\s*(.+)$/;
 
-// ─── Cores de rótulo por nome de linha ───────────────────────────────────────
+// ─── Sistema de cores ─────────────────────────────────────────────────────────
 
 type LabelStyle = { bg: string; text: string };
 
-const DISEASE_MAP: [string, LabelStyle][] = [
-  ["PASTEUREL",         { bg: "#5FAF3E", text: "#FFFFFF" }],
-  ["CLOSTRIDI",         { bg: "#E67E22", text: "#FFFFFF" }],
-  ["LEPTOSPIR",         { bg: "#6C3BFF", text: "#FFFFFF" }],
-  ["RAIVA",             { bg: "#E53935", text: "#FFFFFF" }],
-  ["LINFADENIT",        { bg: "#2D9CDB", text: "#FFFFFF" }],
-  ["CASEOSA",           { bg: "#2D9CDB", text: "#FFFFFF" }],
-];
+// Cor de uma doença (vacina). Retorna null se não reconhecer.
+function diseaseColor(name: string): LabelStyle | null {
+  const n = name.toUpperCase().trim();
+  if (n.includes("PASTEUREL"))               return { bg: "#5FAF3E", text: "#FFFFFF" };
+  if (n.includes("CLOSTRIDI"))               return { bg: "#E67E22", text: "#FFFFFF" };
+  if (n.includes("LEPTOSPIR"))               return { bg: "#6C3BFF", text: "#FFFFFF" };
+  if (n === "RAIVA" || n.startsWith("RAIVA"))return { bg: "#E53935", text: "#FFFFFF" };
+  if (n.includes("LINFADENIT")||n.includes("CASEOSA")) return { bg: "#2D9CDB", text: "#FFFFFF" };
+  return null;
+}
 
-const ROW_MAP: [string, LabelStyle][] = [
-  ["ESTAÇÃO DE MONTA",  { bg: "#5FAF3E", text: "#FFFFFF" }],
-  ["ESTACAO DE MONTA",  { bg: "#5FAF3E", text: "#FFFFFF" }],
-  ["NASCIMENTO",        { bg: "#2D9CDB", text: "#FFFFFF" }],
-  ["DESMAMA",           { bg: "#E53935", text: "#FFFFFF" }],
-  ["EIMERIOSE",         { bg: "#6C3BFF", text: "#FFFFFF" }],
-];
+// Cor de uma linha independente (sem herança de doença).
+function rowColor(rowName: string, blockName: string): LabelStyle {
+  const r = rowName.toUpperCase().trim();
+  const b = blockName.toUpperCase();
 
-const SUBLINHA: LabelStyle = { bg: "#F2F2F2", text: "#000000" };
-const VERMI:    LabelStyle = { bg: "#FF5C5C", text: "#FFFFFF" };
-const DEFAULT:  LabelStyle = { bg: "#F2F2F2", text: "#000000" };
+  // Pode ser uma doença ela mesma (ex: linha única "Raiva")
+  const dc = diseaseColor(r);
+  if (dc) return dc;
 
-function labelStyle(name: string, blockName: string): LabelStyle {
-  const upper = name.toUpperCase().trim();
-  const block = blockName.toUpperCase();
+  // Programação reprodutiva
+  if (r.includes("ESTAÇÃO DE MONTA") || r.includes("ESTACAO DE MONTA") || r.includes("MONTA"))
+    return { bg: "#5FAF3E", text: "#FFFFFF" };
+  if (r.includes("NASCIMENTO"))  return { bg: "#2D9CDB", text: "#FFFFFF" };
+  if (r.includes("DESMAMA"))     return { bg: "#E53935", text: "#FFFFFF" };
 
-  for (const [key, style] of DISEASE_MAP) {
-    if (upper.includes(key)) return style;
-  }
+  // Manejo neonato
+  if (r.includes("UMBIGO") || r.includes("CURA"))   return { bg: "#4F4F4F", text: "#FFFFFF" };
+  if (r.includes("EIMERIOSE"))                       return { bg: "#6C3BFF", text: "#FFFFFF" };
 
-  // Sub-linhas de vacinação
-  if (
-    upper === "ADULTOS" || upper === "CORDEIROS" || upper === "MATRIZES" ||
-    upper.startsWith("OVELHAS") || upper === "REPRODUTORES"
-  ) return SUBLINHA;
+  // Vermifugação — todas as linhas do bloco, inclusive Cordeiros/Adultos/Ovelhas
+  if (b.includes("VERMIF")) return { bg: "#FF5C5C", text: "#FFFFFF" };
 
-  for (const [key, style] of ROW_MAP) {
-    if (upper.includes(key)) return style;
-  }
-
-  if (block.includes("VERMIF")) return VERMI;
-
-  return DEFAULT;
+  // Fallback técnico (sem cinza neutro)
+  return { bg: "#4F4F4F", text: "#FFFFFF" };
 }
 
 // ─── Rótulo da primeira coluna por bloco ─────────────────────────────────────
 
 function colLabel(blockName: string): string {
   const b = blockName.toUpperCase();
-  if (b.includes("DISTRIBUI"))                            return "";
+  if (b.includes("DISTRIBUI"))                             return "";
   if (b.includes("REPRODU") || b.includes("PROGRAMAÇÃO")) return "ATIVIDADES";
-  if (b.includes("VACIN"))                                return "VACINAS";
-  if (b.includes("NEONATO") || b.includes("MANEJO COM")) return "MANEJOS";
-  if (b.includes("VERMIF"))                               return "MANEJOS";
+  if (b.includes("VACIN"))                                 return "VACINAS";
+  if (b.includes("NEONATO") || b.includes("MANEJO COM"))  return "MANEJOS";
+  if (b.includes("VERMIF"))                                return "MANEJOS";
   return "";
 }
 
 // ─── Agrupamento por doença ───────────────────────────────────────────────────
 
 type Row = CalendarBlockGroup["rows"][number];
-
 type RowGroup =
   | { type: "single"; row: Row }
-  | { type: "group";  disease: string; rows: Row[] };
+  | { type: "group";  disease: string; color: LabelStyle; rows: Row[] };
 
-function groupRows(rows: Row[]): RowGroup[] {
+function groupRows(rows: Row[], blockName: string): RowGroup[] {
   const counts = new Map<string, number>();
   for (const row of rows) {
     const m = row.row_name.match(SEP);
@@ -88,9 +80,12 @@ function groupRows(rows: Row[]): RowGroup[] {
       const disease = m[1]!.trim();
       if (!seen.has(disease)) {
         seen.add(disease);
+        // A cor das sublinhas herda a cor da doença
+        const color = diseaseColor(disease) ?? rowColor(disease, blockName);
         result.push({
           type: "group",
           disease,
+          color,
           rows: rows.filter((r) => { const rm = r.row_name.match(SEP); return rm && rm[1]!.trim() === disease; }),
         });
       }
@@ -108,40 +103,55 @@ function catName(rowName: string): string {
 
 // ─── Barra ────────────────────────────────────────────────────────────────────
 
+function barFontSize(label: string, spanMonths: number): string {
+  const density = label.length / spanMonths;
+  if (density > 18) return "5px";
+  if (density > 12) return "6px";
+  if (density > 8)  return "6.5px";
+  return "7px";
+}
+
 function BarTrack({ bars }: { bars: CalendarBar[] }) {
   return (
-    <div style={{ position: "relative", height: "100%", minHeight: "18px" }}>
+    <div style={{ position: "relative", height: "100%", minHeight: "18px", overflow: "hidden" }}>
       {/* Grade vertical */}
       <div style={{ position: "absolute", inset: 0, display: "flex" }}>
         {Array.from({ length: 12 }).map((_, i) => (
-          <div
-            key={i}
-            style={{ flex: 1, borderLeft: i === 0 ? "none" : "1px solid #D9D9D9" }}
-          />
+          <div key={i} style={{ flex: 1, borderLeft: i === 0 ? "none" : "1px solid #D9D9D9" }} />
         ))}
       </div>
 
+      {/* Barras */}
       {bars.map((bar) => {
         const left  = ((bar.start_month - 1) / 12) * 100;
         const width = ((bar.end_month - bar.start_month + 1) / 12) * 100;
+        const span  = bar.end_month - bar.start_month + 1;
+        const fs    = bar.label ? barFontSize(bar.label, span) : "7px";
         return (
           <div
             key={bar.id}
             style={{
               position: "absolute",
               top: "2px", bottom: "2px",
-              left: `calc(${left}% + 1px)`,
+              left:  `calc(${left}% + 1px)`,
               width: `calc(${width}% - 2px)`,
               background: bar.alert ? "#c0392b" : bar.color,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              overflow: "hidden",
+              overflow: "visible",
               whiteSpace: "nowrap",
+              zIndex: 1,
             }}
           >
             {bar.label && (
-              <span style={{ fontSize: "7px", fontWeight: "700", color: bar.alert ? "#fff" : "rgba(0,0,0,0.85)", lineHeight: 1, letterSpacing: "0" }}>
+              <span style={{
+                fontSize: fs,
+                fontWeight: "700",
+                color: bar.alert ? "#fff" : "rgba(0,0,0,0.85)",
+                lineHeight: 1,
+                letterSpacing: 0,
+              }}>
                 {bar.label}
               </span>
             )}
@@ -154,92 +164,73 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
 
 // ─── Tabela de bloco ──────────────────────────────────────────────────────────
 
-const GRID_BORDER = "1px solid #D9D9D9";
-const ROW_H = "17px";
+const BORDER    = "1px solid #D9D9D9";
+const ROW_H     = "18px";
+const MONTH_BG  = "#E67E22";   // fundo da linha de meses — laranja em todos os blocos
 
 function BlockTable({ block }: { block: CalendarBlockGroup }) {
-  const groups      = groupRows(block.rows);
-  const colLbl      = colLabel(block.block_name);
-  const visNotes    = (block.notes ?? []).filter((n) => n.is_visible === 1);
+  const groups   = groupRows(block.rows, block.block_name);
+  const lbl      = colLabel(block.block_name);
+  const visNotes = (block.notes ?? []).filter((n) => n.is_visible === 1);
 
-  const tdLabel = (style: LabelStyle, text: string, extra?: React.CSSProperties): React.CSSProperties => ({
-    background: style.bg,
-    color:      style.text,
-    padding:    "2px 5px",
-    fontSize:   "7px",
-    fontWeight: "600",
-    verticalAlign: "middle",
-    lineHeight: "1.2",
-    borderRight: GRID_BORDER,
-    borderBottom: GRID_BORDER,
-    whiteSpace: "normal",
-    ...extra,
-  });
+  function cell(ls: LabelStyle, content: string, extra?: React.CSSProperties): React.CSSProperties {
+    return {
+      background:    ls.bg,
+      color:         ls.text,
+      padding:       "2px 5px",
+      fontSize:      "7px",
+      fontWeight:    "600",
+      verticalAlign: "middle",
+      lineHeight:    "1.2",
+      borderRight:   BORDER,
+      borderBottom:  BORDER,
+      whiteSpace:    "normal",
+      wordBreak:     "break-word",
+      ...extra,
+    };
+  }
 
   return (
     <div style={{ marginBottom: "5px", breakInside: "avoid", pageBreakInside: "avoid" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", border: GRID_BORDER }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", border: BORDER }}>
         <colgroup>
-          <col style={{ width: "8%" }} />   {/* doença */}
-          <col style={{ width: "11%" }} />  {/* categoria/nome */}
-          {Array.from({ length: 12 }).map((_, i) => (
-            <col key={i} style={{ width: "6.75%" }} />
-          ))}
+          <col style={{ width: "8%" }} />
+          <col style={{ width: "12%" }} />
+          {Array.from({ length: 12 }).map((_, i) => <col key={i} style={{ width: "6.67%" }} />)}
         </colgroup>
 
         <thead>
-          {/* Título do bloco — fundo #000 */}
+          {/* Título do bloco */}
           <tr>
-            <th
-              colSpan={14}
-              style={{
-                background: "#000000",
-                color: "#FFFFFF",
-                textAlign: "center",
-                padding: "4px 8px",
-                fontSize: "8px",
-                fontWeight: "700",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                borderBottom: GRID_BORDER,
-              }}
-            >
+            <th colSpan={14} style={{
+              background: "#000000", color: "#FFFFFF",
+              textAlign: "center", padding: "4px 8px",
+              fontSize: "8px", fontWeight: "700",
+              letterSpacing: "0.08em", textTransform: "uppercase",
+              borderBottom: BORDER,
+            }}>
               {block.block_name}
             </th>
           </tr>
 
-          {/* Cabeçalho dos meses */}
+          {/* Linha dos meses — fundo laranja */}
           <tr>
-            <th
-              colSpan={2}
-              style={{
-                background: "#000000",
-                color: "#FFFFFF",
-                padding: "2px 5px",
-                fontSize: "6.5px",
-                fontWeight: "700",
-                textAlign: "center",
-                letterSpacing: "0.06em",
-                borderRight: GRID_BORDER,
-                borderBottom: GRID_BORDER,
-              }}
-            >
-              {colLbl}
+            <th colSpan={2} style={{
+              background: MONTH_BG, color: "#FFFFFF",
+              padding: "2px 5px", fontSize: "6.5px", fontWeight: "700",
+              textAlign: "center", letterSpacing: "0.05em",
+              borderRight: BORDER, borderBottom: BORDER,
+            }}>
+              {lbl}
             </th>
             {MONTHS.map((m, i) => (
-              <th
-                key={i}
-                style={{
-                  background: "#000000",
-                  color: "#FFFFFF",
-                  textAlign: "center",
-                  padding: "2px 0",
-                  fontSize: "7px",
-                  fontWeight: "700",
-                  borderLeft: "1px solid #333",
-                  borderBottom: GRID_BORDER,
-                }}
-              >
+              <th key={i} style={{
+                background: MONTH_BG, color: "#FFFFFF",
+                textAlign: "center", padding: "2px 0",
+                fontSize: "7px", fontWeight: "700",
+                borderLeft: "1px solid rgba(255,255,255,0.3)",
+                borderBottom: BORDER,
+              }}>
                 {m}
               </th>
             ))}
@@ -249,56 +240,40 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
         <tbody>
           {groups.flatMap((group) => {
             if (group.type === "single") {
-              const ls = labelStyle(group.row.row_name, block.block_name);
+              const ls = rowColor(group.row.row_name, block.block_name);
               return [
                 <tr key={group.row.id} style={{ opacity: group.row.is_active ? 1 : 0.45, height: ROW_H }}>
-                  <td
-                    colSpan={2}
-                    style={tdLabel(ls, group.row.row_name)}
-                  >
+                  <td colSpan={2} style={cell(ls, group.row.row_name)}>
                     {group.row.row_name}
                   </td>
-                  <td
-                    colSpan={12}
-                    style={{ background: "#FFFFFF", borderBottom: GRID_BORDER, padding: 0, height: ROW_H }}
-                  >
+                  <td colSpan={12} style={{ background: "#FFFFFF", borderBottom: BORDER, padding: 0, height: ROW_H }}>
                     <BarTrack bars={group.row.bars} />
                   </td>
                 </tr>,
               ];
             } else {
-              const disLs = labelStyle(group.disease, block.block_name);
-              return group.rows.map((row, ri) => {
-                const catLs = labelStyle(catName(row.row_name), block.block_name);
-                return (
-                  <tr key={row.id} style={{ opacity: row.is_active ? 1 : 0.45, height: ROW_H }}>
-                    {ri === 0 && (
-                      <td
-                        rowSpan={group.rows.length}
-                        style={tdLabel(disLs, group.disease, {
-                          textAlign: "center",
-                          verticalAlign: "middle",
-                          fontWeight: "700",
-                          fontSize: "6.5px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.03em",
-                        })}
-                      >
-                        {group.disease}
-                      </td>
-                    )}
-                    <td style={tdLabel(catLs, catName(row.row_name))}>
-                      {catName(row.row_name)}
+              // Sublinhas herdam a cor da doença
+              const disLs = group.color;
+              return group.rows.map((row, ri) => (
+                <tr key={row.id} style={{ opacity: row.is_active ? 1 : 0.45, height: ROW_H }}>
+                  {ri === 0 && (
+                    <td rowSpan={group.rows.length} style={cell(disLs, group.disease, {
+                      textAlign: "center", verticalAlign: "middle",
+                      fontWeight: "700", fontSize: "6.5px",
+                      textTransform: "uppercase", letterSpacing: "0.03em",
+                    })}>
+                      {group.disease}
                     </td>
-                    <td
-                      colSpan={12}
-                      style={{ background: "#FFFFFF", borderBottom: GRID_BORDER, padding: 0, height: ROW_H }}
-                    >
-                      <BarTrack bars={row.bars} />
-                    </td>
-                  </tr>
-                );
-              });
+                  )}
+                  {/* Sublinha herda cor da doença */}
+                  <td style={cell(disLs, catName(row.row_name))}>
+                    {catName(row.row_name)}
+                  </td>
+                  <td colSpan={12} style={{ background: "#FFFFFF", borderBottom: BORDER, padding: 0, height: ROW_H }}>
+                    <BarTrack bars={row.bars} />
+                  </td>
+                </tr>
+              ));
             }
           })}
         </tbody>
@@ -306,7 +281,7 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
 
       {/* Observações */}
       {visNotes.length > 0 && (
-        <div style={{ borderLeft: GRID_BORDER, borderRight: GRID_BORDER, borderBottom: GRID_BORDER, padding: "3px 6px", background: "#fafafa" }}>
+        <div style={{ borderLeft: BORDER, borderRight: BORDER, borderBottom: BORDER, padding: "3px 6px", background: "#fafafa" }}>
           {visNotes.map((note) => (
             <p key={note.id} style={{ margin: "1px 0", fontSize: "7px", color: "#333", lineHeight: "1.35" }}>
               {note.text}
@@ -332,12 +307,12 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
   return (
     <>
       <style>{`
-        @page { size: A4 landscape; margin: 7mm 8mm; }
+        @page { size: A4 portrait; margin: 7mm 8mm; }
         *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
         html, body { background: #ffffff !important; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #000; }
         @media screen {
-          body { background: #e8e8e8 !important; }
-          .pw  { max-width: 280mm; margin: 16px auto; background: #ffffff; padding: 7mm 8mm; }
+          body { background: #e0e0e0 !important; }
+          .pw  { max-width: 210mm; margin: 16px auto; background: #ffffff; padding: 7mm 8mm; }
         }
         @media print { .no-print { display: none !important; } }
       `}</style>
@@ -349,25 +324,25 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
           <PrintButton />
         </div>
 
-        {/* ── Cabeçalho — fundo #000 ── */}
+        {/* ── Cabeçalho ── */}
         <table style={{ width: "100%", borderCollapse: "collapse", background: "#000000", marginBottom: "4px" }}>
           <tbody>
             <tr>
-              <td style={{ width: "70px", padding: "6px 10px", verticalAlign: "middle" }}>
+              <td style={{ width: "66px", padding: "6px 8px", verticalAlign: "middle" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo-vpc.png" alt="VPC" style={{ height: "44px", display: "block", objectFit: "contain" }} />
+                <img src="/logo-vpc.png" alt="VPC" style={{ height: "40px", display: "block", objectFit: "contain" }} />
               </td>
               <td style={{ textAlign: "center", verticalAlign: "middle", padding: "6px 0" }}>
-                <div style={{ fontSize: "16px", fontWeight: "900", color: "#FFFFFF", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1 }}>
+                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFFFFF", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1 }}>
                   CALENDÁRIO SANITÁRIO
                 </div>
-                <div style={{ fontSize: "8px", color: "#FFFFFF", marginTop: "3px", letterSpacing: "0.02em" }}>
+                <div style={{ fontSize: "7.5px", color: "#FFFFFF", marginTop: "3px", letterSpacing: "0.02em" }}>
                   Programa Rebanho Blindado 3.0 por Léo Pinto
                 </div>
               </td>
-              <td style={{ width: "70px", padding: "6px 10px", verticalAlign: "middle", textAlign: "right" }}>
+              <td style={{ width: "66px", padding: "6px 8px", verticalAlign: "middle", textAlign: "right" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo-rebanho.png" alt="Rebanho Blindado" style={{ height: "44px", display: "inline-block", objectFit: "contain" }} />
+                <img src="/logo-rebanho.png" alt="Rebanho Blindado" style={{ height: "40px", display: "inline-block", objectFit: "contain" }} />
               </td>
             </tr>
           </tbody>
@@ -385,14 +360,11 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
                   { label: "CRIADO EM",    value: createdAt },
                 ] as const
               ).map((f, i, arr) => (
-                <td
-                  key={f.label}
-                  style={{
-                    padding: "3px 8px",
-                    borderRight: i < arr.length - 1 ? "1px solid #D9D9D9" : "none",
-                    verticalAlign: "top",
-                  }}
-                >
+                <td key={f.label} style={{
+                  padding: "3px 8px",
+                  borderRight: i < arr.length - 1 ? "1px solid #D9D9D9" : "none",
+                  verticalAlign: "top",
+                }}>
                   <div style={{ fontSize: "5.5px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.1em", color: "#888", marginBottom: "1px" }}>
                     {f.label}
                   </div>
@@ -411,16 +383,11 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
         ))}
 
         {/* ── Bloco de alerta ── */}
-        <div
-          style={{
-            background: "#FFE5E5",
-            border: "1px solid #D9D9D9",
-            padding: "5px 8px",
-            marginBottom: "4px",
-            breakInside: "avoid",
-            pageBreakInside: "avoid",
-          }}
-        >
+        <div style={{
+          background: "#FFE5E5", border: "1px solid #D9D9D9",
+          padding: "5px 8px", marginBottom: "4px",
+          breakInside: "avoid", pageBreakInside: "avoid",
+        }}>
           <p style={{ margin: "0 0 2px", fontSize: "7px", fontWeight: "700", color: "#7A1C1C" }}>
             ⚠️ ATENÇÃO: Este calendário sanitário foi elaborado de forma personalizada, considerando as características específicas deste rebanho, sistema de criação e condições regionais.
           </p>
