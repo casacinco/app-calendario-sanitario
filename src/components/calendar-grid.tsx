@@ -97,6 +97,24 @@ export function CalendarGrid({ blocks }: CalendarGridProps) {
                   </div>
                 </div>
               ))}
+
+              {/* Observações — só renderiza se houver ao menos 1 visível */}
+              {(block.notes ?? []).filter((n) => n.is_visible === 1).length > 0 && (
+                <div className="border-t border-border px-4 py-3 space-y-1.5">
+                  <p className="text-xs font-medium text-text-muted">
+                    Observações do bloco
+                  </p>
+                  <div className="space-y-1.5">
+                    {(block.notes ?? [])
+                      .filter((n) => n.is_visible === 1)
+                      .map((note) => (
+                        <p key={note.id} className="text-xs text-text leading-relaxed">
+                          {note.text}
+                        </p>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         ))}
