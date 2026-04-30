@@ -1,9 +1,22 @@
 import type { CalendarBar, CalendarBlockGroup } from "@/lib/db";
 import { PrintButton } from "@/components/print-button";
 
-const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
+const MONTHS_SHORT = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const SEP = /^(.+?)\s*—\s*(.+)$/;
+
+// Paleta — verde apenas nos cabeçalhos
+const HDR_BG   = "#1a3d0f";   // cabeçalho do bloco
+const HDR_SUB  = "#2e5c1c";   // linha de meses
+const HDR_TXT  = "#ffffff";
+const LBL_BG   = "#f4f4f4";   // fundo dos rótulos de linha (cinza muito claro)
+const LBL_TXT  = "#1a1a1a";
+const GRID_BG  = "#ffffff";
+const BORDER   = "#c8c8c8";
+const GRID_LINE = "#e2e2e2";
+
+// ─── Agrupamento por doença (idêntico ao editor) ──────────────────────────────
 
 type CalendarRowWithBars = CalendarBlockGroup["rows"][number];
 
@@ -17,10 +30,8 @@ function groupRows(rows: CalendarRowWithBars[]): RowGroup[] {
     const m = row.row_name.match(SEP);
     if (m) counts.set(m[1]!.trim(), (counts.get(m[1]!.trim()) ?? 0) + 1);
   }
-
   const result: RowGroup[] = [];
   const seen = new Set<string>();
-
   for (const row of rows) {
     const m = row.row_name.match(SEP);
     if (m && (counts.get(m[1]!.trim()) ?? 0) > 1) {
@@ -48,45 +59,28 @@ function categoryName(rowName: string): string {
   return m ? m[2]!.trim() : rowName;
 }
 
-const C = {
-  darkGreen: "#1d3a12",
-  midGreen: "#2d5a14",
-  lightGreen: "#eaf5e1",
-  border: "#cccccc",
-  lightBorder: "#e8e8e8",
-} as const;
-
-function barFontSize(label: string, span: number): string {
-  const density = label.length / span;
-  if (density > 20) return "5px";
-  if (density > 14) return "6px";
-  if (density > 10) return "7px";
-  if (density > 8) return "8px";
-  return "9px";
-}
+// ─── Barra de meses ───────────────────────────────────────────────────────────
 
 function BarTrack({ bars }: { bars: CalendarBar[] }) {
   return (
-    <div style={{ position: "relative", height: "100%", minHeight: "24px" }}>
+    <div style={{ position: "relative", height: "100%", minHeight: "20px" }}>
+      {/* Linhas de grade verticais */}
       <div style={{ position: "absolute", inset: 0, display: "flex" }}>
         {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={i}
             style={{
               flex: 1,
-              borderLeft: i === 0 ? "none" : `1px solid ${C.lightBorder}`,
+              borderLeft: i === 0 ? "none" : `1px solid ${GRID_LINE}`,
             }}
           />
         ))}
       </div>
 
+      {/* Barras */}
       {bars.map((bar) => {
-        const startCol = bar.start_month - 1;
-        const span = bar.end_month - bar.start_month + 1;
-        const left = (startCol / 12) * 100;
-        const width = (span / 12) * 100;
-        const fontSize = bar.label ? barFontSize(bar.label, span) : "9px";
-
+        const left = ((bar.start_month - 1) / 12) * 100;
+        const width = ((bar.end_month - bar.start_month + 1) / 12) * 100;
         return (
           <div
             key={bar.id}
@@ -96,8 +90,7 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
               bottom: "3px",
               left: `calc(${left}% + 2px)`,
               width: `calc(${width}% - 4px)`,
-              background: bar.alert ? "#dc2626" : bar.color,
-              borderRadius: "2px",
+              background: bar.alert ? "#c0392b" : bar.color,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -108,11 +101,11 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
             {bar.label && (
               <span
                 style={{
-                  fontSize,
+                  fontSize: "7.5px",
                   fontWeight: "700",
-                  color: bar.alert ? "white" : "rgba(0,0,0,0.85)",
-                  lineHeight: "1",
-                  letterSpacing: "-0.02em",
+                  color: bar.alert ? "#fff" : "rgba(0,0,0,0.8)",
+                  letterSpacing: "0",
+                  lineHeight: 1,
                 }}
               >
                 {bar.label}
@@ -125,98 +118,104 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
   );
 }
 
-const tdBase: React.CSSProperties = {
-  borderBottom: `1px solid ${C.border}`,
-  borderRight: `1px solid ${C.border}`,
+// ─── Estilos compartilhados de célula ─────────────────────────────────────────
+
+const cellBase: React.CSSProperties = {
+  border: `1px solid ${BORDER}`,
   padding: 0,
+  margin: 0,
 };
 
-const nameCellStyle: React.CSSProperties = {
-  ...tdBase,
-  background: C.lightGreen,
-  padding: "3px 6px",
+const labelCell: React.CSSProperties = {
+  ...cellBase,
+  background: LBL_BG,
+  padding: "3px 7px",
   fontSize: "8px",
   fontWeight: "600",
-  color: C.darkGreen,
+  color: LBL_TXT,
   verticalAlign: "middle",
   lineHeight: "1.3",
+  whiteSpace: "normal",
 };
 
-const ROW_HEIGHT = "24px";
+const ROW_H = "22px";
+
+// ─── Tabela de um bloco ───────────────────────────────────────────────────────
 
 function BlockTable({ block }: { block: CalendarBlockGroup }) {
   const groups = groupRows(block.rows);
   const visibleNotes = (block.notes ?? []).filter((n) => n.is_visible === 1);
 
   return (
-    <div style={{ pageBreakInside: "avoid", marginBottom: "7px" }}>
+    <div style={{ marginBottom: "10px", breakInside: "avoid" }}>
       <table
         style={{
           width: "100%",
           borderCollapse: "collapse",
           tableLayout: "fixed",
-          border: `1px solid ${C.border}`,
-          borderTop: `2px solid ${C.darkGreen}`,
+          border: `1px solid ${BORDER}`,
         }}
       >
         <colgroup>
-          {/* disease col */}
+          {/* col doença */}
           <col style={{ width: "8%" }} />
-          {/* name col */}
-          <col style={{ width: "11%" }} />
-          {/* 12 month cols — (100 - 19) / 12 ≈ 6.75% each */}
+          {/* col nome/categoria */}
+          <col style={{ width: "12%" }} />
+          {/* 12 colunas de mês — 80% / 12 ≈ 6.67% cada */}
           {Array.from({ length: 12 }).map((_, i) => (
-            <col key={i} style={{ width: "6.75%" }} />
+            <col key={i} style={{ width: "6.67%" }} />
           ))}
         </colgroup>
 
         <thead>
-          {/* Block name */}
+          {/* Título do bloco */}
           <tr>
             <th
               colSpan={14}
               style={{
-                background: C.darkGreen,
-                color: "white",
+                background: HDR_BG,
+                color: HDR_TXT,
                 textAlign: "left",
                 padding: "4px 8px",
-                fontSize: "9px",
+                fontSize: "8.5px",
                 fontWeight: "700",
-                letterSpacing: "0.05em",
+                letterSpacing: "0.06em",
                 textTransform: "uppercase",
+                border: `1px solid ${HDR_BG}`,
               }}
             >
               {block.block_position}. {block.block_name}
             </th>
           </tr>
 
-          {/* Month labels */}
+          {/* Linha dos meses */}
           <tr>
             <th
               colSpan={2}
               style={{
-                background: C.midGreen,
-                color: "white",
-                padding: "2px 6px",
+                background: HDR_SUB,
+                color: HDR_TXT,
+                padding: "2px 7px",
                 fontSize: "7px",
                 fontWeight: "600",
                 textAlign: "left",
-                borderRight: "1px solid rgba(255,255,255,0.25)",
+                border: `1px solid ${HDR_SUB}`,
               }}
             >
               Linha
             </th>
-            {MONTHS.map((m, i) => (
+            {MONTHS_SHORT.map((m, i) => (
               <th
                 key={i}
                 style={{
-                  background: C.midGreen,
-                  color: "white",
-                  padding: "2px",
+                  background: HDR_SUB,
+                  color: HDR_TXT,
                   textAlign: "center",
-                  fontSize: "8px",
+                  padding: "2px 0",
+                  fontSize: "7.5px",
                   fontWeight: "700",
-                  borderLeft: "1px solid rgba(255,255,255,0.25)",
+                  border: `1px solid ${HDR_SUB}`,
+                  borderLeft: `1px solid rgba(255,255,255,0.2)`,
                 }}
               >
                 {m}
@@ -231,12 +230,15 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
               return [
                 <tr
                   key={group.row.id}
-                  style={{ opacity: group.row.is_active ? 1 : 0.4, height: ROW_HEIGHT }}
+                  style={{ opacity: group.row.is_active ? 1 : 0.45, height: ROW_H }}
                 >
-                  <td colSpan={2} style={nameCellStyle}>
+                  <td colSpan={2} style={labelCell}>
                     {group.row.row_name}
                   </td>
-                  <td colSpan={12} style={{ ...tdBase, height: ROW_HEIGHT }}>
+                  <td
+                    colSpan={12}
+                    style={{ ...cellBase, background: GRID_BG, height: ROW_H, padding: 0 }}
+                  >
                     <BarTrack bars={group.row.bars} />
                   </td>
                 </tr>,
@@ -245,30 +247,29 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
               return group.rows.map((row, ri) => (
                 <tr
                   key={row.id}
-                  style={{ opacity: row.is_active ? 1 : 0.4, height: ROW_HEIGHT }}
+                  style={{ opacity: row.is_active ? 1 : 0.45, height: ROW_H }}
                 >
                   {ri === 0 && (
                     <td
                       rowSpan={group.rows.length}
                       style={{
-                        background: C.midGreen,
-                        color: "white",
-                        padding: "3px 4px",
-                        fontSize: "7px",
-                        fontWeight: "700",
+                        ...labelCell,
                         textAlign: "center",
                         verticalAlign: "middle",
-                        borderBottom: `1px solid ${C.border}`,
-                        borderRight: "1px solid rgba(255,255,255,0.25)",
-                        lineHeight: "1.25",
+                        fontWeight: "700",
+                        fontSize: "7.5px",
                         textTransform: "uppercase",
+                        letterSpacing: "0.02em",
                       }}
                     >
                       {group.disease}
                     </td>
                   )}
-                  <td style={nameCellStyle}>{categoryName(row.row_name)}</td>
-                  <td colSpan={12} style={{ ...tdBase, height: ROW_HEIGHT }}>
+                  <td style={labelCell}>{categoryName(row.row_name)}</td>
+                  <td
+                    colSpan={12}
+                    style={{ ...cellBase, background: GRID_BG, height: ROW_H, padding: 0 }}
+                  >
                     <BarTrack bars={row.bars} />
                   </td>
                 </tr>
@@ -278,38 +279,36 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
         </tbody>
       </table>
 
+      {/* Observações — só se houver ao menos 1 visível */}
       {visibleNotes.length > 0 && (
         <div
           style={{
-            border: `1px solid ${C.border}`,
-            borderTop: "none",
+            borderLeft: `1px solid ${BORDER}`,
+            borderRight: `1px solid ${BORDER}`,
+            borderBottom: `1px solid ${BORDER}`,
             padding: "4px 8px 5px",
-            background: "#f9f9f9",
+            background: "#fafafa",
           }}
         >
-          <p
+          <span
             style={{
-              margin: "0 0 2px",
+              display: "block",
               fontSize: "6.5px",
               fontWeight: "700",
-              color: C.darkGreen,
               textTransform: "uppercase",
-              letterSpacing: "0.06em",
+              letterSpacing: "0.07em",
+              color: "#555",
+              marginBottom: "2px",
             }}
           >
             Observações
-          </p>
+          </span>
           {visibleNotes.map((note) => (
             <p
               key={note.id}
-              style={{
-                margin: "1px 0",
-                fontSize: "8px",
-                color: "#222",
-                lineHeight: "1.4",
-              }}
+              style={{ margin: "1px 0", fontSize: "7.5px", color: "#333", lineHeight: "1.4" }}
             >
-              • {note.text}
+              {note.text}
             </p>
           ))}
         </div>
@@ -317,6 +316,8 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
     </div>
   );
 }
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 
 interface CalendarPrintProps {
   blocks: CalendarBlockGroup[];
@@ -336,182 +337,191 @@ export function CalendarPrint({
   return (
     <>
       <style>{`
-        @page { size: A4 landscape; margin: 8mm; }
-        *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
-        html, body { background: white !important; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; }
-        @media screen {
-          body { background: #dedede !important; }
-          .pp { max-width: 277mm; margin: 20px auto; background: white; padding: 8mm; box-shadow: 0 4px 28px rgba(0,0,0,0.2); }
+        @page { size: A4 landscape; margin: 10mm 8mm; }
+        *, *::before, *::after {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          box-sizing: border-box;
         }
-        @media print { .no-print { display: none !important; } }
+        html, body {
+          background: #ffffff !important;
+          margin: 0;
+          padding: 0;
+          font-family: Arial, Helvetica, sans-serif;
+          color: #1a1a1a;
+        }
+        @media screen {
+          body { background: #f0f0f0 !important; }
+          .print-wrap {
+            max-width: 280mm;
+            margin: 16px auto;
+            background: #ffffff;
+            padding: 10mm;
+          }
+        }
+        @media print {
+          .no-print { display: none !important; }
+          body { background: #ffffff !important; }
+        }
       `}</style>
 
-      <div className="pp">
-        {/* Screen-only toolbar */}
+      <div className="print-wrap">
+
+        {/* Barra de ação — só na tela */}
         <div
           className="no-print"
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "12px",
-            paddingBottom: "10px",
-            borderBottom: "1px solid #ddd",
+            justifyContent: "flex-end",
+            marginBottom: "10px",
           }}
         >
-          <span style={{ fontSize: "13px", color: "#555" }}>
-            Pré-visualização de impressão
-          </span>
           <PrintButton />
         </div>
 
-        {/* ── Header ── */}
-        <header
+        {/* ── Cabeçalho ── */}
+        <table
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            marginBottom: "5px",
+            width: "100%",
+            borderCollapse: "collapse",
+            marginBottom: "6px",
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-vpc.png"
-            alt="VPC"
-            style={{ height: "58px", objectFit: "contain", flexShrink: 0 }}
-          />
-          <div style={{ flex: 1, textAlign: "center" }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "19px",
-                fontWeight: "900",
-                color: C.darkGreen,
-                letterSpacing: "0.07em",
-                textTransform: "uppercase",
-                lineHeight: 1,
-              }}
-            >
-              Calendário Sanitário
-            </h1>
-            <p
-              style={{
-                margin: "3px 0 0",
-                fontSize: "9px",
-                color: "#555",
-                letterSpacing: "0.02em",
-              }}
-            >
-              Programa Rebanho Blindado 3.0 por Léo Pinto
-            </p>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo-rebanho.png"
-            alt="Rebanho Blindado"
-            style={{ height: "58px", objectFit: "contain", flexShrink: 0 }}
-          />
-        </header>
+          <tbody>
+            <tr>
+              <td style={{ width: "80px", padding: "0 12px 0 0", verticalAlign: "middle" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo-vpc.png"
+                  alt="VPC"
+                  style={{ height: "52px", display: "block" }}
+                />
+              </td>
+              <td style={{ textAlign: "center", verticalAlign: "middle" }}>
+                <div
+                  style={{
+                    fontSize: "17px",
+                    fontWeight: "900",
+                    color: HDR_BG,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    lineHeight: 1,
+                  }}
+                >
+                  Calendário Sanitário
+                </div>
+                <div
+                  style={{
+                    fontSize: "8.5px",
+                    color: "#555",
+                    marginTop: "3px",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Programa Rebanho Blindado 3.0 · por Léo Pinto
+                </div>
+              </td>
+              <td style={{ width: "80px", padding: "0 0 0 12px", verticalAlign: "middle", textAlign: "right" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo-rebanho.png"
+                  alt="Rebanho Blindado"
+                  style={{ height: "52px", display: "inline-block" }}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-        {/* ── Producer info bar ── */}
-        <div
+        {/* ── Linha divisória + dados do produtor ── */}
+        <table
           style={{
-            display: "flex",
-            borderTop: `2px solid ${C.darkGreen}`,
-            borderBottom: `1px solid ${C.border}`,
-            marginBottom: "9px",
+            width: "100%",
+            borderCollapse: "collapse",
+            borderTop: `2px solid ${HDR_BG}`,
+            borderBottom: `1px solid ${BORDER}`,
+            marginBottom: "8px",
           }}
         >
-          {(
-            [
-              { label: "Proprietário", value: ownerName, flex: 2 },
-              { label: "Localização", value: location, flex: 2 },
-              { label: "Rebanho", value: farmName, flex: 2 },
-              { label: "Criado em", value: createdAt, flex: 1 },
-            ] as const
-          ).map((field, i, arr) => (
-            <div
-              key={field.label}
-              style={{
-                flex: field.flex,
-                padding: "4px 10px",
-                borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : "none",
-              }}
-            >
-              <p
+          <tbody>
+            <tr>
+              {(
+                [
+                  { label: "Proprietário", value: ownerName },
+                  { label: "Localização",  value: location  },
+                  { label: "Rebanho",      value: farmName  },
+                  { label: "Criado em",    value: createdAt },
+                ] as const
+              ).map((f, i, arr) => (
+                <td
+                  key={f.label}
+                  style={{
+                    padding: "4px 10px",
+                    borderRight: i < arr.length - 1 ? `1px solid ${BORDER}` : "none",
+                    verticalAlign: "top",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "6px",
+                      fontWeight: "700",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      color: "#888",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    {f.label}
+                  </div>
+                  <div style={{ fontSize: "9.5px", fontWeight: "600", color: "#111" }}>
+                    {f.value || "—"}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+
+        {/* ── Blocos ── */}
+        {blocks.map((block) => (
+          <BlockTable key={block.block_position} block={block} />
+        ))}
+
+        {/* ── Rodapé ── */}
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginTop: "4px",
+            borderTop: `1px solid ${BORDER}`,
+          }}
+        >
+          <tbody>
+            <tr>
+              <td style={{ padding: "5px 8px", verticalAlign: "top" }}>
+                <span style={{ fontSize: "8px", color: "#b45309", fontWeight: "600" }}>⚠ </span>
+                <span style={{ fontSize: "7.5px", color: "#555", lineHeight: "1.4" }}>
+                  Este calendário é um guia preventivo personalizado. As recomendações devem ser
+                  avaliadas por um médico-veterinário habilitado, considerando as condições
+                  específicas do rebanho, região e histórico sanitário.
+                </span>
+              </td>
+              <td
                 style={{
-                  margin: 0,
-                  fontSize: "6px",
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: "#888",
+                  padding: "5px 8px",
+                  textAlign: "right",
+                  verticalAlign: "middle",
+                  whiteSpace: "nowrap",
+                  fontSize: "7px",
+                  color: "#aaa",
                 }}
               >
-                {field.label}
-              </p>
-              <p
-                style={{
-                  margin: "2px 0 0",
-                  fontSize: "10px",
-                  fontWeight: "600",
-                  color: "#111",
-                }}
-              >
-                {field.value || "—"}
-              </p>
-            </div>
-          ))}
-        </div>
+                Programa Rebanho Blindado 3.0 · VPC Veterinária · Léo Pinto
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-        {/* ── Blocks ── */}
-        <div>
-          {blocks.map((block) => (
-            <BlockTable key={block.block_position} block={block} />
-          ))}
-        </div>
-
-        {/* ── Footer ── */}
-        <footer style={{ marginTop: "6px" }}>
-          <div
-            style={{
-              background: "#fff8e1",
-              border: "1px solid #f59e0b",
-              borderRadius: "3px",
-              padding: "5px 8px",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "6px",
-              marginBottom: "4px",
-            }}
-          >
-            <span style={{ fontSize: "12px", flexShrink: 0 }}>⚠️</span>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "7.5px",
-                color: "#78350f",
-                lineHeight: "1.45",
-              }}
-            >
-              Este calendário sanitário é um guia preventivo personalizado. As
-              recomendações devem ser avaliadas e adaptadas por um
-              médico-veterinário habilitado, considerando as condições
-              específicas do seu rebanho, região e histórico sanitário.
-            </p>
-          </div>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "7px",
-              color: "#aaa",
-              textAlign: "center",
-            }}
-          >
-            Calendário Sanitário · Programa Rebanho Blindado 3.0 · VPC
-            Veterinária · Léo Pinto
-          </p>
-        </footer>
       </div>
     </>
   );
