@@ -113,7 +113,7 @@ function barFontSize(label: string, spanMonths: number): string {
 
 function BarTrack({ bars }: { bars: CalendarBar[] }) {
   return (
-    <div style={{ position: "relative", height: "100%", minHeight: "18px", overflow: "hidden" }}>
+    <div style={{ position: "relative", height: "100%", minHeight: "18px" }}>
       {/* Grade vertical */}
       <div style={{ position: "absolute", inset: 0, display: "flex" }}>
         {Array.from({ length: 12 }).map((_, i) => (
@@ -194,9 +194,9 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
     <div style={{ marginBottom: "5px", breakInside: "avoid", pageBreakInside: "avoid" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", border: BORDER }}>
         <colgroup>
-          <col style={{ width: "8%" }} />
-          <col style={{ width: "12%" }} />
-          {Array.from({ length: 12 }).map((_, i) => <col key={i} style={{ width: "6.67%" }} />)}
+          <col style={{ width: "14%" }} />  {/* doença — largo o suficiente para LINFADENITE CASEOSA */}
+          <col style={{ width: "10%" }} />
+          {Array.from({ length: 12 }).map((_, i) => <col key={i} style={{ width: "6.33%" }} />)}
         </colgroup>
 
         <thead>
@@ -205,7 +205,7 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
             <th colSpan={14} style={{
               background: "#000000", color: "#FFFFFF",
               textAlign: "center", padding: "4px 8px",
-              fontSize: "8px", fontWeight: "700",
+              fontSize: "10px", fontWeight: "700",
               letterSpacing: "0.08em", textTransform: "uppercase",
               borderBottom: BORDER,
             }}>
@@ -261,6 +261,7 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
                       textAlign: "center", verticalAlign: "middle",
                       fontWeight: "700", fontSize: "6.5px",
                       textTransform: "uppercase", letterSpacing: "0.03em",
+                      whiteSpace: "nowrap", wordBreak: "normal",
                     })}>
                       {group.disease}
                     </td>
@@ -283,7 +284,7 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
       {visNotes.length > 0 && (
         <div style={{ borderLeft: BORDER, borderRight: BORDER, borderBottom: BORDER, padding: "3px 6px", background: "#fafafa" }}>
           {visNotes.map((note) => (
-            <p key={note.id} style={{ margin: "1px 0", fontSize: "7px", color: "#333", lineHeight: "1.35" }}>
+            <p key={note.id} style={{ margin: "2px 0", fontSize: "8.5px", color: "#000000", lineHeight: "1.4" }}>
               {note.text}
             </p>
           ))}
@@ -310,6 +311,7 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
         @page { size: A4 portrait; margin: 7mm 8mm; }
         *, *::before, *::after { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
         html, body { background: #ffffff !important; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #000; }
+        .pw { display: flex; flex-direction: column; min-height: 283mm; }
         @media screen {
           body { background: #e0e0e0 !important; }
           .pw  { max-width: 210mm; margin: 16px auto; background: #ffffff; padding: 7mm 8mm; }
@@ -333,7 +335,7 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
                 <img src="/logo-vpc.png" alt="VPC" style={{ height: "40px", display: "block", objectFit: "contain" }} />
               </td>
               <td style={{ textAlign: "center", verticalAlign: "middle", padding: "6px 0" }}>
-                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFFFFF", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1 }}>
+                <div style={{ fontSize: "20px", fontWeight: "900", color: "#FFFFFF", letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: 1 }}>
                   CALENDÁRIO SANITÁRIO
                 </div>
                 <div style={{ fontSize: "7.5px", color: "#FFFFFF", marginTop: "3px", letterSpacing: "0.02em" }}>
@@ -377,33 +379,38 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
           </tbody>
         </table>
 
-        {/* ── Blocos ── */}
-        {blocks.map((block) => (
-          <BlockTable key={block.block_position} block={block} />
-        ))}
+        {/* Conteúdo principal — cresce para empurrar rodapé para baixo */}
+        <div style={{ flex: 1 }}>
 
-        {/* ── Bloco de alerta ── */}
-        <div style={{
-          background: "#FFE5E5", border: "1px solid #D9D9D9",
-          padding: "5px 8px", marginBottom: "4px",
-          breakInside: "avoid", pageBreakInside: "avoid",
-        }}>
-          <p style={{ margin: "0 0 2px", fontSize: "7px", fontWeight: "700", color: "#7A1C1C" }}>
-            ⚠️ ATENÇÃO: Este calendário sanitário foi elaborado de forma personalizada, considerando as características específicas deste rebanho, sistema de criação e condições regionais.
-          </p>
-          <p style={{ margin: "1px 0", fontSize: "7px", color: "#7A1C1C", lineHeight: "1.35" }}>
-            Este material é de uso exclusivo do contratante, sendo vedada sua reprodução, compartilhamento ou utilização em outras propriedades sem a devida adequação técnica.
-          </p>
-          <p style={{ margin: "1px 0", fontSize: "7px", color: "#7A1C1C", lineHeight: "1.35" }}>
-            O uso indevido em realidades distintas pode comprometer a eficácia das estratégias de controle sanitário, resultando em prejuízos produtivos e sanitários.
-          </p>
-          <p style={{ margin: "1px 0 0", fontSize: "7px", color: "#7A1C1C", lineHeight: "1.35" }}>
-            Para garantir resultados seguros, cada rebanho deve ser avaliado individualmente.
-          </p>
+          {/* ── Blocos ── */}
+          {blocks.map((block) => (
+            <BlockTable key={block.block_position} block={block} />
+          ))}
+
+          {/* ── Bloco de alerta ── */}
+          <div style={{
+            background: "#FFE5E5", border: "1px solid #D9D9D9",
+            padding: "5px 8px", marginBottom: "4px",
+            breakInside: "avoid", pageBreakInside: "avoid",
+          }}>
+            <p style={{ margin: "0 0 2px", fontSize: "7px", fontWeight: "700", color: "#7A1C1C" }}>
+              ⚠️ ATENÇÃO: Este calendário sanitário foi elaborado de forma personalizada, considerando as características específicas deste rebanho, sistema de criação e condições regionais.
+            </p>
+            <p style={{ margin: "1px 0", fontSize: "7px", color: "#7A1C1C", lineHeight: "1.35" }}>
+              Este material é de uso exclusivo do contratante, sendo vedada sua reprodução, compartilhamento ou utilização em outras propriedades sem a devida adequação técnica.
+            </p>
+            <p style={{ margin: "1px 0", fontSize: "7px", color: "#7A1C1C", lineHeight: "1.35" }}>
+              O uso indevido em realidades distintas pode comprometer a eficácia das estratégias de controle sanitário, resultando em prejuízos produtivos e sanitários.
+            </p>
+            <p style={{ margin: "1px 0 0", fontSize: "7px", color: "#7A1C1C", lineHeight: "1.35" }}>
+              Para garantir resultados seguros, cada rebanho deve ser avaliado individualmente.
+            </p>
+          </div>
+
         </div>
 
-        {/* ── Rodapé ── */}
-        <div style={{ textAlign: "center", padding: "3px 0" }}>
+        {/* ── Rodapé — fixo na base da página ── */}
+        <div style={{ textAlign: "center", padding: "4px 0", borderTop: "1px solid #D9D9D9" }}>
           <span style={{ fontSize: "7.5px", fontWeight: "600", color: "#000000", letterSpacing: "0.03em" }}>
             www.vamosproduzircordeiros.com.br&nbsp;&nbsp;|&nbsp;&nbsp;ESCOLA DE OVINOCULTORES&nbsp;&nbsp;|&nbsp;&nbsp;@leopinto.cordeiros
           </span>
