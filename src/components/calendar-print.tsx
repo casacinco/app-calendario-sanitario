@@ -75,17 +75,28 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
 
       {/* Barras — usa o mesmo campo que o editor: description ?? label */}
       {bars.map((bar) => {
-        const left        = ((bar.start_month - 1) / 12) * 100;
-        const width       = ((bar.end_month - bar.start_month + 1) / 12) * 100;
         const span        = bar.end_month - bar.start_month + 1;
+        const left        = ((bar.start_month - 1) / 12) * 100;
+        const width       = (span / 12) * 100;
         const displayText = bar.description ?? bar.label;
-        const density     = (displayText?.length ?? 0) / span;
-        const fontSize    =
-          density > 20 ? "7px"  :
-          density > 14 ? "8px"  :
-          density > 10 ? "9px"  :
-          density > 8  ? "10px" :
-          density > 6  ? "11px" : "12px";
+        const textLen     = displayText?.length ?? 0;
+
+        // Tamanho de fonte por densidade (min 8px)
+        const density  = textLen / span;
+        const fontSize = Math.max(8,
+          density > 20 ? 7  :
+          density > 14 ? 8  :
+          density > 10 ? 9  :
+          density > 8  ? 10 :
+          density > 6  ? 11 : 12,
+        );
+
+        // Compressão horizontal: cada mês ≈ 46px (A4 portrait 194mm * 76% / 12)
+        // Largura de char bold Inter ≈ fontSize * 0.58
+        const availPx = span * 46;
+        const textPx  = textLen * fontSize * 0.58;
+        const scaleX  = textLen > 0 ? Math.min(1, availPx / Math.max(textPx, 1)) : 1;
+
         return (
           <div
             key={bar.id}
@@ -98,17 +109,21 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              overflow: "visible",
-              whiteSpace: "nowrap",
-              zIndex: 1,
+              overflow: "hidden",
             }}
           >
             {displayText && (
               <span style={{
-                fontSize,
+                display: "block",
+                whiteSpace: "nowrap",
+                fontSize: `${fontSize}px`,
                 fontWeight: "700",
                 color: bar.alert ? "#fff" : "rgba(0,0,0,0.85)",
                 lineHeight: 1,
+                ...(scaleX < 1 && {
+                  transform: `scaleX(${scaleX.toFixed(3)})`,
+                  transformOrigin: "center",
+                }),
               }}>
                 {displayText}
               </span>
