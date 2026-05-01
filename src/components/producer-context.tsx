@@ -150,9 +150,9 @@ export function ProducerContextPanel({ rawResponses }: { rawResponses: string })
 
   const hasLocalizacao = !!(ctx.estado || cidade || ctx.assistencia_vet);
   const hasRebanho     = !!(ctx.qtd_reprodutores || ctx.qtd_matrizes || ctx.racas_reprodutores?.length || ctx.racas_matrizes?.length);
-  const hasReproducao  = !!(ctx.meses_monta?.length);
+  const hasReproducao  = !!(ctx.meses_monta?.length || ctx.idade_apartacao);
   const hasSanitario   = !!(ctx.vacinas?.length || ctx.meses_chuva?.length || ctx.causas_obito?.length);
-  const hasTexto       = !!(ctx.decisao_compra || ctx.ja_tentou || ctx.info_adicionais || ctx.propriedades_vizinhas || ctx.idade_apartacao);
+  const hasTexto       = !!(ctx.decisao_compra || ctx.ja_tentou || ctx.info_adicionais || ctx.propriedades_vizinhas);
 
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -236,8 +236,9 @@ export function ProducerContextPanel({ rawResponses }: { rawResponses: string })
             {/* Reprodução */}
             {hasReproducao && (
               <Section title="Reprodução" open={open.reproducao} onToggle={() => toggle("reproducao")}>
-                <div className="px-4 pb-3 pt-1">
+                <div className="px-4 pb-3 pt-1 space-y-3">
                   <Chips label="Estação de monta" items={ctx.meses_monta} />
+                  <Field label="Idade de apartação" value={ctx.idade_apartacao} />
                 </div>
               </Section>
             )}
@@ -261,7 +262,6 @@ export function ProducerContextPanel({ rawResponses }: { rawResponses: string })
                   <TextField label="O que já tentou" value={ctx.ja_tentou} />
                   <TextField label="Informações adicionais" value={ctx.info_adicionais} />
                   <TextField label="Propriedades vizinhas" value={ctx.propriedades_vizinhas} />
-                  <TextField label="Idade de apartação" value={ctx.idade_apartacao} />
                 </div>
               </Section>
             )}
