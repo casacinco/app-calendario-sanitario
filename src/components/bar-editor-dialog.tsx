@@ -13,6 +13,7 @@ const COLORS = [
   "#6C3BFF", // roxo
   "#E53935", // vermelho
   "#2D9CDB", // azul
+  "#2EC4B6", // foot-rot (ciano)
   "#4F4F4F", // cinza escuro
   "#FF5C5C", // vermifugação
 ];
@@ -37,6 +38,8 @@ const PRESETS_BY_BLOCK: Record<number, Preset[]> = {
     { label: "1ª Dose (60 dias) + Reforço (30 dias)",    description: "1ª dose: 60 dias de vida. Reforço: 30 dias após a 1ª dose." },
     { label: "1ª Dose (90 dias) + Reforço (30 dias)",    description: "1ª dose: 90 dias de vida. Reforço: 30 dias após a 1ª dose." },
     { label: "1ª Dose (150 dias) + Reforço (30 dias)",   description: "1ª dose: 150 dias de vida. Reforço: 30 dias após a 1ª dose." },
+    { label: "1ª DOSE APÓS 90 DIAS + REFORÇO",           description: "1ª DOSE APÓS 90 DIAS + REFORÇO" },
+    { label: "DOSE + REFORÇO",                           description: "DOSE + REFORÇO" },
   ],
   4: [ // Neonato
     { label: "Cura umbigo + Probezerro + Catofós", description: "Cura umbigo + Probezerro + Catofós" },

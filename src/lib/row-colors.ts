@@ -12,6 +12,7 @@ export function diseaseColor(name: string): LabelStyle | null {
   if (n.includes("LEPTOSPIR"))                             return { bg: "#6C3BFF", text: "#FFFFFF" };
   if (n === "RAIVA" || n.startsWith("RAIVA"))              return { bg: "#E53935", text: "#FFFFFF" };
   if (n.includes("LINFADENIT") || n.includes("CASEOSA"))   return { bg: "#2D9CDB", text: "#FFFFFF" };
+  if (n.includes("FOOT"))                                  return { bg: "#2EC4B6", text: "#FFFFFF" };
   return null;
 }
 
