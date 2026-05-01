@@ -81,20 +81,18 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
         const displayText = bar.description ?? bar.label;
         const textLen     = displayText?.length ?? 0;
 
-        // Tamanho de fonte por densidade (min 8px)
-        const density  = textLen / span;
-        const fontSize = Math.max(8,
-          density > 20 ? 7  :
-          density > 14 ? 8  :
-          density > 10 ? 9  :
-          density > 8  ? 10 :
-          density > 6  ? 11 : 12,
-        );
+        // A4 portrait: cada mês ≈ 46px (194mm × 76% / 12 × 3.78px/mm)
+        // Inter Bold: largura média por char ≈ fontSize × 0.65
+        const RATIO    = 0.65;
+        const availPx  = span * 46;
 
-        // Compressão horizontal: cada mês ≈ 46px (A4 portrait 194mm * 76% / 12)
-        // Largura de char bold Inter ≈ fontSize * 0.58
-        const availPx = span * 46;
-        const textPx  = textLen * fontSize * 0.58;
+        // Passo 1 — reduz fonte até caber (min 8px, max 12px)
+        const fontSize = textLen > 0
+          ? Math.max(8, Math.min(12, availPx / (textLen * RATIO)))
+          : 12;
+
+        // Passo 2 — se ainda não couber no mínimo de fonte, comprime horizontalmente
+        const textPx  = textLen * fontSize * RATIO;
         const scaleX  = textLen > 0 ? Math.min(1, availPx / Math.max(textPx, 1)) : 1;
 
         return (
@@ -120,7 +118,7 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
                 fontWeight: "700",
                 color: bar.alert ? "#fff" : "rgba(0,0,0,0.85)",
                 lineHeight: 1,
-                ...(scaleX < 1 && {
+                ...(scaleX < 0.99 && {
                   transform: `scaleX(${scaleX.toFixed(3)})`,
                   transformOrigin: "center",
                 }),
