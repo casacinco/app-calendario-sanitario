@@ -65,7 +65,8 @@ function catName(rowName: string): string {
 
 function BarTrack({ bars }: { bars: CalendarBar[] }) {
   return (
-    <div style={{ position: "relative", height: "100%", minHeight: "18px" }}>
+    // overflow: hidden no container garante clip mesmo quando transform bypassa o clip interno
+    <div style={{ position: "relative", height: "100%", minHeight: "18px", overflow: "hidden" }}>
       {/* Grade vertical */}
       <div style={{ position: "absolute", inset: 0, display: "flex" }}>
         {Array.from({ length: 12 }).map((_, i) => (
@@ -82,9 +83,10 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
         const textLen     = displayText?.length ?? 0;
 
         // A4 portrait: cada mês ≈ 46px (194mm × 76% / 12 × 3.78px/mm)
-        // Inter Bold: largura média por char ≈ fontSize × 0.65
-        const RATIO    = 0.65;
-        const availPx  = span * 46;
+        // Maiúsculas (Inter Bold) ≈ fontSize × 0.78; minúsculas mistas ≈ fontSize × 0.65
+        const isUpper = textLen > 0 && displayText === displayText?.toUpperCase();
+        const RATIO   = isUpper ? 0.78 : 0.65;
+        const availPx = span * 46;
 
         // Passo 1 — reduz fonte até caber (min 8px, max 12px)
         const fontSize = textLen > 0
@@ -92,8 +94,8 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
           : 12;
 
         // Passo 2 — se ainda não couber no mínimo de fonte, comprime horizontalmente
-        const textPx  = textLen * fontSize * RATIO;
-        const scaleX  = textLen > 0 ? Math.min(1, availPx / Math.max(textPx, 1)) : 1;
+        const textPx = textLen * fontSize * RATIO;
+        const scaleX = textLen > 0 ? Math.min(1, availPx / Math.max(textPx, 1)) : 1;
 
         return (
           <div
