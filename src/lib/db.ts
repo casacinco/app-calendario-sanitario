@@ -582,6 +582,7 @@ export interface AdminRequestRow {
   deadline: string | null;
   created_at: string;
   delivered_at: string | null;
+  calendar_id: number | null;
   user_name: string;
   user_email: string;
   farm_name: string;
@@ -601,6 +602,7 @@ export async function listAdminRequests(
          cr.id, cr.user_id, cr.farm_id, cr.status, cr.deadline,
          cr.created_at,
          c.published_at AS delivered_at,
+         c.id AS calendar_id,
          u.name  AS user_name,
          u.email AS user_email,
          f.name  AS farm_name,

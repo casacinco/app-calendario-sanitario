@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Search, Clock, AlertTriangle, CalendarDays,
   LayoutGrid, List, CheckCircle2, ChevronLeft, ChevronRight,
+  FileText, Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDateBR } from "@/lib/format";
@@ -99,6 +100,52 @@ function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
   );
 }
 
+// ─── Action buttons ───────────────────────────────────────────────────────────
+
+function ActionButtons({
+  calendarId,
+  onEmailClick,
+}: {
+  calendarId: number | null;
+  onEmailClick: () => void;
+}) {
+  const enabled = calendarId !== null;
+  const disabledTitle = "Calendário ainda não criado";
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {enabled ? (
+        <a
+          href={`/calendarios/${calendarId}/print`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+          title="Ver PDF"
+        >
+          <FileText className="h-3.5 w-3.5" />
+        </a>
+      ) : (
+        <span className="p-1.5 text-white/20 cursor-not-allowed" title={disabledTitle}>
+          <FileText className="h-3.5 w-3.5" />
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={enabled ? onEmailClick : undefined}
+        disabled={!enabled}
+        title={enabled ? "Enviar por e-mail" : disabledTitle}
+        className={`p-1.5 rounded transition-colors ${
+          enabled
+            ? "hover:bg-white/10 text-white/50 hover:text-white"
+            : "text-white/20 cursor-not-allowed"
+        }`}
+      >
+        <Mail className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
 // ─── Input helpers ────────────────────────────────────────────────────────────
 
 const inputCls =
@@ -123,8 +170,14 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
   const [deadlineEnd,   setDeadlineEnd]   = useState("");
   const [page,          setPage]          = useState(1);
   const [perPage,       setPerPage]       = useState<PerPage>(10);
+  const [toast,         setToast]         = useState<string | null>(null);
 
   function resetPage() { setPage(1); }
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3500);
+  }
 
   // ─── Filtered set ─────────────────────────────────────────────────────────
 
@@ -187,14 +240,14 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
     return (
       <div className="bg-[hsl(var(--card))] border border-white/8 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[750px]">
+          <table className="w-full text-sm min-w-[820px]">
             <thead>
               <tr className="border-b border-white/8">
                 {[
                   "Nome", "E-mail", "Telefone", "Rebanho", "Cidade/UF",
                   "Solicitação", "Prazo",
                   ...(tab === "entregues" ? ["Entrega"] : []),
-                  "Status",
+                  "Status", "Ações",
                 ].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-white/40 whitespace-nowrap">
                     {h}
@@ -230,6 +283,12 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
                       </td>
                     )}
                     <td className="px-4 py-3"><StatusPill cs={cs} /></td>
+                    <td className="px-4 py-3">
+                      <ActionButtons
+                        calendarId={r.calendar_id}
+                        onEmailClick={() => showToast("Envio por e-mail será configurado em breve.")}
+                      />
+                    </td>
                   </tr>
                 );
               })}
@@ -403,6 +462,13 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
 
       {/* Table / Entregues */}
       {(tab === "tabela" || tab === "entregues") && <TableView />}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 bg-[hsl(var(--card))] border border-white/15 rounded-xl px-4 py-3 text-sm text-white shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+          {toast}
+        </div>
+      )}
 
     </div>
   );
