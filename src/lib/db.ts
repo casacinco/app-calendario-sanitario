@@ -964,6 +964,7 @@ const DEFAULT_BLOCK_NOTES: { block_position: number; text: string; position: num
   { block_position: 4, position: 1, text: "Realizar a cura do umbigo com iodo 10% logo após o nascimento ou produto compatível + PROBEZERRO + CATOFÓS;" },
   { block_position: 4, position: 2, text: "Recomendação de tratamento preventivo contra EIMERIOSE com uma dose entre 21 e 30 dias após o nascimento (produtos à base de Toltrazuril)." },
   { block_position: 5, position: 1, text: "ATENÇÃO ao vermifugar ovelhas com prenhez positiva: usar droga compatível com a categoria." },
+  { block_position: 5, position: 2, text: "A dose reforço do vermífugo deve ser administrado entre 17 e 21 dias após a 1ª dose." },
 ];
 
 export async function insertDefaultBlockNotes(
