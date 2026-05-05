@@ -846,6 +846,18 @@ export async function deleteBar(db: D1Database, barId: number): Promise<void> {
   if (result.meta.changes === 0) throw new DbError("Bar not found");
 }
 
+export async function deleteAllCalendarBars(db: D1Database, calendarId: number): Promise<void> {
+  await db
+    .prepare(
+      `DELETE FROM calendar_bars
+       WHERE calendar_row_id IN (
+         SELECT id FROM calendar_rows WHERE calendar_id = ?1
+       )`,
+    )
+    .bind(calendarId)
+    .run();
+}
+
 export async function toggleCalendarRow(
   db: D1Database,
   rowId: number,

@@ -6,6 +6,7 @@ import type { CalendarBar, CalendarBlockGroup, CalendarBlockNote, CalendarRow } 
 import { cn } from "@/lib/utils";
 import { BarEditorDialog, type BarFormValue } from "@/components/bar-editor-dialog";
 import { rowColor } from "@/lib/row-colors";
+import { PRESETS } from "@/lib/presets";
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const SEP = /^(.+?)\s*—\s*(.+)$/;
@@ -90,6 +91,8 @@ export function CalendarEditor({
   const [editingNote, setEditingNote] = useState<{ id: number; text: string } | null>(null);
   const [newNote, setNewNote]         = useState<{ blockPos: number; text: string } | null>(null);
 
+  const [applyingPreset, setApplyingPreset] = useState(false);
+
   const canEdit = !readOnly && !!calendarId;
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -111,6 +114,14 @@ export function CalendarEditor({
     for (const block of blocks) {
       const row = block.rows.find((r) => r.id === rowId);
       if (row) return { rowName: row.row_name, blockName: block.block_name };
+    }
+    return null;
+  }
+
+  function findRowByName(rowName: string): CalendarRowWithBars | null {
+    for (const block of blocks) {
+      const row = (block.rows as CalendarRowWithBars[]).find((r) => r.row_name === rowName);
+      if (row) return row;
     }
     return null;
   }
@@ -420,6 +431,38 @@ export function CalendarEditor({
     setNewRowState({ blockPosition: newPos, blockName: name, value: "" });
   }
 
+  async function applyPreset(presetId: string) {
+    const preset = PRESETS.find((p) => p.id === presetId);
+    if (!preset || !calendarId) return;
+    if (!window.confirm(`Aplicar o modelo "${preset.name}"?\n\nTodas as barras atuais serão removidas e substituídas pelas barras do modelo.`)) return;
+
+    setApplyingPreset(true);
+    try {
+      // 1. Apagar todas as barras
+      await fetch(`/api/admin/calendars/${calendarId}/bars`, { method: "DELETE" });
+      patchBlocks((prev) => prev.map((b) => ({
+        ...b,
+        rows: b.rows.map((r) => ({ ...r, bars: [] })),
+      })));
+
+      // 2. Criar barras do preset sequencialmente
+      for (const pb of preset.bars) {
+        const row = findRowByName(pb.rowName);
+        if (!row) continue;
+        await createBar(row.id, {
+          start_month:     pb.startMonth,
+          end_month:       pb.endMonth,
+          label:           pb.label,
+          color:           pb.color,
+          description:     pb.label,
+          animal_category: "",
+        });
+      }
+    } finally {
+      setApplyingPreset(false);
+    }
+  }
+
   // ─── Row cell renderers ─────────────────────────────────────────────────────
 
   function renderMonthGrid(row: CalendarRowWithBars, blockPosition: number, blockName: string) {
@@ -573,6 +616,34 @@ export function CalendarEditor({
 
   return (
     <>
+      {/* Seletor de modelo de calendário */}
+      {canEdit && (
+        <div className="rounded-lg border border-border bg-card px-4 py-3 flex flex-wrap items-center gap-3">
+          <label className="text-sm font-medium text-text whitespace-nowrap">
+            Selecionar modelo de calendário
+          </label>
+          <select
+            defaultValue=""
+            disabled={applyingPreset}
+            onChange={(e) => {
+              if (e.target.value) {
+                applyPreset(e.target.value).catch(() => null);
+                e.target.value = "";
+              }
+            }}
+            className="flex-1 min-w-[200px] h-9 rounded-md border border-border bg-bg px-3 text-sm focus-visible:outline-none focus-visible:border-text-muted disabled:opacity-50"
+          >
+            <option value="">Selecionar modelo...</option>
+            {PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          {applyingPreset && (
+            <span className="text-xs text-text-muted animate-pulse">Aplicando modelo...</span>
+          )}
+        </div>
+      )}
+
       <div className="overflow-x-auto -mx-4 md:mx-0">
         <div className="min-w-[680px] px-4 md:px-0 space-y-6">
 
