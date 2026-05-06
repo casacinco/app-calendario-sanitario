@@ -145,7 +145,7 @@ export const PRESETS: CalendarPreset[] = [
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
       bar("Estação de monta",                 1,  4, "ESTAÇÃO DE MONTA",                                                                  C.verde),
-      bar("Nascimento",        7, "end",     10, "start",  "NASCIMENTO",                                                                 C.azul),
+      bar("Nascimento",        7, "start",   10, "start",  "NASCIMENTO",                                                                 C.azul),
       bar("Desmama",           9, 12, "DESMAMA",                                                                                         C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
