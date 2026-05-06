@@ -149,11 +149,12 @@ const ROW_H     = "18px";
 const MONTH_BG  = "#E67E22";   // fundo da linha de meses — laranja em todos os blocos
 
 function BlockTable({ block }: { block: CalendarBlockGroup }) {
-  const groups   = groupRows(block.rows, block.block_name);
+  const printableRows = block.rows.filter((r) => r.is_active !== 0 && r.bars.length > 0);
+  const groups   = groupRows(printableRows, block.block_name);
   const lbl      = colLabel(block.block_name);
   const visNotes = (block.notes ?? []).filter((n) => n.is_visible === 1);
 
-  function cell(ls: LabelStyle, content: string, extra?: React.CSSProperties): React.CSSProperties {
+  function cell(ls: LabelStyle, extra?: React.CSSProperties): React.CSSProperties {
     return {
       background:    ls.bg,
       color:         ls.text,
@@ -222,8 +223,8 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
             if (group.type === "single") {
               const ls = rowColor(group.row.row_name, block.block_name);
               return [
-                <tr key={group.row.id} style={{ opacity: group.row.is_active ? 1 : 0.45, height: ROW_H }}>
-                  <td colSpan={2} style={cell(ls, group.row.row_name)}>
+                <tr key={group.row.id} style={{ height: ROW_H }}>
+                  <td colSpan={2} style={cell(ls)}>
                     {group.row.row_name}
                   </td>
                   <td colSpan={12} style={{ background: "#FFFFFF", borderBottom: BORDER, padding: 0, height: ROW_H }}>
@@ -235,9 +236,9 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
               // Sublinhas herdam a cor da doença
               const disLs = group.color;
               return group.rows.map((row, ri) => (
-                <tr key={row.id} style={{ opacity: row.is_active ? 1 : 0.45, height: ROW_H }}>
+                <tr key={row.id} style={{ height: ROW_H }}>
                   {ri === 0 && (
-                    <td rowSpan={group.rows.length} style={cell(disLs, group.disease, {
+                    <td rowSpan={group.rows.length} style={cell(disLs, {
                       textAlign: "center", verticalAlign: "middle",
                       fontWeight: "700", fontSize: "6.5px",
                       textTransform: "uppercase", letterSpacing: "0.03em",
@@ -247,7 +248,7 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
                     </td>
                   )}
                   {/* Sublinha herda cor da doença */}
-                  <td style={cell(disLs, catName(row.row_name))}>
+                  <td style={cell(disLs)}>
                     {catName(row.row_name)}
                   </td>
                   <td colSpan={12} style={{ background: "#FFFFFF", borderBottom: BORDER, padding: 0, height: ROW_H }}>
@@ -363,9 +364,12 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
         <div style={{ flex: 1 }}>
 
           {/* ── Blocos ── */}
-          {blocks.map((block) => (
-            <BlockTable key={block.block_position} block={block} />
-          ))}
+          {blocks
+            .filter((block) => block.rows.some((r) => r.is_active !== 0 && r.bars.length > 0))
+            .map((block) => (
+              <BlockTable key={block.block_position} block={block} />
+            ))
+          }
 
           {/* ── Bloco de alerta ── */}
           <div style={{
