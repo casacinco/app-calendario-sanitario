@@ -15,6 +15,8 @@ interface UpdateBarBody {
   alert?: boolean;
   description?: string | null;
   animal_category?: string | null;
+  start_part?: string | null;
+  end_part?: string | null;
 }
 
 function parseId(value: string): number | null {
@@ -35,7 +37,11 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const bar = await updateBar(getEnv().DB, barId, body);
+    const bar = await updateBar(getEnv().DB, barId, {
+      ...body,
+      start_part: (body.start_part as "start"|"middle"|"end"|null|undefined),
+      end_part:   (body.end_part   as "start"|"middle"|"end"|null|undefined),
+    });
     return Response.json({ bar });
   } catch (err) {
     return Response.json(

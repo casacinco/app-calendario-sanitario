@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import type { CalendarBar, CalendarBlockGroup, CalendarBlockNote, CalendarRow } from "@/lib/db";
 import { cn } from "@/lib/utils";
-import { BarEditorDialog, type BarFormValue } from "@/components/bar-editor-dialog";
+import { BarEditorDialog, type BarFormValue, type BarPart } from "@/components/bar-editor-dialog";
 import { rowColor } from "@/lib/row-colors";
 import { PRESETS } from "@/lib/presets";
 
@@ -385,6 +385,8 @@ export function CalendarEditor({
     ? {
         start_month:     dialog.bar.start_month,
         end_month:       dialog.bar.end_month,
+        start_part:      (dialog.bar.start_part ?? "start") as BarFormValue["start_part"],
+        end_part:        (dialog.bar.end_part   ?? "end")   as BarFormValue["end_part"],
         label:           dialog.bar.label ?? "",
         color:           dialog.bar.color,
         description:     dialog.bar.description ?? "",
@@ -393,6 +395,8 @@ export function CalendarEditor({
     : {
         start_month:     1,
         end_month:       1,
+        start_part:      "start",
+        end_part:        "end",
         label:           "",
         color:           (() => {
           const info = findRowInfo(dialog.rowId);
@@ -452,6 +456,8 @@ export function CalendarEditor({
         await createBar(row.id, {
           start_month:     pb.startMonth,
           end_month:       pb.endMonth,
+          start_part:      "start",
+          end_part:        "end",
           label:           pb.label,
           color:           pb.color,
           description:     pb.label,
@@ -488,6 +494,8 @@ export function CalendarEditor({
                         calendar_row_id: row.id,
                         start_month: i + 1,
                         end_month: i + 1,
+                        start_part: "start",
+                        end_part: "end",
                         label: null,
                         color: rowColor(row.row_name, blockName).bg,
                         alert: 0,
@@ -511,12 +519,17 @@ export function CalendarEditor({
         </div>
 
         {row.bars.map((bar) => {
-          const startCol = bar.start_month - 1;
-          const span = bar.end_month - bar.start_month + 1;
-          const left = (startCol / 12) * 100;
-          const width = (span / 12) * 100;
+          const PART_LEFT:  Record<BarPart, number> = { start: 0, middle: 1/3, end: 2/3 };
+          const PART_RIGHT: Record<BarPart, number> = { start: 1/3, middle: 2/3, end: 1 };
+          const sp = (bar.start_part ?? "start") as BarPart;
+          const ep = (bar.end_part   ?? "end")   as BarPart;
+          const leftFrac  = (bar.start_month - 1 + PART_LEFT[sp])  / 12;
+          const rightFrac = (bar.end_month   - 1 + PART_RIGHT[ep]) / 12;
+          const left  = leftFrac  * 100;
+          const width = (rightFrac - leftFrac) * 100;
           const displayText = bar.description ?? bar.label;
-          const density = (displayText?.length ?? 0) / span;
+          const span = rightFrac - leftFrac; // fraction of 12 months, for density
+          const density = (displayText?.length ?? 0) / Math.max(span * 12, 0.1);
           const fontSize =
             density > 20 ? "5px" :
             density > 14 ? "6px" :

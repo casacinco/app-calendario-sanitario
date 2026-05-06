@@ -76,9 +76,16 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
 
       {/* Barras — usa o mesmo campo que o editor: description ?? label */}
       {bars.map((bar) => {
-        const span        = bar.end_month - bar.start_month + 1;
-        const left        = ((bar.start_month - 1) / 12) * 100;
-        const width       = (span / 12) * 100;
+        type BP = "start" | "middle" | "end";
+        const PART_LEFT:  Record<BP, number> = { start: 0, middle: 1/3, end: 2/3 };
+        const PART_RIGHT: Record<BP, number> = { start: 1/3, middle: 2/3, end: 1 };
+        const sp = (bar.start_part ?? "start") as BP;
+        const ep = (bar.end_part   ?? "end")   as BP;
+        const leftFrac  = (bar.start_month - 1 + PART_LEFT[sp])  / 12;
+        const rightFrac = (bar.end_month   - 1 + PART_RIGHT[ep]) / 12;
+        const left      = leftFrac * 100;
+        const width     = (rightFrac - leftFrac) * 100;
+
         const displayText = bar.description ?? bar.label;
         const textLen     = displayText?.length ?? 0;
 
@@ -86,7 +93,7 @@ function BarTrack({ bars }: { bars: CalendarBar[] }) {
         // Maiúsculas (Inter Bold) ≈ fontSize × 0.78; minúsculas mistas ≈ fontSize × 0.65
         const isUpper = textLen > 0 && displayText === displayText?.toUpperCase();
         const RATIO   = isUpper ? 0.78 : 0.65;
-        const availPx = span * 46;
+        const availPx = (rightFrac - leftFrac) * 12 * 46;
 
         // Passo 1 — reduz fonte até caber (min 8px, max 12px)
         const fontSize = textLen > 0

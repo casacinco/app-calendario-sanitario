@@ -12,6 +12,8 @@ interface CreateBarBody {
   alert?: boolean;
   description?: string | null;
   animal_category?: string | null;
+  start_part?: string | null;
+  end_part?: string | null;
 }
 
 export async function POST(request: Request) {
@@ -34,7 +36,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const bar = await createBar(getEnv().DB, body);
+    const bar = await createBar(getEnv().DB, {
+      ...body,
+      start_part: (body.start_part as "start"|"middle"|"end"|null|undefined),
+      end_part:   (body.end_part   as "start"|"middle"|"end"|null|undefined),
+    });
     return Response.json({ bar }, { status: 201 });
   } catch (err) {
     return Response.json(

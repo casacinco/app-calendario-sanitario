@@ -374,6 +374,8 @@ export async function createCalendarRequest(
 // ADMIN — listagens
 // =====================================================
 
+export type BarPart = "start" | "middle" | "end";
+
 export interface CalendarBar {
   id: number;
   calendar_row_id: number;
@@ -385,6 +387,8 @@ export interface CalendarBar {
   position: number;
   description: string | null;
   animal_category: string | null;
+  start_part: BarPart | null;
+  end_part: BarPart | null;
   created_at: string;
 }
 
@@ -749,6 +753,8 @@ export interface CreateBarInput {
   position?: number;
   description?: string | null;
   animal_category?: string | null;
+  start_part?: BarPart | null;
+  end_part?: BarPart | null;
 }
 
 export async function createBar(
@@ -765,8 +771,8 @@ export async function createBar(
   return insertReturning<CalendarBar>(
     db,
     `INSERT INTO calendar_bars
-       (calendar_row_id, start_month, end_month, label, color, alert, position, description, animal_category)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+       (calendar_row_id, start_month, end_month, label, color, alert, position, description, animal_category, start_part, end_part)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
      RETURNING *`,
     [
       input.calendar_row_id,
@@ -778,6 +784,8 @@ export async function createBar(
       input.position ?? 0,
       input.description ?? null,
       input.animal_category ?? null,
+      input.start_part ?? "start",
+      input.end_part ?? "end",
     ],
     "create bar",
   );
@@ -791,6 +799,8 @@ export interface UpdateBarInput {
   alert?: boolean;
   description?: string | null;
   animal_category?: string | null;
+  start_part?: BarPart | null;
+  end_part?: BarPart | null;
 }
 
 export async function updateBar(
@@ -819,8 +829,10 @@ export async function updateBar(
            color            = ?4,
            alert            = ?5,
            description      = ?6,
-           animal_category  = ?7
-       WHERE id = ?8
+           animal_category  = ?7,
+           start_part       = ?8,
+           end_part         = ?9
+       WHERE id = ?10
        RETURNING *`,
     )
     .bind(
@@ -831,6 +843,8 @@ export async function updateBar(
       input.alert !== undefined ? (input.alert ? 1 : 0) : existing.alert,
       input.description !== undefined ? input.description : existing.description,
       input.animal_category !== undefined ? input.animal_category : existing.animal_category,
+      input.start_part !== undefined ? input.start_part : (existing.start_part ?? "start"),
+      input.end_part   !== undefined ? input.end_part   : (existing.end_part   ?? "end"),
       barId,
     )
     .first<CalendarBar>();

@@ -79,15 +79,55 @@ function saveCustomPreset(blockPosition: number, description: string) {
   } catch { /* ignore */ }
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Tipos ───────────────────────────────────────────────────────────────────
+
+export type BarPart = "start" | "middle" | "end";
 
 export interface BarFormValue {
   start_month: number;
   end_month: number;
+  start_part: BarPart;
+  end_part: BarPart;
   label: string;
   color: string;
   description: string;
   animal_category: string;
+}
+
+// ─── Toggle de posição parcial ────────────────────────────────────────────────
+
+const PART_OPTS: { val: BarPart; label: string }[] = [
+  { val: "start",  label: "Início" },
+  { val: "middle", label: "Meio" },
+  { val: "end",    label: "Fim" },
+];
+
+function PartToggle({ label, value, onChange }: {
+  label: string;
+  value: BarPart;
+  onChange: (v: BarPart) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <div className="flex rounded-md border border-border overflow-hidden">
+        {PART_OPTS.map((o) => (
+          <button
+            key={o.val}
+            type="button"
+            onClick={() => onChange(o.val)}
+            className={`flex-1 text-sm py-1.5 transition-colors border-l first:border-l-0 border-border ${
+              value === o.val
+                ? "bg-text text-bg font-medium"
+                : "text-text-muted hover:bg-text/5"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 interface Props {
@@ -245,6 +285,20 @@ export function BarEditorDialog({
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Posição parcial */}
+        <div className="grid grid-cols-2 gap-3">
+          <PartToggle
+            label="Posição inicial"
+            value={value.start_part}
+            onChange={(v) => setValue({ ...value, start_part: v })}
+          />
+          <PartToggle
+            label="Posição final"
+            value={value.end_part}
+            onChange={(v) => setValue({ ...value, end_part: v })}
+          />
         </div>
 
         {/* Rótulo exibido na barra */}
