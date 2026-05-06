@@ -1107,3 +1107,36 @@ export async function publishCalendar(
     published_at: new Date().toISOString(),
   };
 }
+
+export async function unpublishCalendar(
+  db: D1Database,
+  calendar_id: number,
+): Promise<Calendar> {
+  const calendar = await db
+    .prepare(`SELECT * FROM calendars WHERE id = ?1`)
+    .bind(calendar_id)
+    .first<Calendar>();
+  if (!calendar) throw new DbError("Calendar not found");
+  if (calendar.status === "draft") throw new DbError("Calendar is not published");
+
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE calendars
+         SET status = 'draft',
+             published_at = NULL,
+             updated_at   = datetime('now')
+         WHERE id = ?1`,
+      )
+      .bind(calendar_id),
+    db
+      .prepare(
+        `UPDATE calendar_requests
+         SET status = 'pending', updated_at = datetime('now')
+         WHERE id = ?1`,
+      )
+      .bind(calendar.request_id),
+  ]);
+
+  return { ...calendar, status: "draft", published_at: null };
+}

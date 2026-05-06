@@ -85,9 +85,7 @@ export default async function CalendarPage({ params }: PageProps) {
           >
             Imprimir / Ver calendário ↗
           </Link>
-          {calendar.status === "draft" && (
-            <PublishButton calendarId={calendar.id} />
-          )}
+          <PublishButton calendarId={calendar.id} status={calendar.status} />
         </div>
       </header>
 
