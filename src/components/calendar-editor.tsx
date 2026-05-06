@@ -92,6 +92,7 @@ export function CalendarEditor({
   const [newNote, setNewNote]         = useState<{ blockPos: number; text: string } | null>(null);
 
   const [applyingPreset, setApplyingPreset] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const canEdit = !readOnly && !!calendarId;
 
@@ -469,6 +470,21 @@ export function CalendarEditor({
     }
   }
 
+  async function clearCalendar() {
+    if (!calendarId) return;
+    setShowClearConfirm(false);
+    setApplyingPreset(true);
+    try {
+      await fetch(`/api/admin/calendars/${calendarId}/bars`, { method: "DELETE" });
+      patchBlocks((prev) => prev.map((b) => ({
+        ...b,
+        rows: b.rows.map((r) => ({ ...r, bars: [] })),
+      })));
+    } finally {
+      setApplyingPreset(false);
+    }
+  }
+
   // ─── Row cell renderers ─────────────────────────────────────────────────────
 
   function renderMonthGrid(row: CalendarRowWithBars, blockPosition: number, blockName: string) {
@@ -651,6 +667,14 @@ export function CalendarEditor({
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
+          <button
+            type="button"
+            disabled={applyingPreset}
+            onClick={() => setShowClearConfirm(true)}
+            className="ml-auto text-sm text-red border border-red/40 rounded-md px-3 h-9 hover:bg-red/10 transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap"
+          >
+            Limpar calendário
+          </button>
           {applyingPreset && (
             <span className="text-xs text-text-muted animate-pulse">Aplicando modelo...</span>
           )}
@@ -987,6 +1011,35 @@ export function CalendarEditor({
 
         </div>
       </div>
+
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+            <h2 className="text-base font-semibold text-text leading-snug">
+              TEM CERTEZA QUE DESEJA LIMPAR ESTE CALENDÁRIO?
+            </h2>
+            <p className="text-sm text-text-muted">
+              Todas as barras adicionadas serão removidas. Esta ação não poderá ser desfeita.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="text-sm px-4 h-9 rounded-md border border-border hover:bg-text/5 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => clearCalendar().catch(() => null)}
+                className="text-sm px-4 h-9 rounded-md bg-red text-white hover:opacity-90 transition-opacity"
+              >
+                Limpar calendário
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BarEditorDialog
         open={dialog.open}
