@@ -456,8 +456,8 @@ export function CalendarEditor({
         await createBar(row.id, {
           start_month:     pb.startMonth,
           end_month:       pb.endMonth,
-          start_part:      "start",
-          end_part:        "end",
+          start_part:      pb.startPart,
+          end_part:        pb.endPart,
           label:           pb.label,
           color:           pb.color,
           description:     pb.label,

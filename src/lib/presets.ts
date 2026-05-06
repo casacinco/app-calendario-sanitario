@@ -1,19 +1,23 @@
+import type { BarPart } from "@/lib/db";
+
 // Cores oficiais
 const C = {
-  verde:       "#5FAF3E",
-  laranja:     "#E67E22",
-  roxo:        "#6C3BFF",
-  vermelho:    "#E53935",
-  azul:        "#2D9CDB",
-  ciano:       "#2EC4B6",
-  cinza:       "#4F4F4F",
-  vermifugacao:"#FF5C5C",
+  verde:        "#5FAF3E",
+  laranja:      "#E67E22",
+  roxo:         "#6C3BFF",
+  vermelho:     "#E53935",
+  azul:         "#2D9CDB",
+  ciano:        "#2EC4B6",
+  cinza:        "#4F4F4F",
+  vermifugacao: "#FF5C5C",
 } as const;
 
 export interface PresetBar {
   rowName: string;
   startMonth: number;
   endMonth: number;
+  startPart: BarPart;
+  endPart: BarPart;
   label: string;
   color: string;
 }
@@ -24,48 +28,68 @@ export interface CalendarPreset {
   bars: PresetBar[];
 }
 
+// Atalho para barra com posição padrão (start → end)
+function bar(rowName: string, s: number, e: number, label: string, color: string): PresetBar;
+function bar(rowName: string, s: number, sp: BarPart, e: number, ep: BarPart, label: string, color: string): PresetBar;
+function bar(
+  rowName: string,
+  s: number,
+  spOrE: BarPart | number,
+  eOrLabel: number | string,
+  epOrColor: BarPart | string,
+  labelOrUndef?: string,
+  colorOrUndef?: string,
+): PresetBar {
+  if (typeof spOrE === "number") {
+    // atalho sem parts: bar(row, start, end, label, color)
+    return { rowName, startMonth: s, endMonth: spOrE, startPart: "start", endPart: "end", label: eOrLabel as string, color: epOrColor as string };
+  }
+  // com parts: bar(row, start, startPart, end, endPart, label, color)
+  return { rowName, startMonth: s, startPart: spOrE, endMonth: eOrLabel as number, endPart: epOrColor as BarPart, label: labelOrUndef!, color: colorOrUndef! };
+}
+
 export const PRESETS: CalendarPreset[] = [
   {
     id: "sul-sem-estacao-chuvas",
     name: "SUL SEM ESTAÇÃO CHUVAS SET,OUT,NOV,DEZ",
     bars: [
-      // ── DISTRIBUIÇÃO ────────────────────────────────────────────────────────
-      { rowName: "Período das chuvas",                  startMonth:  9, endMonth: 12, label: "PERÍODO DAS CHUVAS",                                                                 color: C.azul },
+      // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
+      bar("Período das chuvas",               9, 12, "PERÍODO DAS CHUVAS",                                                               C.azul),
 
-      // ── PROGRAMAÇÃO REPRODUTIVA ─────────────────────────────────────────────
-      { rowName: "Estação de monta",                    startMonth:  1, endMonth: 12, label: "ESTAÇÃO DE MONTA",                                                                   color: C.verde },
-      { rowName: "Nascimento",                          startMonth:  1, endMonth: 12, label: "NASCIMENTO",                                                                         color: C.azul },
-      { rowName: "Desmama",                             startMonth:  1, endMonth: 12, label: "DESMAMA",                                                                            color: C.vermelho },
+      // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
+      bar("Estação de monta",                 1, 12, "ESTAÇÃO DE MONTA",                                                                  C.verde),
+      bar("Nascimento",                       1, 12, "NASCIMENTO",                                                                        C.azul),
+      bar("Desmama",                          1, 12, "DESMAMA",                                                                           C.vermelho),
 
-      // ── VACINAÇÃO ───────────────────────────────────────────────────────────
-      { rowName: "Pasteurelose — Cordeiros",            startMonth:  1, endMonth: 12, label: "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                    color: C.verde },
-      { rowName: "Pasteurelose — Adultos",              startMonth:  2, endMonth:  3, label: "DOSE + REFORÇO",                                                                    color: C.verde },
-      { rowName: "Pasteurelose — Adultos",              startMonth:  8, endMonth:  8, label: "DOSE",                                                                              color: C.verde },
+      // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
+      bar("Pasteurelose — Cordeiros",         1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                   C.verde),
+      bar("Pasteurelose — Adultos",           2,  3, "DOSE + REFORÇO",                                                                   C.verde),
+      bar("Pasteurelose — Adultos",           8,  8, "DOSE",                                                                             C.verde),
 
-      { rowName: "Clostridiose — Cordeiros",            startMonth:  1, endMonth: 12, label: "1ª DOSE ENTRE 30 E 60 DIAS + REFORÇO",                                             color: C.laranja },
-      { rowName: "Clostridiose — Adultos",              startMonth:  2, endMonth:  3, label: "DOSE + REFORÇO",                                                                    color: C.laranja },
-      { rowName: "Clostridiose — Adultos",              startMonth:  8, endMonth:  8, label: "DOSE",                                                                              color: C.laranja },
+      bar("Clostridiose — Cordeiros",         1, 12, "1ª DOSE ENTRE 30 E 60 DIAS + REFORÇO",                                            C.laranja),
+      bar("Clostridiose — Adultos",           2,  3, "DOSE + REFORÇO",                                                                   C.laranja),
+      bar("Clostridiose — Adultos",           8,  8, "DOSE",                                                                             C.laranja),
 
-      { rowName: "Leptospirose — Cordeiras",            startMonth:  1, endMonth: 12, label: "1ª DOSE APÓS 150 DIAS + REFORÇO",                                                  color: C.roxo },
-      { rowName: "Leptospirose — Matrizes",             startMonth:  6, endMonth:  7, label: "DOSE + REFORÇO",                                                                    color: C.roxo },
+      bar("Leptospirose — Cordeiras",         1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO",                                                 C.roxo),
+      bar("Leptospirose — Matrizes",          5,  6, "DOSE + REFORÇO",                                                                   C.roxo),
 
-      { rowName: "Raiva — Cordeiros",                   startMonth:  1, endMonth: 12, label: "1ª DOSE APÓS 90 DIAS + REFORÇO",                                                   color: C.vermelho },
-      { rowName: "Raiva — Adultos",                     startMonth:  8, endMonth:  8, label: "DOSE",                                                                              color: C.vermelho },
+      bar("Raiva — Cordeiros",                1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                                  C.vermelho),
+      bar("Raiva — Adultos",                  8,  8, "DOSE",                                                                             C.vermelho),
 
-      { rowName: "Foot-rot — Cordeiros",                startMonth:  1, endMonth: 12, label: "1ª DOSE APÓS 90 DIAS + REFORÇO",                                                   color: C.ciano },
-      { rowName: "Foot-rot — Adultos",                  startMonth:  1, endMonth:  2, label: "DOSE + REFORÇO",                                                                    color: C.ciano },
+      bar("Foot-rot — Cordeiros",             1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                                  C.ciano),
+      bar("Foot-rot — Adultos",               4,  5, "DOSE + REFORÇO",                                                                   C.ciano),
 
-      // ── MANEJO COM O NEONATO ────────────────────────────────────────────────
-      { rowName: "Cura do umbigo",                      startMonth:  1, endMonth: 12, label: "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",               color: C.cinza },
-      { rowName: "Prevenção de eimeriose",              startMonth:  1, endMonth: 12, label: "REALIZAR TRATAMENTO PREVENTIVO CONTRA EIMERIOSE",                                  color: C.roxo },
+      // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
+      bar("Cura do umbigo",                   1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",              C.cinza),
+      bar("Prevenção de eimeriose",           1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EIMERIOSE",                                 C.roxo),
 
-      // ── VERMIFUGAÇÃO ────────────────────────────────────────────────────────
-      { rowName: "Cordeiros",                           startMonth:  1, endMonth: 12, label: "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                     color: C.vermifugacao },
-      { rowName: "Adultos",                             startMonth:  1, endMonth:  2, label: "DOSE + REFORÇO",                                                                    color: C.vermifugacao },
-      { rowName: "Adultos",                             startMonth:  4, endMonth:  5, label: "DOSE + REFORÇO",                                                                    color: C.vermifugacao },
-      { rowName: "Adultos",                             startMonth:  8, endMonth:  9, label: "DOSE + REFORÇO",                                                                    color: C.vermifugacao },
-      { rowName: "Adultos",                             startMonth: 11, endMonth: 12, label: "DOSE + REFORÇO",                                                                    color: C.vermifugacao },
-      { rowName: "Ovelhas prenhes",                     startMonth:  1, endMonth: 12, label: "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)",           color: C.vermifugacao },
+      // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
+      bar("Cordeiros",                        1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                    C.vermifugacao),
+      bar("Adultos",   1, "start",  2, "middle", "DOSE + REFORÇO",                                                                      C.vermifugacao),
+      bar("Adultos",   4, "end",    6, "start",  "DOSE + REFORÇO",                                                                      C.vermifugacao),
+      bar("Adultos",   8, "middle", 9, "end",    "DOSE + REFORÇO",                                                                      C.vermifugacao),
+      bar("Adultos",  10, "end",   12, "start",  "DOSE + REFORÇO",                                                                      C.vermifugacao),
+      bar("Ovelhas prenhes",                  1, 12, "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)",          C.vermifugacao),
     ],
   },
 ];
