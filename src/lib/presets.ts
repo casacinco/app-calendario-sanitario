@@ -546,7 +546,7 @@ export const PRESETS: CalendarPreset[] = [
       bar("Clostridiose — Adultos",                     10, 10, "DOSE",                                                                              C.laranja),
 
       bar("Leptospirose — Cordeiras",                   2, "end",    5, "middle", "1ª DOSE APÓS 150 DIAS + REFORÇO",                                 C.roxo),
-      bar("Leptospirose — Matrizes",                    6, "start",  7, "middle", "DOSE + REFORÇO",                                                  C.roxo),
+      bar("Leptospirose — Matrizes",                     6,  7, "DOSE + REFORÇO",                                                                    C.roxo),
 
       bar("Raiva — Cordeiros",                          10, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                    C.vermelho),
       bar("Raiva — Adultos",                             4,  4, "DOSE",                                                                              C.vermelho),
