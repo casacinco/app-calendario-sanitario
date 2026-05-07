@@ -350,4 +350,47 @@ export const PRESETS: CalendarPreset[] = [
       bar("Ovelhas prenhes",                             1, 12, "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)",             C.vermifugacao),
     ],
   },
+  {
+    id: "sem-estacao-chuvas-jan-mai",
+    name: "SEM ESTAÇÃO CHUVAS JAN,FEV,MAR,ABR,MAIO",
+    bars: [
+      // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
+      bar("Período das chuvas",                          1,  5, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+
+      // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
+      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+
+      // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
+      bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                     C.verde),
+      bar("Pasteurelose — Adultos",                      5,  6, "DOSE + REFORÇO",                                                                     C.verde),
+      bar("Pasteurelose — Adultos",                     12, 12, "DOSE",                                                                               C.verde),
+
+      bar("Clostridiose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 E 60 DIAS + REFORÇO",                                              C.laranja),
+      bar("Clostridiose — Adultos",                      5,  6, "DOSE + REFORÇO",                                                                    C.laranja),
+      bar("Clostridiose — Adultos",                     12, 12, "DOSE",                                                                              C.laranja),
+
+      bar("Leptospirose — Cordeiras",                    1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO",                                                   C.roxo),
+      bar("Leptospirose — Matrizes",                     9, 10, "DOSE + REFORÇO",                                                                    C.roxo),
+
+      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO APÓS 30 DIAS",                                       C.vermelho),
+      bar("Raiva — Adultos",                            10, 10, "DOSE",                                                                              C.vermelho),
+
+      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO APÓS 30 DIAS",                                       C.azul),
+      bar("Linfadeite caseosa — Adulto imunizado",       9,  9, "DOSE",                                                                              C.azul),
+
+      // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+
+      // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
+      bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
+      bar("Adultos",   1, "start",  2, "middle", "DOSE + REFORÇO",                                                                                   C.vermifugacao),
+      bar("Adultos",   3, "middle", 4, "middle", "DOSE + REFORÇO",                                                                                   C.vermifugacao),
+      bar("Adultos",   7, "start",  8, "start",  "DOSE + REFORÇO",                                                                                   C.vermifugacao),
+      bar("Adultos",  10, "end",   12, "start",  "DOSE + REFORÇO",                                                                                   C.vermifugacao),
+      bar("Ovelhas prenhes",                             1, 12, "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)",             C.vermifugacao),
+    ],
+  },
 ];
