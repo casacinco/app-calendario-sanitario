@@ -93,6 +93,7 @@ export function CalendarEditor({
 
   const [applyingPreset, setApplyingPreset] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
 
   const canEdit = !readOnly && !!calendarId;
 
@@ -439,8 +440,7 @@ export function CalendarEditor({
   async function applyPreset(presetId: string) {
     const preset = PRESETS.find((p) => p.id === presetId);
     if (!preset || !calendarId) return;
-    if (!window.confirm(`Aplicar o modelo "${preset.name}"?\n\nTodas as barras atuais serão removidas e substituídas pelas barras do modelo.`)) return;
-
+    setPendingPresetId(null);
     setApplyingPreset(true);
     try {
       // 1. Apagar todas as barras
@@ -656,7 +656,7 @@ export function CalendarEditor({
             disabled={applyingPreset}
             onChange={(e) => {
               if (e.target.value) {
-                applyPreset(e.target.value).catch(() => null);
+                setPendingPresetId(e.target.value);
                 e.target.value = "";
               }
             }}
@@ -1011,6 +1011,51 @@ export function CalendarEditor({
 
         </div>
       </div>
+
+      {pendingPresetId && (() => {
+        const preset = PRESETS.find((p) => p.id === pendingPresetId);
+        if (!preset) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setPendingPresetId(null); }}
+            onKeyDown={(e) => { if (e.key === "Escape") setPendingPresetId(null); }}
+          >
+            <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+              <h2 className="text-base font-semibold text-text leading-snug">
+                Aplicar modelo de calendário?
+              </h2>
+              <p className="text-sm text-text-muted">
+                O modelo selecionado irá remover todas as barras atuais e substituir pela estrutura do preset escolhido.
+              </p>
+              <p className="text-xs text-text-muted/70">
+                Essa ação não pode ser desfeita automaticamente.
+              </p>
+              <div className="rounded-md bg-bg border border-border px-3 py-2">
+                <span className="text-xs text-text-muted uppercase tracking-wide">Modelo</span>
+                <p className="text-sm font-medium text-text mt-0.5">{preset.name}</p>
+              </div>
+              <div className="flex justify-between gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingPresetId(null)}
+                  className="text-sm px-4 h-9 rounded-md border border-border hover:bg-text/5 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={applyingPreset}
+                  onClick={() => applyPreset(preset.id).catch(() => null)}
+                  className="text-sm px-4 h-9 rounded-md bg-text text-bg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  Aplicar modelo
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
