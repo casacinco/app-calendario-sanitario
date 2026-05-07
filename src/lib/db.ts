@@ -1140,3 +1140,39 @@ export async function unpublishCalendar(
 
   return { ...calendar, status: "draft", published_at: null };
 }
+
+// =====================================================
+// CUSTOM PRESETS
+// =====================================================
+
+export interface CustomPreset {
+  id: number;
+  name: string;
+  bars_json: string;
+  created_at: string;
+}
+
+export async function listCustomPresets(db: D1Database): Promise<CustomPreset[]> {
+  const result = await db
+    .prepare(`SELECT * FROM calendar_presets ORDER BY created_at ASC`)
+    .all<CustomPreset>();
+  return result.results;
+}
+
+export async function saveCustomPreset(
+  db: D1Database,
+  input: { name: string; bars_json: string },
+): Promise<CustomPreset> {
+  const existing = await db
+    .prepare(`SELECT id FROM calendar_presets WHERE name = ?1`)
+    .bind(input.name)
+    .first();
+  if (existing) throw new DbError(`Já existe um modelo com o nome "${input.name}"`);
+
+  return insertReturning<CustomPreset>(
+    db,
+    `INSERT INTO calendar_presets (name, bars_json) VALUES (?1, ?2) RETURNING *`,
+    [input.name, input.bars_json],
+    "save custom preset",
+  );
+}

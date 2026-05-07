@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import type { CalendarBar, CalendarBlockGroup, CalendarBlockNote, CalendarRow } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { BarEditorDialog, type BarFormValue, type BarPart } from "@/components/bar-editor-dialog";
 import { rowColor } from "@/lib/row-colors";
-import { PRESETS } from "@/lib/presets";
+import { PRESETS, type PresetBar, type CalendarPreset } from "@/lib/presets";
 
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 const SEP = /^(.+?)\s*—\s*(.+)$/;
@@ -94,6 +94,30 @@ export function CalendarEditor({
   const [applyingPreset, setApplyingPreset] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
+
+  const [customPresets, setCustomPresets] = useState<CalendarPreset[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModelName, setSaveModelName] = useState("");
+  const [savingModel, setSavingModel] = useState(false);
+  const [saveModelError, setSaveModelError] = useState<string | null>(null);
+
+  const allPresets: CalendarPreset[] = [...PRESETS, ...customPresets];
+
+  useEffect(() => {
+    fetch("/api/admin/presets")
+      .then((r) => r.json<{ presets?: Array<{ id: number; name: string; bars_json: string }> }>())
+      .then((data) => {
+        if (!data.presets) return;
+        setCustomPresets(
+          data.presets.map((cp) => ({
+            id: `custom-${cp.id}`,
+            name: cp.name,
+            bars: JSON.parse(cp.bars_json) as PresetBar[],
+          })),
+        );
+      })
+      .catch(() => null);
+  }, []);
 
   const canEdit = !readOnly && !!calendarId;
 
@@ -438,7 +462,7 @@ export function CalendarEditor({
   }
 
   async function applyPreset(presetId: string) {
-    const preset = PRESETS.find((p) => p.id === presetId);
+    const preset = allPresets.find((p) => p.id === presetId);
     if (!preset || !calendarId) return;
     setPendingPresetId(null);
     setApplyingPreset(true);
@@ -467,6 +491,56 @@ export function CalendarEditor({
       }
     } finally {
       setApplyingPreset(false);
+    }
+  }
+
+  async function saveAsModel() {
+    const name = saveModelName.trim();
+    if (!name) { setSaveModelError("Nome é obrigatório"); return; }
+    if (allPresets.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+      setSaveModelError("Já existe um modelo com esse nome");
+      return;
+    }
+    const bars: PresetBar[] = [];
+    for (const block of blocks) {
+      for (const row of block.rows as CalendarRowWithBars[]) {
+        if (!row.is_active || row.bars.length === 0) continue;
+        for (const b of row.bars) {
+          bars.push({
+            rowName: row.row_name,
+            startMonth: b.start_month,
+            endMonth: b.end_month,
+            startPart: (b.start_part ?? "start") as BarPart,
+            endPart: (b.end_part ?? "end") as BarPart,
+            label: b.label ?? "",
+            color: b.color,
+          });
+        }
+      }
+    }
+    if (bars.length === 0) { setSaveModelError("O calendário não possui barras para salvar"); return; }
+    setSavingModel(true);
+    setSaveModelError(null);
+    try {
+      const res = await fetch("/api/admin/presets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, bars }),
+      });
+      const data = await res.json<{ preset?: { id: number; name: string; bars_json: string }; error?: string }>();
+      if (!res.ok) { setSaveModelError(data.error ?? "Erro ao salvar"); return; }
+      setCustomPresets((prev) => [
+        ...prev,
+        {
+          id: `custom-${data.preset!.id}`,
+          name: data.preset!.name,
+          bars: JSON.parse(data.preset!.bars_json) as PresetBar[],
+        },
+      ]);
+      setShowSaveModal(false);
+      setSaveModelName("");
+    } finally {
+      setSavingModel(false);
     }
   }
 
@@ -663,15 +737,23 @@ export function CalendarEditor({
             className="flex-1 min-w-[200px] h-9 rounded-md border border-border bg-bg px-3 text-sm focus-visible:outline-none focus-visible:border-text-muted disabled:opacity-50"
           >
             <option value="">Selecionar modelo...</option>
-            {PRESETS.map((p) => (
+            {allPresets.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
           <button
             type="button"
             disabled={applyingPreset}
+            onClick={() => { setSaveModelName(""); setSaveModelError(null); setShowSaveModal(true); }}
+            className="ml-auto text-sm text-text border border-border rounded-md px-3 h-9 hover:bg-text/5 transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap"
+          >
+            Salvar como modelo
+          </button>
+          <button
+            type="button"
+            disabled={applyingPreset}
             onClick={() => setShowClearConfirm(true)}
-            className="ml-auto text-sm text-red border border-red/40 rounded-md px-3 h-9 hover:bg-red/10 transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap"
+            className="text-sm text-red border border-red/40 rounded-md px-3 h-9 hover:bg-red/10 transition-colors disabled:opacity-50 shrink-0 whitespace-nowrap"
           >
             Limpar calendário
           </button>
@@ -1013,7 +1095,7 @@ export function CalendarEditor({
       </div>
 
       {pendingPresetId && (() => {
-        const preset = PRESETS.find((p) => p.id === pendingPresetId);
+        const preset = allPresets.find((p) => p.id === pendingPresetId);
         if (!preset) return null;
         return (
           <div
@@ -1080,6 +1162,54 @@ export function CalendarEditor({
                 className="text-sm px-4 h-9 rounded-md bg-red text-white hover:opacity-90 transition-opacity"
               >
                 Limpar calendário
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSaveModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSaveModal(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setShowSaveModal(false); }}
+        >
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+            <h2 className="text-base font-semibold text-text leading-snug">
+              Salvar calendário como modelo
+            </h2>
+            <p className="text-sm text-text-muted">
+              O estado atual do calendário será salvo como um novo modelo reutilizável.
+            </p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-text-muted">Nome do modelo</label>
+              <input
+                autoFocus
+                value={saveModelName}
+                onChange={(e) => { setSaveModelName(e.target.value); setSaveModelError(null); }}
+                onKeyDown={(e) => { if (e.key === "Enter") saveAsModel().catch(() => null); if (e.key === "Escape") setShowSaveModal(false); }}
+                placeholder="Ex: SUL ESTAÇÃO CHUVAS JULHO"
+                className="h-9 rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:border-text-muted"
+              />
+              {saveModelError && (
+                <p className="text-xs text-red">{saveModelError}</p>
+              )}
+            </div>
+            <div className="flex justify-between gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="text-sm px-4 h-9 rounded-md border border-border hover:bg-text/5 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={savingModel}
+                onClick={() => saveAsModel().catch(() => null)}
+                className="text-sm px-4 h-9 rounded-md bg-text text-bg hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {savingModel ? "Salvando..." : "Salvar modelo"}
               </button>
             </div>
           </div>
