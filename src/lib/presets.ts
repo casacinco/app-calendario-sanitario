@@ -260,7 +260,7 @@ export const PRESETS: CalendarPreset[] = [
       bar("Adultos",   1, "start",  2, "middle", "DOSE + REFORÇO",                                                                                   C.vermifugacao),
       bar("Adultos",   5, "middle", 6, "middle", "DOSE + REFORÇO",                                                                                   C.vermifugacao),
       bar("Adultos",   7, "middle", 8, "end",    "DOSE + REFORÇO",                                                                                   C.vermifugacao),
-      bar("Adultos",   9, "middle",11, "start",  "DOSE + REFORÇO",                                                                                   C.vermifugacao),
+      bar("Adultos",   9, "end",   11, "start",  "DOSE + REFORÇO",                                                                                   C.vermifugacao),
       bar("Ovelhas prenhes",                             1, 12, "TERÇO FINAL DA GESTAÇÃO VERMIFUGAÇÃO + REFORÇO (USAR DROGA COMPATÍVEL)",             C.vermifugacao),
     ],
   },
