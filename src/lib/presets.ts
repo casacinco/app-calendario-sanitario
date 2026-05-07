@@ -206,7 +206,7 @@ export const PRESETS: CalendarPreset[] = [
       bar("Raiva — Adultos",                            11, 11, "DOSE",                                                                              C.vermelho),
 
       bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                                    C.azul),
-      bar("Linfadeite caseosa — Adulto imunizado",      11, 11, "DOSE",                                                                              C.azul),
+      bar("Linfadeite caseosa — Adulto imunizado",      10, 10, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
       bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
