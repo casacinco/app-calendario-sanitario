@@ -1176,3 +1176,163 @@ export async function saveCustomPreset(
     "save custom preset",
   );
 }
+
+// =====================================================
+// MEMBERS
+// =====================================================
+
+export type MemberStatus = "active" | "inactive";
+
+export interface Member {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  product: string | null;
+  status: MemberStatus;
+  origin: string | null;
+  notes: string | null;
+  calendar_request_id: number | null;
+  entry_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberWithRequest extends Member {
+  request_status: string | null;
+  calendar_id: number | null;
+  user_name: string | null;
+  farm_name: string | null;
+}
+
+export interface CreateMemberInput {
+  name: string;
+  email: string;
+  phone?: string | null;
+  product?: string | null;
+  status?: MemberStatus;
+  origin?: string | null;
+  notes?: string | null;
+  calendar_request_id?: number | null;
+  entry_date?: string;
+}
+
+export type UpdateMemberInput = Partial<CreateMemberInput>;
+
+export async function listMembers(db: D1Database): Promise<MemberWithRequest[]> {
+  const result = await db
+    .prepare(
+      `SELECT m.*,
+              cr.status AS request_status,
+              c.id      AS calendar_id,
+              u.name    AS user_name,
+              f.name    AS farm_name
+       FROM members m
+       LEFT JOIN calendar_requests cr ON cr.id = m.calendar_request_id
+       LEFT JOIN calendars          c  ON c.request_id = cr.id
+       LEFT JOIN users              u  ON u.id = cr.user_id
+       LEFT JOIN farms              f  ON f.id = cr.farm_id
+       ORDER BY m.created_at DESC`,
+    )
+    .all<MemberWithRequest>();
+  return result.results;
+}
+
+export async function getMember(db: D1Database, id: number): Promise<MemberWithRequest | null> {
+  return db
+    .prepare(
+      `SELECT m.*,
+              cr.status AS request_status,
+              c.id      AS calendar_id,
+              u.name    AS user_name,
+              f.name    AS farm_name
+       FROM members m
+       LEFT JOIN calendar_requests cr ON cr.id = m.calendar_request_id
+       LEFT JOIN calendars          c  ON c.request_id = cr.id
+       LEFT JOIN users              u  ON u.id = cr.user_id
+       LEFT JOIN farms              f  ON f.id = cr.farm_id
+       WHERE m.id = ?1`,
+    )
+    .bind(id)
+    .first<MemberWithRequest>();
+}
+
+export async function createMember(db: D1Database, input: CreateMemberInput): Promise<Member> {
+  const existing = await db
+    .prepare(`SELECT id FROM members WHERE email = ?1`)
+    .bind(input.email)
+    .first();
+  if (existing) throw new DbError(`Já existe um usuário com o e-mail "${input.email}"`);
+
+  return insertReturning<Member>(
+    db,
+    `INSERT INTO members (name, email, phone, product, status, origin, notes, calendar_request_id, entry_date)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+     RETURNING *`,
+    [
+      input.name,
+      input.email,
+      input.phone ?? null,
+      input.product ?? null,
+      input.status ?? "active",
+      input.origin ?? null,
+      input.notes ?? null,
+      input.calendar_request_id ?? null,
+      input.entry_date ?? new Date().toISOString().split("T")[0],
+    ],
+    "create member",
+  );
+}
+
+export async function updateMember(
+  db: D1Database,
+  id: number,
+  patch: UpdateMemberInput,
+): Promise<Member> {
+  const fields: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+
+  if (patch.name !== undefined)                { fields.push(`name = ?${idx++}`);                params.push(patch.name); }
+  if (patch.email !== undefined)               { fields.push(`email = ?${idx++}`);               params.push(patch.email); }
+  if (patch.phone !== undefined)               { fields.push(`phone = ?${idx++}`);               params.push(patch.phone); }
+  if (patch.product !== undefined)             { fields.push(`product = ?${idx++}`);             params.push(patch.product); }
+  if (patch.status !== undefined)              { fields.push(`status = ?${idx++}`);              params.push(patch.status); }
+  if (patch.origin !== undefined)              { fields.push(`origin = ?${idx++}`);              params.push(patch.origin); }
+  if (patch.notes !== undefined)               { fields.push(`notes = ?${idx++}`);               params.push(patch.notes); }
+  if (patch.calendar_request_id !== undefined) { fields.push(`calendar_request_id = ?${idx++}`); params.push(patch.calendar_request_id); }
+  if (patch.entry_date !== undefined)          { fields.push(`entry_date = ?${idx++}`);          params.push(patch.entry_date); }
+
+  if (fields.length === 0) {
+    const existing = await db.prepare(`SELECT * FROM members WHERE id = ?1`).bind(id).first<Member>();
+    if (!existing) throw new DbError("Usuário não encontrado");
+    return existing;
+  }
+
+  fields.push(`updated_at = datetime('now')`);
+  params.push(id);
+
+  return insertReturning<Member>(
+    db,
+    `UPDATE members SET ${fields.join(", ")} WHERE id = ?${idx} RETURNING *`,
+    params,
+    "update member",
+  );
+}
+
+export async function toggleMemberStatus(db: D1Database, id: number): Promise<Member> {
+  return insertReturning<Member>(
+    db,
+    `UPDATE members
+     SET status = CASE WHEN status = 'active' THEN 'inactive' ELSE 'active' END,
+         updated_at = datetime('now')
+     WHERE id = ?1
+     RETURNING *`,
+    [id],
+    "toggle member status",
+  );
+}
+
+export async function deleteMember(db: D1Database, id: number): Promise<void> {
+  await db.prepare(`DELETE FROM members WHERE id = ?1`).bind(id).run();
+}
