@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
-  Search, Plus, Package, ShoppingBag, CalendarDays,
+  Search, Plus, CalendarDays,
   Infinity as InfinityIcon, Lock, Unlock, RefreshCw,
   ExternalLink, Users, X, Clock, Mail, KeyRound,
-  Eye, EyeOff, Copy, Check, Wifi, MonitorSmartphone,
+  Eye, EyeOff, Copy, Check, MonitorSmartphone,
 } from "lucide-react";
 import type {
   MemberWithRequest, Member, AdminRequestRow,
@@ -111,13 +111,10 @@ function StatCard({ value, label, accent }: { value: number; label: string; acce
 // ─── Action button ────────────────────────────────────────────────────────────
 
 function Btn({
-  onClick, disabled, loading, danger, success, title, children,
+  onClick, disabled, title, children,
 }: {
   onClick?: () => void;
   disabled?: boolean;
-  loading?: boolean;
-  danger?: boolean;
-  success?: boolean;
   title?: string;
   children: React.ReactNode;
 }) {
@@ -126,13 +123,36 @@ function Btn({
       type="button"
       title={title}
       onClick={onClick}
-      disabled={disabled || loading}
-      className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border transition-colors disabled:opacity-40 whitespace-nowrap
-        ${danger  ? "border-red/30 text-red hover:bg-red/10" :
-          success ? "border-green/30 text-green hover:bg-green/10" :
-          "border-border text-text-muted hover:bg-text/5 hover:text-text"}`}
+      disabled={disabled}
+      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors disabled:opacity-40 whitespace-nowrap"
     >
-      {loading ? <RefreshCw className="h-3 w-3 animate-spin" /> : children}
+      {children}
+    </button>
+  );
+}
+
+function BtnDanger({ onClick, disabled, title, children }: {
+  onClick?: () => void; disabled?: boolean; title?: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button" title={title} onClick={onClick} disabled={disabled}
+      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-red/30 text-red hover:bg-red/10 transition-colors disabled:opacity-40 whitespace-nowrap"
+    >
+      {children}
+    </button>
+  );
+}
+
+function BtnSuccess({ onClick, disabled, title, children }: {
+  onClick?: () => void; disabled?: boolean; title?: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button" title={title} onClick={onClick} disabled={disabled}
+      className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-green/30 text-green hover:bg-green/10 transition-colors disabled:opacity-40 whitespace-nowrap"
+    >
+      {children}
     </button>
   );
 }
@@ -144,18 +164,125 @@ const INPUT_LG = "h-9 w-full rounded-md border border-border bg-bg px-3 text-sm 
 const SELECT   = "h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:border-text-muted transition-colors";
 const TEXTAREA = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors resize-none";
 
+// ─── Confirm modal ────────────────────────────────────────────────────────────
+
+interface ConfirmAction {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  variant: "green" | "red" | "neutral";
+  execute: () => Promise<void>;
+}
+
+function ConfirmModal({
+  action, onClose,
+}: {
+  action: ConfirmAction;
+  onClose: () => void;
+}) {
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [visible, setVisible]   = useState(false);
+
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !loading) onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [loading, onClose]);
+
+  async function handleConfirm() {
+    setLoading(true);
+    setError(null);
+    try {
+      await action.execute();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao executar ação");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const confirmBtnClass =
+    action.variant === "red"
+      ? "bg-red text-white hover:opacity-90"
+      : action.variant === "green"
+      ? "bg-green text-white hover:opacity-90"
+      : "bg-text text-bg hover:opacity-90";
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-200 ${visible ? "bg-black/60" : "bg-black/0"}`}
+      onClick={e => { if (e.target === e.currentTarget && !loading) onClose(); }}
+    >
+      <div
+        className={`bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm transition-all duration-200 ${visible ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-5 pb-3 gap-3">
+          <h2 className="text-base font-semibold text-text leading-snug">{action.title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="text-text-muted hover:text-text p-0.5 transition-colors shrink-0 disabled:opacity-40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 pb-5 space-y-3">
+          <p className="text-sm text-text-muted leading-relaxed">{action.message}</p>
+          {error && (
+            <p className="text-xs text-red bg-red/10 border border-red/20 rounded-md px-3 py-2">{error}</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 pb-5 flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="text-sm px-4 h-9 rounded-md border border-border text-text-muted hover:bg-text/5 transition-colors disabled:opacity-40"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={loading}
+            className={`text-sm px-5 h-9 rounded-md font-medium transition-opacity disabled:opacity-50 flex items-center gap-2 ${confirmBtnClass}`}
+          >
+            {loading
+              ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Aguarde…</>
+              : action.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Member card ──────────────────────────────────────────────────────────────
 
 function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate: (u: Member) => void }) {
-  const [loading, setLoading]         = useState<string | null>(null);
-  const [err, setErr]                 = useState<string | null>(null);
-  const [feedback, setFeedback]       = useState<string | null>(null);
-  const [inlineMode, setInlineMode]   = useState<InlineMode>(null);
-  const [inlineVal, setInlineVal]     = useState("");
-  const [inlineConf, setInlineConf]   = useState("");
-  const [inlineErr, setInlineErr]     = useState<string | null>(null);
-  const [inlineLoad, setInlineLoad]   = useState(false);
-  const [showPwd, setShowPwd]         = useState(false);
+  const [feedback, setFeedback]         = useState<string | null>(null);
+  const [inlineMode, setInlineMode]     = useState<InlineMode>(null);
+  const [inlineVal, setInlineVal]       = useState("");
+  const [inlineConf, setInlineConf]     = useState("");
+  const [inlineErr, setInlineErr]       = useState<string | null>(null);
+  const [inlineLoad, setInlineLoad]     = useState(false);
+  const [showPwd, setShowPwd]           = useState(false);
+  const [pendingAction, setPendingAction] = useState<ConfirmAction | null>(null);
 
   const ds       = getDisplayStatus(member);
   const daysLeft = getDaysLeft(member.expires_at);
@@ -179,55 +306,59 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
     setInlineErr(null);
   }
 
-  // ── API calls ──────────────────────────────────────────────────────────────
+  // ── API helpers for confirm modal ──────────────────────────────────────────
 
-  async function apiPost(action: string, url: string, body?: object) {
-    setLoading(action);
-    setErr(null);
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
-      });
-      const data = await res.json<{ member?: Member; error?: string }>();
-      if (!res.ok) { setErr(data.error ?? "Erro"); return; }
-      onUpdate(data.member!);
-    } catch { setErr("Erro de conexão"); }
-    finally  { setLoading(null); }
+  async function apiExtend(days?: number, type?: "lifetime") {
+    const body = type === "lifetime" ? { type } : { days };
+    const res = await fetch(`/api/admin/members/${member.id}/extend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json<{ member?: Member; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+    onUpdate(data.member!);
   }
 
-  async function saveInline() {
+  async function apiToggle() {
+    const res = await fetch(`/api/admin/members/${member.id}/toggle`, { method: "POST" });
+    const data = await res.json<{ member?: Member; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+    onUpdate(data.member!);
+  }
+
+  // ── Inline editor save (triggered from confirm modal) ─────────────────────
+
+  async function saveInlineActual() {
+    const body = inlineMode === "email" ? { email: inlineVal.trim() } : { password: inlineVal };
+    const res = await fetch(`/api/admin/members/${member.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json<{ member?: Member; error?: string }>();
+    if (!res.ok) throw new Error(data.error ?? "Erro");
+    onUpdate(data.member!);
+    closeInline();
+    flash(inlineMode === "email" ? "E-mail atualizado" : "Senha atualizada");
+  }
+
+  function requestSaveInline() {
     if (inlineMode === "email") {
       if (!inlineVal.trim()) { setInlineErr("E-mail é obrigatório"); return; }
     } else {
       if (!inlineVal.trim()) { setInlineErr("Senha é obrigatória"); return; }
       if (inlineVal !== inlineConf) { setInlineErr("As senhas não coincidem"); return; }
     }
-    setInlineLoad(true);
-    setInlineErr(null);
-    try {
-      const body = inlineMode === "email" ? { email: inlineVal.trim() } : { password: inlineVal };
-      const res = await fetch(`/api/admin/members/${member.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json<{ member?: Member; error?: string }>();
-      if (!res.ok) { setInlineErr(data.error ?? "Erro"); return; }
-      onUpdate(data.member!);
-      closeInline();
-      flash(inlineMode === "email" ? "E-mail atualizado" : "Senha atualizada");
-    } catch { setInlineErr("Erro de conexão"); }
-    finally  { setInlineLoad(false); }
-  }
-
-  function handleResend() {
-    if (!member.password) { flash("Sem senha configurada — defina uma senha primeiro."); return; }
-    const text = `Acesso ao sistema:\nLogin: ${member.email}\nSenha: ${member.password}`;
-    navigator.clipboard.writeText(text)
-      .then(() => flash("Credenciais copiadas para a área de transferência"))
-      .catch(() => flash(`Senha: ${member.password}`));
+    setPendingAction({
+      title: inlineMode === "email" ? "Alterar e-mail do usuário?" : "Alterar senha do usuário?",
+      message: inlineMode === "email"
+        ? `O e-mail de ${member.name} será alterado para ${inlineVal.trim()}.`
+        : `A senha de acesso de ${member.name} será redefinida.`,
+      confirmLabel: "Confirmar alteração",
+      variant: "neutral",
+      execute: saveInlineActual,
+    });
   }
 
   // ── Subscription status label ──────────────────────────────────────────────
@@ -242,254 +373,326 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
     return "Ativo";
   }
 
+  const firstName = member.name.split(" ")[0];
+
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      {/* Status bar */}
-      <div className={`h-0.5 ${SC[ds].bar}`} />
+    <>
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {/* Status bar */}
+        <div className={`h-0.5 ${SC[ds].bar}`} />
 
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-4 pb-3 flex items-start gap-3">
-        <Avatar name={member.name} status={ds} />
+        {/* ── Header ───────────────────────────────────────────────────────── */}
+        <div className="px-5 pt-4 pb-3 flex items-start gap-3">
+          <Avatar name={member.name} status={ds} />
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-text leading-snug">{member.name}</span>
-            <ProfileBadge profile={member.profile ?? "user"} />
-            <StatusBadge status={ds} />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-text leading-snug">{member.name}</span>
+              <ProfileBadge profile={member.profile ?? "user"} />
+              <StatusBadge status={ds} />
+            </div>
+            <p className="text-xs text-text-muted mt-0.5">{member.email}</p>
+            {member.phone && <p className="text-xs text-text-muted">{member.phone}</p>}
           </div>
-          <p className="text-xs text-text-muted mt-0.5">{member.email}</p>
-          {member.phone && <p className="text-xs text-text-muted">{member.phone}</p>}
+
+          {/* Icon shortcuts */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              title="Copiar e-mail"
+              onClick={() => navigator.clipboard.writeText(member.email).then(() => flash("E-mail copiado"))}
+              className="p-1.5 rounded text-text-muted hover:text-text hover:bg-text/5 transition-colors"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+            <Link
+              href={`/admin/usuarios/${member.id}`}
+              title="Abrir página de edição"
+              className="p-1.5 rounded text-text-muted hover:text-text hover:bg-text/5 transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
 
-        {/* Icon shortcuts */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            title="Copiar e-mail"
-            onClick={() => navigator.clipboard.writeText(member.email).then(() => flash("E-mail copiado"))}
-            className="p-1.5 rounded text-text-muted hover:text-text hover:bg-text/5 transition-colors"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </button>
-          <Link
-            href={`/admin/usuarios/${member.id}`}
-            title="Abrir página de edição"
-            className="p-1.5 rounded text-text-muted hover:text-text hover:bg-text/5 transition-colors"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      </div>
+        {/* ── Info grid ────────────────────────────────────────────────────── */}
+        <div className="px-5 pb-4 border-t border-border pt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
+            <InfoCell label="Produto"         value={member.product} />
+            <InfoCell label="Último acesso"   value={member.last_access ? formatDateBR(member.last_access) : null} />
+            <InfoCell label="Origem"          value={member.origin} />
+            <InfoCell label="Perfil"          value={PROFILE_LABELS[member.profile ?? "user"]} />
+            <InfoCell label="Data de entrada" value={formatDateBR(member.entry_date)} />
+            <InfoCell label="Tipo de acesso"  value={ACCESS_LABELS[member.access_type ?? "30d"]} />
+          </div>
 
-      {/* ── Info grid ────────────────────────────────────────────────────── */}
-      <div className="px-5 pb-4 border-t border-border pt-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3">
-          <InfoCell label="Produto"        value={member.product} />
-          <InfoCell label="Último acesso"  value={member.last_access ? formatDateBR(member.last_access) : null} />
-          <InfoCell label="Origem"         value={member.origin} />
-          <InfoCell label="Perfil"         value={PROFILE_LABELS[member.profile ?? "user"]} />
-          <InfoCell label="Data de entrada" value={formatDateBR(member.entry_date)} />
-          <InfoCell label="Tipo de acesso" value={ACCESS_LABELS[member.access_type ?? "30d"]} />
-        </div>
-
-        {/* ── Access countdown ──────────────────────────────────────────── */}
-        <div className="mt-3 pt-3 border-t border-border/50">
-          {member.access_type === "lifetime" ? (
-            <div className="flex items-center gap-2 text-xs text-blue-400">
-              <InfinityIcon className="h-3.5 w-3.5" />
-              <span className="font-medium">Acesso vitalício</span>
-            </div>
-          ) : member.expires_at ? (
-            <div className={`flex items-center justify-between gap-2 text-xs ${
-              daysLeft !== null && daysLeft <= 0  ? "text-red" :
-              daysLeft !== null && daysLeft <= 30 ? "text-yellow-400" :
-              "text-text-muted"
-            }`}>
-              <div className="flex items-center gap-2">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                {daysLeft !== null && daysLeft <= 0 ? (
-                  <span>Acesso expirado · {formatDateBR(member.expires_at)}</span>
-                ) : (
-                  <span><strong className="text-text">{daysLeft} dias restantes</strong> · expira {formatDateBR(member.expires_at)}</span>
-                )}
+          {/* ── Access countdown ──────────────────────────────────────────── */}
+          <div className="mt-3 pt-3 border-t border-border/50">
+            {member.access_type === "lifetime" ? (
+              <div className="flex items-center gap-2 text-xs text-blue-400">
+                <InfinityIcon className="h-3.5 w-3.5" />
+                <span className="font-medium">Acesso vitalício</span>
               </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                daysLeft !== null && daysLeft <= 0  ? "bg-red/10 text-red border-red/30" :
-                daysLeft !== null && daysLeft <= 30 ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/25" :
-                "bg-green/10 text-green border-green/30"
+            ) : member.expires_at ? (
+              <div className={`flex items-center justify-between gap-2 text-xs ${
+                daysLeft !== null && daysLeft <= 0  ? "text-red" :
+                daysLeft !== null && daysLeft <= 30 ? "text-yellow-400" :
+                "text-text-muted"
               }`}>
-                {subscriptionLabel()}
-              </span>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  {daysLeft !== null && daysLeft <= 0 ? (
+                    <span>Acesso expirado · {formatDateBR(member.expires_at)}</span>
+                  ) : (
+                    <span><strong className="text-text">{daysLeft} dias restantes</strong> · expira {formatDateBR(member.expires_at)}</span>
+                  )}
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                  daysLeft !== null && daysLeft <= 0  ? "bg-red/10 text-red border-red/30" :
+                  daysLeft !== null && daysLeft <= 30 ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/25" :
+                  "bg-green/10 text-green border-green/30"
+                }`}>
+                  {subscriptionLabel()}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-text-muted">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Sem data de expiração configurada</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── Device info ───────────────────────────────────────────────── */}
+          {member.device_info && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+              <MonitorSmartphone className="h-3.5 w-3.5 shrink-0" />
+              <span>{member.device_info}</span>
             </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs text-text-muted">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Sem data de expiração configurada</span>
+          )}
+
+          {/* ── Calendar link ──────────────────────────────────────────────── */}
+          {(member.calendar_id || member.calendar_request_id) && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+              {member.calendar_id ? (
+                <Link href={`/admin/calendarios/${member.calendar_id}`} className="hover:text-text underline underline-offset-2">
+                  Ver calendário vinculado ↗
+                </Link>
+              ) : (
+                <Link href={`/admin/requests/${member.calendar_request_id}`} className="hover:text-text underline underline-offset-2">
+                  Ver solicitação vinculada ↗
+                </Link>
+              )}
+            </div>
+          )}
+
+          {/* ── Feedback toast ─────────────────────────────────────────────── */}
+          {feedback && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-green">
+              <Check className="h-3.5 w-3.5" /> {feedback}
             </div>
           )}
         </div>
 
-        {/* ── Device info ───────────────────────────────────────────────── */}
-        {member.device_info && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-            <MonitorSmartphone className="h-3.5 w-3.5 shrink-0" />
-            <span>{member.device_info}</span>
-          </div>
-        )}
+        {/* ── Quick actions ─────────────────────────────────────────────────── */}
+        <div className="px-5 py-3 border-t border-border bg-bg/30 space-y-2">
 
-        {/* ── Calendar link ──────────────────────────────────────────────── */}
-        {(member.calendar_id || member.calendar_request_id) && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
-            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-            {member.calendar_id ? (
-              <Link href={`/admin/calendarios/${member.calendar_id}`} className="hover:text-text underline underline-offset-2">
-                Ver calendário vinculado ↗
-              </Link>
-            ) : (
-              <Link href={`/admin/requests/${member.calendar_request_id}`} className="hover:text-text underline underline-offset-2">
-                Ver solicitação vinculada ↗
-              </Link>
-            )}
-          </div>
-        )}
+          {/* Main actions row */}
+          <div className="flex items-center flex-wrap gap-1.5">
 
-        {/* ── Feedback toast ─────────────────────────────────────────────── */}
-        {feedback && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-green">
-            <Check className="h-3.5 w-3.5" /> {feedback}
-          </div>
-        )}
-        {err && <p className="mt-2 text-xs text-red">{err}</p>}
-      </div>
+            {/* Extend time — positive (green) */}
+            <BtnSuccess onClick={() => setPendingAction({
+              title: "Adicionar 30 dias de acesso?",
+              message: `Você está prestes a adicionar 30 dias de acesso para ${firstName}.`,
+              confirmLabel: "Adicionar 30 dias",
+              variant: "green",
+              execute: () => apiExtend(30),
+            })}>+30d</BtnSuccess>
 
-      {/* ── Quick actions ─────────────────────────────────────────────────── */}
-      <div className="px-5 py-3 border-t border-border bg-bg/30 space-y-2">
+            <BtnSuccess onClick={() => setPendingAction({
+              title: "Adicionar 90 dias de acesso?",
+              message: `Você está prestes a adicionar 90 dias de acesso para ${firstName}.`,
+              confirmLabel: "Adicionar 90 dias",
+              variant: "green",
+              execute: () => apiExtend(90),
+            })}>+90d</BtnSuccess>
 
-        {/* Main actions row */}
-        <div className="flex items-center flex-wrap gap-1.5">
-          {/* Extend time */}
-          <Btn onClick={() => apiPost("+30d",    `/api/admin/members/${member.id}/extend`, { days: 30  })} loading={loading === "+30d"}    disabled={!!loading}>+30d</Btn>
-          <Btn onClick={() => apiPost("+90d",    `/api/admin/members/${member.id}/extend`, { days: 90  })} loading={loading === "+90d"}    disabled={!!loading}>+90d</Btn>
-          <Btn onClick={() => apiPost("+365d",   `/api/admin/members/${member.id}/extend`, { days: 365 })} loading={loading === "+365d"}   disabled={!!loading}>+365d</Btn>
-          <Btn onClick={() => apiPost("lifetime",`/api/admin/members/${member.id}/extend`, { type: "lifetime" })} loading={loading === "lifetime"} disabled={!!loading || ds === "lifetime"}>
-            <InfinityIcon className="h-3 w-3" /> Vitalício
-          </Btn>
+            <BtnSuccess onClick={() => setPendingAction({
+              title: "Adicionar 365 dias de acesso?",
+              message: `Você está prestes a adicionar 365 dias de acesso para ${firstName}.`,
+              confirmLabel: "Adicionar 365 dias",
+              variant: "green",
+              execute: () => apiExtend(365),
+            })}>+365d</BtnSuccess>
 
-          <span className="text-border text-xs select-none">|</span>
-
-          {/* Block/Unblock */}
-          <Btn
-            onClick={() => apiPost("toggle", `/api/admin/members/${member.id}/toggle`)}
-            loading={loading === "toggle"}
-            disabled={!!loading}
-            danger={ds !== "blocked"}
-            success={ds === "blocked"}
-          >
-            {ds === "blocked"
-              ? <><Unlock className="h-3 w-3" /> Desbloquear</>
-              : <><Lock   className="h-3 w-3" /> Bloquear</>}
-          </Btn>
-
-          <span className="text-border text-xs select-none">|</span>
-
-          {/* Account actions */}
-          <Btn onClick={() => openInline("email")}    disabled={!!loading} title="Alterar e-mail de acesso">
-            <Mail className="h-3 w-3" /> Alt. Email
-          </Btn>
-          <Btn onClick={() => openInline("password")} disabled={!!loading} title="Alterar senha de acesso">
-            <KeyRound className="h-3 w-3" /> Alt. Senha
-          </Btn>
-          <Btn onClick={handleResend} disabled={!!loading} title="Copiar credenciais de acesso">
-            <Copy className="h-3 w-3" /> Reenviar
-          </Btn>
-        </div>
-
-        {/* Inline: edit email */}
-        {inlineMode === "email" && (
-          <div className="flex items-center gap-2 pt-1">
-            <Mail className="h-4 w-4 text-text-muted shrink-0" />
-            <input
-              autoFocus
-              type="email"
-              value={inlineVal}
-              onChange={e => setInlineVal(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") saveInline(); if (e.key === "Escape") closeInline(); }}
-              placeholder="Novo e-mail..."
-              className={`${INPUT} flex-1`}
-            />
-            <button
-              type="button"
-              onClick={saveInline}
-              disabled={inlineLoad}
-              className="h-8 px-3 text-xs rounded border border-green/30 text-green hover:bg-green/10 transition-colors disabled:opacity-50"
+            <BtnSuccess
+              disabled={ds === "lifetime"}
+              onClick={() => setPendingAction({
+                title: "Tornar acesso vitalício?",
+                message: `O acesso de ${firstName} se tornará vitalício, sem data de expiração.`,
+                confirmLabel: "Tornar vitalício",
+                variant: "green",
+                execute: () => apiExtend(undefined, "lifetime"),
+              })}
             >
-              {inlineLoad ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Salvar"}
-            </button>
-            <button type="button" onClick={closeInline} className="text-text-muted hover:text-text p-1">
-              <X className="h-4 w-4" />
-            </button>
-            {inlineErr && <p className="text-xs text-red">{inlineErr}</p>}
-          </div>
-        )}
+              <InfinityIcon className="h-3 w-3" /> Vitalício
+            </BtnSuccess>
 
-        {/* Inline: change password */}
-        {inlineMode === "password" && (
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4 text-text-muted shrink-0" />
-              <div className="relative flex-1">
-                <input
-                  autoFocus
-                  type={showPwd ? "text" : "password"}
-                  value={inlineVal}
-                  onChange={e => setInlineVal(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Escape") closeInline(); }}
-                  placeholder="Nova senha..."
-                  className={`${INPUT} pr-8`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(p => !p)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
-                >
-                  {showPwd ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => { const p = generatePassword(); setInlineVal(p); setInlineConf(p); setShowPwd(true); }}
-                className="h-8 px-2.5 text-xs rounded border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors whitespace-nowrap"
-              >
-                Gerar
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 shrink-0" />
+            <span className="text-border text-xs select-none">|</span>
+
+            {/* Block/Unblock */}
+            {ds === "blocked" ? (
+              <BtnSuccess onClick={() => setPendingAction({
+                title: "Desbloquear usuário?",
+                message: `O acesso de ${firstName} será reativado.`,
+                confirmLabel: "Desbloquear",
+                variant: "green",
+                execute: apiToggle,
+              })}>
+                <Unlock className="h-3 w-3" /> Desbloquear
+              </BtnSuccess>
+            ) : (
+              <BtnDanger onClick={() => setPendingAction({
+                title: "Bloquear acesso do usuário?",
+                message: `${firstName} não conseguirá fazer login enquanto estiver bloqueado.`,
+                confirmLabel: "Bloquear acesso",
+                variant: "red",
+                execute: apiToggle,
+              })}>
+                <Lock className="h-3 w-3" /> Bloquear
+              </BtnDanger>
+            )}
+
+            <span className="text-border text-xs select-none">|</span>
+
+            {/* Account actions */}
+            <Btn onClick={() => openInline("email")} title="Alterar e-mail de acesso">
+              <Mail className="h-3 w-3" /> Alt. Email
+            </Btn>
+            <Btn onClick={() => openInline("password")} title="Alterar senha de acesso">
+              <KeyRound className="h-3 w-3" /> Alt. Senha
+            </Btn>
+            <Btn
+              title="Copiar credenciais de acesso"
+              onClick={() => {
+                if (!member.password) {
+                  setFeedback("Sem senha configurada — defina uma senha primeiro.");
+                  setTimeout(() => setFeedback(null), 3000);
+                  return;
+                }
+                setPendingAction({
+                  title: "Reenviar dados de acesso?",
+                  message: `As credenciais de ${firstName} serão copiadas para a área de transferência.`,
+                  confirmLabel: "Copiar credenciais",
+                  variant: "neutral",
+                  execute: async () => {
+                    const text = `Acesso ao sistema:\nLogin: ${member.email}\nSenha: (definida no cadastro)`;
+                    await navigator.clipboard.writeText(text);
+                    flash("Credenciais copiadas para a área de transferência");
+                  },
+                });
+              }}
+            >
+              <Copy className="h-3 w-3" /> Reenviar
+            </Btn>
+          </div>
+
+          {/* Inline: edit email */}
+          {inlineMode === "email" && (
+            <div className="flex items-center gap-2 pt-1">
+              <Mail className="h-4 w-4 text-text-muted shrink-0" />
               <input
-                type={showPwd ? "text" : "password"}
-                value={inlineConf}
-                onChange={e => setInlineConf(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") saveInline(); if (e.key === "Escape") closeInline(); }}
-                placeholder="Confirmar senha..."
+                autoFocus
+                type="email"
+                value={inlineVal}
+                onChange={e => setInlineVal(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") requestSaveInline(); if (e.key === "Escape") closeInline(); }}
+                placeholder="Novo e-mail..."
                 className={`${INPUT} flex-1`}
               />
               <button
                 type="button"
-                onClick={saveInline}
+                onClick={requestSaveInline}
                 disabled={inlineLoad}
-                className="h-8 px-3 text-xs rounded border border-green/30 text-green hover:bg-green/10 transition-colors disabled:opacity-50 whitespace-nowrap"
+                className="h-8 px-3 text-xs rounded border border-green/30 text-green hover:bg-green/10 transition-colors disabled:opacity-50"
               >
                 {inlineLoad ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Salvar"}
               </button>
               <button type="button" onClick={closeInline} className="text-text-muted hover:text-text p-1">
                 <X className="h-4 w-4" />
               </button>
+              {inlineErr && <p className="text-xs text-red">{inlineErr}</p>}
             </div>
-            {inlineErr && <p className="text-xs text-red pl-6">{inlineErr}</p>}
-          </div>
-        )}
+          )}
+
+          {/* Inline: change password */}
+          {inlineMode === "password" && (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-text-muted shrink-0" />
+                <div className="relative flex-1">
+                  <input
+                    autoFocus
+                    type={showPwd ? "text" : "password"}
+                    value={inlineVal}
+                    onChange={e => setInlineVal(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Escape") closeInline(); }}
+                    placeholder="Nova senha..."
+                    className={`${INPUT} pr-8`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(p => !p)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+                  >
+                    {showPwd ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { const p = generatePassword(); setInlineVal(p); setInlineConf(p); setShowPwd(true); }}
+                  className="h-8 px-2.5 text-xs rounded border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors whitespace-nowrap"
+                >
+                  Gerar
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 shrink-0" />
+                <input
+                  type={showPwd ? "text" : "password"}
+                  value={inlineConf}
+                  onChange={e => setInlineConf(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") requestSaveInline(); if (e.key === "Escape") closeInline(); }}
+                  placeholder="Confirmar senha..."
+                  className={`${INPUT} flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={requestSaveInline}
+                  disabled={inlineLoad}
+                  className="h-8 px-3 text-xs rounded border border-green/30 text-green hover:bg-green/10 transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {inlineLoad ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Salvar"}
+                </button>
+                <button type="button" onClick={closeInline} className="text-text-muted hover:text-text p-1">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              {inlineErr && <p className="text-xs text-red pl-6">{inlineErr}</p>}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Confirm modal — rendered outside card to avoid clipping */}
+      {pendingAction && (
+        <ConfirmModal
+          action={pendingAction}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+    </>
   );
 }
 
