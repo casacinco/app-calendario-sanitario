@@ -7,7 +7,7 @@ import {
   Infinity as InfinityIcon, Lock, Unlock, RefreshCw,
   ExternalLink, Users, X, Clock, Mail, KeyRound,
   Eye, EyeOff, Copy, Check, MonitorSmartphone,
-  Download, Printer, ChevronDown, SlidersHorizontal,
+  Download, Printer, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal,
 } from "lucide-react";
 import type {
   MemberWithRequest, Member, AdminRequestRow,
@@ -734,6 +734,7 @@ interface SavedFilters {
   entryTo?: string;
   expiryFrom?: string;
   expiryTo?: string;
+  pageSize?: number;
 }
 
 export function MembersList({ members: initial, requests }: { members: MemberWithRequest[]; requests: AdminRequestRow[] }) {
@@ -748,6 +749,8 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
   const [entryTo, setEntryTo]           = useState("");
   const [expiryFrom, setExpiryFrom]     = useState("");
   const [expiryTo, setExpiryTo]         = useState("");
+  const [page, setPage]                 = useState(1);
+  const [pageSize, setPageSize]         = useState(25);
   const [showModal, setShowModal]       = useState(false);
   const [showExport, setShowExport]     = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -769,6 +772,7 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
         if (f.entryTo !== undefined)          setEntryTo(f.entryTo);
         if (f.expiryFrom !== undefined)       setExpiryFrom(f.expiryFrom);
         if (f.expiryTo !== undefined)         setExpiryTo(f.expiryTo);
+        if (f.pageSize !== undefined)         setPageSize(f.pageSize);
       }
     } catch { /* ignore localStorage errors */ }
     setFiltersLoaded(true);
@@ -780,10 +784,15 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         search, filter, calFilter, profileFilter, accessTypeFilter,
-        originFilter, entryFrom, entryTo, expiryFrom, expiryTo,
+        originFilter, entryFrom, entryTo, expiryFrom, expiryTo, pageSize,
       } satisfies SavedFilters));
     } catch { /* ignore */ }
-  }, [filtersLoaded, search, filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo]);
+  }, [filtersLoaded, search, filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo, pageSize]);
+
+  // Reset to page 1 whenever filters or search change
+  useEffect(() => {
+    setPage(1);
+  }, [search, filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo]);
 
   const withStatus = useMemo(
     () => members.map(m => ({ m, ds: getDisplayStatus(m), cs: getCalendarStatus(m) })),
@@ -870,6 +879,13 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
       })
       .map(({ m }) => m);
   }, [withStatus, search, filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, safePage, pageSize],
+  );
 
   function clearAllFilters() {
     setSearch("");
@@ -1167,9 +1183,58 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
           )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {filtered.map(m => <MemberCard key={m.id} member={m} onUpdate={onUpdate} />)}
-        </div>
+        <>
+          <div className="space-y-4">
+            {paginated.map(m => <MemberCard key={m.id} member={m} onUpdate={onUpdate} />)}
+          </div>
+
+          {/* Pagination footer */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border">
+
+            {/* Per-page selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-text-muted">Exibir:</span>
+              <select
+                value={pageSize}
+                onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                className="h-8 rounded border border-border bg-bg px-2 pr-6 text-xs text-text-muted focus:outline-none focus:border-text-muted transition-colors appearance-none cursor-pointer"
+                style={{ backgroundImage: "none" }}
+              >
+                <option value={10}>10 por página</option>
+                <option value={25}>25 por página</option>
+                <option value={50}>50 por página</option>
+                <option value={100}>100 por página</option>
+              </select>
+              <span className="text-xs text-text-muted/60 tabular-nums">
+                {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} de {filtered.length}
+              </span>
+            </div>
+
+            {/* Page controls */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="flex items-center justify-center w-8 h-8 rounded border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs text-text-muted tabular-nums px-2 min-w-[4rem] text-center">
+                {safePage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="flex items-center justify-center w-8 h-8 rounded border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+          </div>
+        </>
       )}
 
       {showModal && <NewMemberModal onClose={() => setShowModal(false)} onCreated={onCreated} />}
