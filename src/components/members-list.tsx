@@ -1133,7 +1133,7 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
       )}
 
       {/* Member status filter tabs */}
-      <div className="flex border-b border-border overflow-x-auto">
+      <div className="flex border-b border-border overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
         {memberTabs.map(({ key, label, count }) => (
           <button key={key} type="button" onClick={() => setFilter(key)}
             className={`px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors whitespace-nowrap ${
