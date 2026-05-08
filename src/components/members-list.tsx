@@ -7,7 +7,7 @@ import {
   Infinity as InfinityIcon, Lock, Unlock, RefreshCw,
   ExternalLink, Users, X, Clock, Mail, KeyRound,
   Eye, EyeOff, Copy, Check, MonitorSmartphone,
-  Download, Printer, ChevronDown,
+  Download, Printer, ChevronDown, SlidersHorizontal,
 } from "lucide-react";
 import type {
   MemberWithRequest, Member, AdminRequestRow,
@@ -718,16 +718,72 @@ function NewMemberModal({ onClose, onCreated }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-type FilterKey    = "all" | DisplayStatus;
+type FilterKey    = "all" | DisplayStatus | "inactive";
 type CalFilterKey = "all" | CalendarStatusKey;
 
+const STORAGE_KEY = "vpc_member_filters";
+
+interface SavedFilters {
+  search?: string;
+  filter?: string;
+  calFilter?: string;
+  profileFilter?: string;
+  accessTypeFilter?: string;
+  originFilter?: string;
+  entryFrom?: string;
+  entryTo?: string;
+  expiryFrom?: string;
+  expiryTo?: string;
+}
+
 export function MembersList({ members: initial, requests }: { members: MemberWithRequest[]; requests: AdminRequestRow[] }) {
-  const [members, setMembers]     = useState<MemberWithRequest[]>(initial);
-  const [search, setSearch]       = useState("");
-  const [filter, setFilter]       = useState<FilterKey>("all");
-  const [calFilter, setCalFilter] = useState<CalFilterKey>("all");
-  const [showModal, setShowModal] = useState(false);
-  const [showExport, setShowExport] = useState(false);
+  const [members, setMembers]           = useState<MemberWithRequest[]>(initial);
+  const [search, setSearch]             = useState("");
+  const [filter, setFilter]             = useState<FilterKey>("all");
+  const [calFilter, setCalFilter]       = useState<CalFilterKey>("all");
+  const [profileFilter, setProfileFilter]       = useState("all");
+  const [accessTypeFilter, setAccessTypeFilter] = useState("all");
+  const [originFilter, setOriginFilter]         = useState("all");
+  const [entryFrom, setEntryFrom]       = useState("");
+  const [entryTo, setEntryTo]           = useState("");
+  const [expiryFrom, setExpiryFrom]     = useState("");
+  const [expiryTo, setExpiryTo]         = useState("");
+  const [showModal, setShowModal]       = useState(false);
+  const [showExport, setShowExport]     = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [filtersLoaded, setFiltersLoaded]     = useState(false);
+
+  // Load persisted filters on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const f: SavedFilters = JSON.parse(raw);
+        if (f.search !== undefined)           setSearch(f.search);
+        if (f.filter !== undefined)           setFilter(f.filter as FilterKey);
+        if (f.calFilter !== undefined)        setCalFilter(f.calFilter as CalFilterKey);
+        if (f.profileFilter !== undefined)    setProfileFilter(f.profileFilter);
+        if (f.accessTypeFilter !== undefined) setAccessTypeFilter(f.accessTypeFilter);
+        if (f.originFilter !== undefined)     setOriginFilter(f.originFilter);
+        if (f.entryFrom !== undefined)        setEntryFrom(f.entryFrom);
+        if (f.entryTo !== undefined)          setEntryTo(f.entryTo);
+        if (f.expiryFrom !== undefined)       setExpiryFrom(f.expiryFrom);
+        if (f.expiryTo !== undefined)         setExpiryTo(f.expiryTo);
+      }
+    } catch { /* ignore localStorage errors */ }
+    setFiltersLoaded(true);
+  }, []);
+
+  // Persist filters whenever they change (only after initial load)
+  useEffect(() => {
+    if (!filtersLoaded) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        search, filter, calFilter, profileFilter, accessTypeFilter,
+        originFilter, entryFrom, entryTo, expiryFrom, expiryTo,
+      } satisfies SavedFilters));
+    } catch { /* ignore */ }
+  }, [filtersLoaded, search, filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo]);
 
   const withStatus = useMemo(
     () => members.map(m => ({ m, ds: getDisplayStatus(m), cs: getCalendarStatus(m) })),
@@ -738,16 +794,72 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
     total:    members.length,
     active:   withStatus.filter(x => x.ds === "active").length,
     expiring: withStatus.filter(x => x.ds === "expiring").length,
-    blocked:  withStatus.filter(x => x.ds === "blocked").length,
+    blocked:  members.filter(m => m.status === "blocked").length,
     lifetime: withStatus.filter(x => x.ds === "lifetime").length,
+    inactive: members.filter(m => (m.status as string) === "inactive").length,
   }), [members, withStatus]);
+
+  // Count active filters (excluding search — shown separately)
+  const activeFilterCount = useMemo(() => [
+    filter !== "all",
+    calFilter !== "all",
+    profileFilter !== "all",
+    accessTypeFilter !== "all",
+    originFilter !== "all",
+    !!entryFrom,
+    !!entryTo,
+    !!expiryFrom,
+    !!expiryTo,
+  ].filter(Boolean).length, [filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo]);
+
+  const hasActiveFilters = activeFilterCount > 0 || search.trim().length > 0;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return withStatus
       .filter(({ m, ds, cs }) => {
-        if (filter    !== "all" && ds !== filter)    return false;
+
+        // ── Status tab ──────────────────────────────────────────────────────
+        if (filter === "inactive") {
+          if ((m.status as string) !== "inactive") return false;
+        } else if (filter !== "all" && ds !== filter) {
+          return false;
+        }
+
+        // ── Calendar status ─────────────────────────────────────────────────
         if (calFilter !== "all" && cs !== calFilter) return false;
+
+        // ── Perfil ──────────────────────────────────────────────────────────
+        if (profileFilter !== "all") {
+          if (profileFilter === "produtor") {
+            // Produtor = profile user WITH a registered farm
+            if (m.profile !== "user" || !m.farm_name) return false;
+          } else if (profileFilter === "usuario") {
+            // Usuário = profile user WITHOUT a farm (pure account)
+            if (m.profile !== "user" || !!m.farm_name) return false;
+          } else {
+            if (m.profile !== profileFilter) return false;
+          }
+        }
+
+        // ── Tipo de acesso ──────────────────────────────────────────────────
+        if (accessTypeFilter !== "all" && m.access_type !== accessTypeFilter) return false;
+
+        // ── Origem ──────────────────────────────────────────────────────────
+        if (originFilter !== "all") {
+          const memberOrigin = m.origin?.trim() || "Manual";
+          if (memberOrigin !== originFilter) return false;
+        }
+
+        // ── Data de entrada (compra) ────────────────────────────────────────
+        if (entryFrom && (!m.entry_date || m.entry_date < entryFrom)) return false;
+        if (entryTo   && (!m.entry_date || m.entry_date > entryTo))   return false;
+
+        // ── Data de expiração ───────────────────────────────────────────────
+        if (expiryFrom && (!m.expires_at || m.expires_at < expiryFrom)) return false;
+        if (expiryTo   && (!m.expires_at || m.expires_at > expiryTo))   return false;
+
+        // ── Busca textual ───────────────────────────────────────────────────
         if (!q) return true;
         return (
           m.name.toLowerCase().includes(q) ||
@@ -757,7 +869,20 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
         );
       })
       .map(({ m }) => m);
-  }, [withStatus, search, filter, calFilter]);
+  }, [withStatus, search, filter, calFilter, profileFilter, accessTypeFilter, originFilter, entryFrom, entryTo, expiryFrom, expiryTo]);
+
+  function clearAllFilters() {
+    setSearch("");
+    setFilter("all");
+    setCalFilter("all");
+    setProfileFilter("all");
+    setAccessTypeFilter("all");
+    setOriginFilter("all");
+    setEntryFrom("");
+    setEntryTo("");
+    setExpiryFrom("");
+    setExpiryTo("");
+  }
 
   function onUpdate(updated: Member) {
     setMembers(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } as MemberWithRequest : m));
@@ -774,17 +899,10 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
     { key: "expiring", label: "Expirando",  count: stats.expiring },
     { key: "blocked",  label: "Bloqueados", count: stats.blocked },
     { key: "lifetime", label: "Vitalícios", count: stats.lifetime },
+    { key: "inactive", label: "Inativos",   count: stats.inactive },
   ];
 
-  const calFilterOptions: { key: CalFilterKey; label: string }[] = [
-    { key: "all",          label: "Todos os calendários" },
-    { key: "not_started",  label: CSC.not_started.label },
-    { key: "awaiting_form",label: CSC.awaiting_form.label },
-    { key: "requested",    label: CSC.requested.label },
-    { key: "in_production",label: CSC.in_production.label },
-    { key: "published",    label: CSC.published.label },
-    { key: "delivered",    label: CSC.delivered.label },
-  ];
+  const SELECT_ACTIVE = `${SELECT} border-text/50 text-text`;
 
   return (
     <div className="space-y-6">
@@ -798,22 +916,56 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+
+        {/* Search */}
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted pointer-events-none" />
-          <input value={search} onChange={e => setSearch(e.target.value)} autoComplete="off"
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            autoComplete="off"
             placeholder="Buscar por nome, e-mail ou telefone..."
-            className="w-full h-9 rounded-md border border-border bg-bg pl-9 pr-3 text-sm focus:outline-none focus:border-text-muted transition-colors" />
+            className="w-full h-9 rounded-md border border-border bg-bg pl-9 pr-8 text-sm focus:outline-none focus:border-text-muted transition-colors"
+          />
+          {search && (
+            <button type="button" onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Calendar status filter */}
-        <div className="relative">
-          <select value={calFilter} onChange={e => setCalFilter(e.target.value as CalFilterKey)}
-            className="h-9 pl-3 pr-8 rounded-md border border-border bg-bg text-sm text-text-muted focus:outline-none focus:border-text-muted transition-colors appearance-none cursor-pointer">
-            {calFilterOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted pointer-events-none" />
-        </div>
+        {/* Filtros button */}
+        <button
+          type="button"
+          onClick={() => setShowFilterPanel(p => !p)}
+          className={`flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm transition-colors whitespace-nowrap ${
+            activeFilterCount > 0
+              ? "border-text/40 text-text bg-text/10 font-medium"
+              : "border-border text-text-muted hover:bg-text/5 hover:text-text"
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Filtros
+          {activeFilterCount > 0 && (
+            <span className="flex items-center justify-center bg-text text-bg text-[10px] font-bold rounded-full w-4 h-4 leading-none tabular-nums">
+              {activeFilterCount}
+            </span>
+          )}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showFilterPanel ? "rotate-180" : ""}`} />
+        </button>
+
+        {/* Limpar filtros (visible when any filter is active) */}
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearAllFilters}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-sm text-text-muted hover:bg-text/5 hover:text-text transition-colors whitespace-nowrap"
+          >
+            <X className="h-3.5 w-3.5" /> Limpar filtros
+          </button>
+        )}
 
         {/* Export dropdown */}
         <div className="relative">
@@ -824,10 +976,11 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
           {showExport && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowExport(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-xl overflow-hidden min-w-[160px]">
+              <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-xl overflow-hidden min-w-[180px]">
                 <button type="button" onClick={() => { exportCSV(filtered); setShowExport(false); }}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-text-muted hover:bg-text/5 transition-colors text-left">
                   <Download className="h-4 w-4" /> Exportar CSV
+                  {hasActiveFilters && <span className="ml-auto text-[10px] text-text-muted/60">({filtered.length})</span>}
                 </button>
                 <button type="button" onClick={() => { window.print(); setShowExport(false); }}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-text-muted hover:bg-text/5 transition-colors text-left">
@@ -843,6 +996,141 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
           <Plus className="h-4 w-4" /> Novo usuário
         </button>
       </div>
+
+      {/* Advanced filter panel */}
+      {showFilterPanel && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+
+            {/* Perfil */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Perfil</label>
+              <select
+                value={profileFilter}
+                onChange={e => setProfileFilter(e.target.value)}
+                className={profileFilter !== "all" ? SELECT_ACTIVE : SELECT}
+              >
+                <option value="all">Todos os perfis</option>
+                <option value="usuario">Usuário</option>
+                <option value="produtor">Produtor</option>
+                <option value="support">Suporte</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+
+            {/* Tipo de acesso */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Tipo de acesso</label>
+              <select
+                value={accessTypeFilter}
+                onChange={e => setAccessTypeFilter(e.target.value)}
+                className={accessTypeFilter !== "all" ? SELECT_ACTIVE : SELECT}
+              >
+                <option value="all">Todos os tipos</option>
+                <option value="30d">30 dias</option>
+                <option value="90d">90 dias</option>
+                <option value="365d">365 dias</option>
+                <option value="lifetime">Vitalício</option>
+              </select>
+            </div>
+
+            {/* Origem */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Origem</label>
+              <select
+                value={originFilter}
+                onChange={e => setOriginFilter(e.target.value)}
+                className={originFilter !== "all" ? SELECT_ACTIVE : SELECT}
+              >
+                <option value="all">Todas as origens</option>
+                <option value="Manual">Manual</option>
+                <option value="Hotmart">Hotmart</option>
+                <option value="Kiwify">Kiwify</option>
+                <option value="PerfectPay">PerfectPay</option>
+                <option value="Eduzz">Eduzz</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+
+            {/* Status do calendário */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Status do calendário</label>
+              <select
+                value={calFilter}
+                onChange={e => setCalFilter(e.target.value as CalFilterKey)}
+                className={calFilter !== "all" ? SELECT_ACTIVE : SELECT}
+              >
+                <option value="all">Todos</option>
+                <option value="not_started">{CSC.not_started.label}</option>
+                <option value="awaiting_form">{CSC.awaiting_form.label}</option>
+                <option value="requested">{CSC.requested.label}</option>
+                <option value="in_production">{CSC.in_production.label}</option>
+                <option value="published">{CSC.published.label}</option>
+                <option value="delivered">{CSC.delivered.label}</option>
+              </select>
+            </div>
+
+            {/* Compra de */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Compra de</label>
+              <input
+                type="date"
+                value={entryFrom}
+                onChange={e => setEntryFrom(e.target.value)}
+                className={entryFrom ? SELECT_ACTIVE : SELECT}
+              />
+            </div>
+
+            {/* Compra até */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Compra até</label>
+              <input
+                type="date"
+                value={entryTo}
+                onChange={e => setEntryTo(e.target.value)}
+                className={entryTo ? SELECT_ACTIVE : SELECT}
+              />
+            </div>
+
+            {/* Expiração de */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Expiração de</label>
+              <input
+                type="date"
+                value={expiryFrom}
+                onChange={e => setExpiryFrom(e.target.value)}
+                className={expiryFrom ? SELECT_ACTIVE : SELECT}
+              />
+            </div>
+
+            {/* Expiração até */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Expiração até</label>
+              <input
+                type="date"
+                value={expiryTo}
+                onChange={e => setExpiryTo(e.target.value)}
+                className={expiryTo ? SELECT_ACTIVE : SELECT}
+              />
+            </div>
+
+          </div>
+
+          {/* Panel footer: result count + clear */}
+          <div className="flex items-center justify-between pt-1 border-t border-border/50">
+            <span className="text-xs text-text-muted">
+              {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
+              {hasActiveFilters && ` de ${members.length}`}
+            </span>
+            {activeFilterCount > 0 && (
+              <button type="button" onClick={clearAllFilters}
+                className="flex items-center gap-1 text-xs text-text-muted hover:text-text transition-colors">
+                <X className="h-3 w-3" /> Limpar {activeFilterCount} filtro{activeFilterCount !== 1 ? "s" : ""}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Member status filter tabs */}
       <div className="flex border-b border-border overflow-x-auto">
@@ -862,9 +1150,16 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
         <div className="text-center py-20 text-text-muted">
           <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
           <p className="text-sm font-medium">
-            {search || filter !== "all" || calFilter !== "all" ? "Nenhum usuário encontrado." : "Nenhum usuário cadastrado ainda."}
+            {hasActiveFilters
+              ? "Nenhum usuário encontrado com os filtros aplicados."
+              : "Nenhum usuário cadastrado ainda."}
           </p>
-          {!search && filter === "all" && calFilter === "all" && (
+          {hasActiveFilters ? (
+            <button type="button" onClick={clearAllFilters}
+              className="mt-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text border border-border rounded-md px-4 h-9 transition-colors">
+              <X className="h-4 w-4" /> Limpar filtros
+            </button>
+          ) : (
             <button type="button" onClick={() => setShowModal(true)}
               className="mt-4 inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text border border-border rounded-md px-4 h-9 transition-colors">
               <Plus className="h-4 w-4" /> Cadastrar primeiro usuário
