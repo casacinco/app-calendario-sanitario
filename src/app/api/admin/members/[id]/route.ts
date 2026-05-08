@@ -48,6 +48,7 @@ export async function PATCH(
       ...(body.profile !== undefined && { profile: ["user","support","admin"].includes(String(body.profile)) ? (body.profile as "user"|"support"|"admin") : "user" }),
       ...(body.access_type !== undefined && { access_type: ["30d","90d","365d","lifetime"].includes(String(body.access_type)) ? (body.access_type as "30d"|"90d"|"365d"|"lifetime") : "30d" }),
       ...(body.expires_at !== undefined && { expires_at: body.expires_at ? String(body.expires_at) : null }),
+      ...(body.password !== undefined && { password: body.password ? String(body.password) : null }),
       ...(body.origin !== undefined && { origin: body.origin ? String(body.origin).trim() : null }),
       ...(body.notes !== undefined && { notes: body.notes ? String(body.notes).trim() : null }),
       ...(body.calendar_request_id !== undefined && {

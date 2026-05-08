@@ -1196,6 +1196,8 @@ export interface Member {
   access_type: MemberAccessType;
   expires_at: string | null;
   last_access: string | null;
+  password: string | null;
+  device_info: string | null;
   origin: string | null;
   notes: string | null;
   calendar_request_id: number | null;
@@ -1220,6 +1222,7 @@ export interface CreateMemberInput {
   profile?: MemberProfile;
   access_type?: MemberAccessType;
   expires_at?: string | null;
+  password?: string | null;
   origin?: string | null;
   notes?: string | null;
   calendar_request_id?: number | null;
@@ -1275,8 +1278,8 @@ export async function createMember(db: D1Database, input: CreateMemberInput): Pr
 
   return insertReturning<Member>(
     db,
-    `INSERT INTO members (name, email, phone, product, status, profile, access_type, expires_at, origin, notes, calendar_request_id, entry_date)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+    `INSERT INTO members (name, email, phone, product, status, profile, access_type, expires_at, password, origin, notes, calendar_request_id, entry_date)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
      RETURNING *`,
     [
       input.name,
@@ -1287,6 +1290,7 @@ export async function createMember(db: D1Database, input: CreateMemberInput): Pr
       input.profile ?? "user",
       input.access_type ?? "30d",
       input.expires_at ?? null,
+      input.password ?? null,
       input.origin ?? null,
       input.notes ?? null,
       input.calendar_request_id ?? null,
@@ -1313,6 +1317,7 @@ export async function updateMember(
   if (patch.profile !== undefined)             { fields.push(`profile = ?${idx++}`);             params.push(patch.profile); }
   if (patch.access_type !== undefined)         { fields.push(`access_type = ?${idx++}`);         params.push(patch.access_type); }
   if (patch.expires_at !== undefined)          { fields.push(`expires_at = ?${idx++}`);          params.push(patch.expires_at); }
+  if (patch.password !== undefined)            { fields.push(`password = ?${idx++}`);            params.push(patch.password); }
   if (patch.origin !== undefined)              { fields.push(`origin = ?${idx++}`);              params.push(patch.origin); }
   if (patch.notes !== undefined)               { fields.push(`notes = ?${idx++}`);               params.push(patch.notes); }
   if (patch.calendar_request_id !== undefined) { fields.push(`calendar_request_id = ?${idx++}`); params.push(patch.calendar_request_id); }
