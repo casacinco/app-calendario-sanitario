@@ -635,6 +635,7 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
                   <input
                     autoFocus
                     type={showPwd ? "text" : "password"}
+                    autoComplete="new-password"
                     value={inlineVal}
                     onChange={e => setInlineVal(e.target.value)}
                     onKeyDown={e => { if (e.key === "Escape") closeInline(); }}
@@ -661,6 +662,7 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
                 <div className="w-4 h-4 shrink-0" />
                 <input
                   type={showPwd ? "text" : "password"}
+                  autoComplete="new-password"
                   value={inlineConf}
                   onChange={e => setInlineConf(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") requestSaveInline(); if (e.key === "Escape") closeInline(); }}
@@ -802,6 +804,7 @@ function NewMemberModal({
                 <div className="relative flex-1">
                   <input
                     type={showPwd ? "text" : "password"}
+                    autoComplete="new-password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Definir senha..."
@@ -824,6 +827,7 @@ function NewMemberModal({
               <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Confirmar senha</label>
               <input
                 type={showPwd ? "text" : "password"}
+                autoComplete="new-password"
                 value={pwdConf}
                 onChange={e => setPwdConf(e.target.value)}
                 placeholder="Repita a senha..."
@@ -953,6 +957,7 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome, e-mail ou telefone..."
+            autoComplete="off"
             className="w-full h-9 rounded-md border border-border bg-bg pl-9 pr-3 text-sm focus:outline-none focus:border-text-muted transition-colors"
           />
         </div>
