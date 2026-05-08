@@ -61,6 +61,22 @@ export async function PATCH(
         calendar_request_id: body.calendar_request_id ? Number(body.calendar_request_id) : null,
       }),
       ...(body.entry_date !== undefined && { entry_date: String(body.entry_date) }),
+      ...(body.platform !== undefined && { platform: body.platform ? String(body.platform).trim() : null }),
+      ...(body.transaction_id !== undefined && { transaction_id: body.transaction_id ? String(body.transaction_id).trim() : null }),
+      ...(body.product_id !== undefined && { product_id: body.product_id ? String(body.product_id).trim() : null }),
+      ...(body.product_name !== undefined && { product_name: body.product_name ? String(body.product_name).trim() : null }),
+      ...(body.buyer_email !== undefined && { buyer_email: body.buyer_email ? String(body.buyer_email).trim().toLowerCase() : null }),
+      ...(body.buyer_name !== undefined && { buyer_name: body.buyer_name ? String(body.buyer_name).trim() : null }),
+      ...(body.purchase_date !== undefined && { purchase_date: body.purchase_date ? String(body.purchase_date) : null }),
+      ...(body.access_start_date !== undefined && { access_start_date: body.access_start_date ? String(body.access_start_date) : null }),
+      ...(body.subscription_status !== undefined && {
+        subscription_status: (["active","canceled","expired","refunded","chargedback"].includes(String(body.subscription_status))
+          ? body.subscription_status : "active") as "active"|"canceled"|"expired"|"refunded"|"chargedback",
+      }),
+      ...(body.payment_status !== undefined && {
+        payment_status: (["approved","pending","refunded","chargedback"].includes(String(body.payment_status))
+          ? body.payment_status : "approved") as "approved"|"pending"|"refunded"|"chargedback",
+      }),
     });
     return Response.json({ member });
   } catch (err) {

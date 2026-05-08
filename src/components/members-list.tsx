@@ -17,14 +17,21 @@ import { formatDateBR } from "@/lib/format";
 
 // ─── Display status (member access) ──────────────────────────────────────────
 
-type DisplayStatus = "active" | "expiring" | "blocked" | "lifetime" | "support" | "admin";
+type DisplayStatus =
+  | "active" | "expiring" | "blocked" | "lifetime" | "support" | "admin"
+  | "refunded" | "chargedback" | "expired" | "canceled";
 type InlineMode    = "email" | "password" | null;
 
 function getDisplayStatus(m: MemberWithRequest): DisplayStatus {
   if (m.profile === "admin")   return "admin";
   if (m.profile === "support") return "support";
-  const isBlocked = m.status === "blocked" || (m.status as string) === "inactive";
-  if (isBlocked) return "blocked";
+  // Sub-status de assinatura tem prioridade sobre o status de acesso
+  const sub = m.subscription_status as string;
+  if (sub === "refunded")    return "refunded";
+  if (sub === "chargedback") return "chargedback";
+  if (sub === "expired")     return "expired";
+  if (sub === "canceled")    return "canceled";
+  if (m.status === "blocked" || (m.status as string) === "inactive") return "blocked";
   if (m.access_type === "lifetime") return "lifetime";
   if (m.expires_at) {
     const days = Math.ceil((new Date(m.expires_at).getTime() - Date.now()) / 86400000);
@@ -76,12 +83,16 @@ function getCalendarStatus(m: MemberWithRequest): CalendarStatusKey {
 // ─── Status config (member access) ───────────────────────────────────────────
 
 const SC: Record<DisplayStatus, { label: string; badge: string; bar: string; avatar: string }> = {
-  active:   { label: "Ativo",     badge: "bg-green/15 text-green border-green/30",                  bar: "bg-green",      avatar: "bg-green/20 text-green" },
-  expiring: { label: "Expirando", badge: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",   bar: "bg-yellow-500", avatar: "bg-yellow-500/20 text-yellow-400" },
-  blocked:  { label: "Bloqueado", badge: "bg-red/15 text-red border-red/30",                        bar: "bg-red",        avatar: "bg-red/20 text-red" },
-  lifetime: { label: "Vitalício", badge: "bg-blue-500/15 text-blue-400 border-blue-500/25",         bar: "bg-blue-500",   avatar: "bg-blue-500/20 text-blue-400" },
-  support:  { label: "Suporte",   badge: "bg-purple-500/15 text-purple-400 border-purple-500/25",   bar: "bg-purple-500", avatar: "bg-purple-500/20 text-purple-400" },
-  admin:    { label: "Admin",     badge: "bg-text/10 text-text-muted border-border",                bar: "bg-text-muted", avatar: "bg-text/10 text-text-muted" },
+  active:      { label: "Ativo",       badge: "bg-green/15 text-green border-green/30",                    bar: "bg-green",        avatar: "bg-green/20 text-green" },
+  expiring:    { label: "Expirando",   badge: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",     bar: "bg-yellow-500",   avatar: "bg-yellow-500/20 text-yellow-400" },
+  blocked:     { label: "Bloqueado",   badge: "bg-red/15 text-red border-red/30",                          bar: "bg-red",          avatar: "bg-red/20 text-red" },
+  lifetime:    { label: "Vitalício",   badge: "bg-blue-500/15 text-blue-400 border-blue-500/25",           bar: "bg-blue-500",     avatar: "bg-blue-500/20 text-blue-400" },
+  support:     { label: "Suporte",     badge: "bg-purple-500/15 text-purple-400 border-purple-500/25",     bar: "bg-purple-500",   avatar: "bg-purple-500/20 text-purple-400" },
+  admin:       { label: "Admin",       badge: "bg-text/10 text-text-muted border-border",                  bar: "bg-text-muted",   avatar: "bg-text/10 text-text-muted" },
+  refunded:    { label: "Reembolsado", badge: "bg-orange-500/15 text-orange-400 border-orange-500/25",     bar: "bg-orange-500",   avatar: "bg-orange-500/20 text-orange-400" },
+  chargedback: { label: "Chargeback",  badge: "bg-red/15 text-red border-red/30",                          bar: "bg-red",          avatar: "bg-red/20 text-red" },
+  expired:     { label: "Expirado",    badge: "bg-text/10 text-text-muted border-border",                  bar: "bg-text-muted",   avatar: "bg-text/10 text-text-muted" },
+  canceled:    { label: "Cancelado",   badge: "bg-text/10 text-text-muted border-border",                  bar: "bg-text-muted",   avatar: "bg-text/10 text-text-muted" },
 };
 
 const PROFILE_LABELS: Record<MemberProfile, string> = {
@@ -437,6 +448,71 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
               </p>
             )}
           </div>
+
+          {/* ── Dados de compra (somente quando vem de plataforma externa) ── */}
+          {member.platform && (
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-text-muted font-medium">Compra</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide border bg-blue-500/10 text-blue-400 border-blue-500/20">
+                  {member.platform}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {member.product_name && (
+                  <div className="col-span-2 min-w-0">
+                    <p className="text-[10px] text-text-muted">Produto</p>
+                    <p className="text-xs text-text truncate">{member.product_name}</p>
+                  </div>
+                )}
+                {member.purchase_date && (
+                  <div>
+                    <p className="text-[10px] text-text-muted">Compra</p>
+                    <p className="text-xs text-text">{formatDateBR(member.purchase_date)}</p>
+                  </div>
+                )}
+                {member.subscription_status && member.subscription_status !== "active" && (
+                  <div>
+                    <p className="text-[10px] text-text-muted">Assinatura</p>
+                    <p className={`text-xs font-medium ${
+                      member.subscription_status === "canceled"    ? "text-text-muted" :
+                      member.subscription_status === "refunded"    ? "text-orange-400" :
+                      member.subscription_status === "chargedback" ? "text-red"        :
+                      member.subscription_status === "expired"     ? "text-text-muted" :
+                      "text-text"
+                    }`}>{SC[member.subscription_status as DisplayStatus]?.label ?? member.subscription_status}</p>
+                  </div>
+                )}
+                {member.payment_status && member.payment_status !== "approved" && (
+                  <div>
+                    <p className="text-[10px] text-text-muted">Pagamento</p>
+                    <p className={`text-xs font-medium ${
+                      member.payment_status === "refunded"    ? "text-orange-400" :
+                      member.payment_status === "chargedback" ? "text-red"        :
+                      member.payment_status === "pending"     ? "text-yellow-400" :
+                      "text-text"
+                    }`}>{member.payment_status}</p>
+                  </div>
+                )}
+                {member.last_event_received_at && (
+                  <div className="col-span-2">
+                    <p className="text-[10px] text-text-muted">Último evento</p>
+                    <p className="text-xs text-text-muted">
+                      {formatDateBR(member.last_event_received_at.split("T")[0])}
+                      {member.last_event_received_at.includes("T") && (
+                        <span className="ml-1">{member.last_event_received_at.split("T")[1]?.slice(0, 5)}</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {member.transaction_id && (
+                <p className="text-[10px] text-text-muted/50 font-mono truncate">
+                  txn: {member.transaction_id}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* ── Device info ───────────────────────────────────────────────── */}
           {member.device_info && (

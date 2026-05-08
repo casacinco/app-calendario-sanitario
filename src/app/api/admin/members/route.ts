@@ -29,6 +29,16 @@ export async function POST(request: Request) {
     origin?: string;
     notes?: string;
     entry_date?: string;
+    platform?: string;
+    transaction_id?: string;
+    product_id?: string;
+    product_name?: string;
+    buyer_email?: string;
+    buyer_name?: string;
+    purchase_date?: string;
+    access_start_date?: string;
+    subscription_status?: string;
+    payment_status?: string;
   };
   try {
     body = await request.json();
@@ -56,6 +66,14 @@ export async function POST(request: Request) {
       origin: body.origin?.trim() || null,
       notes: body.notes?.trim() || null,
       entry_date: body.entry_date || undefined,
+      platform: body.platform?.trim() || null,
+      transaction_id: body.transaction_id?.trim() || null,
+      product_id: body.product_id?.trim() || null,
+      product_name: body.product_name?.trim() || null,
+      buyer_email: body.buyer_email?.trim().toLowerCase() || null,
+      buyer_name: body.buyer_name?.trim() || null,
+      purchase_date: body.purchase_date || null,
+      access_start_date: body.access_start_date || null,
     });
     return Response.json({ member }, { status: 201 });
   } catch (err) {

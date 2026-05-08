@@ -1181,9 +1181,19 @@ export async function saveCustomPreset(
 // MEMBERS
 // =====================================================
 
-export type MemberStatus     = "active" | "blocked";
-export type MemberProfile    = "user" | "support" | "admin";
-export type MemberAccessType = "30d" | "90d" | "365d" | "lifetime";
+export type MemberStatus           = "active" | "blocked";
+export type MemberProfile          = "user" | "support" | "admin";
+export type MemberAccessType       = "30d" | "90d" | "365d" | "lifetime";
+export type MemberSubStatus        = "active" | "canceled" | "expired" | "refunded" | "chargedback";
+export type MemberPaymentStatus    = "approved" | "pending" | "refunded" | "chargedback";
+export type ExternalPlatform       = "hotmart" | "kiwify" | "perfectpay" | "eduzz" | "manual" | "outro";
+export type ExternalEventType      =
+  | "purchase"
+  | "renewal"
+  | "expiration"
+  | "refund"
+  | "cancellation"
+  | "chargeback";
 
 export interface Member {
   id: number;
@@ -1205,6 +1215,60 @@ export interface Member {
   entry_date: string;
   created_at: string;
   updated_at: string;
+  // ── Campos de compra/plataforma (migration 0019) ──────────────────────────
+  platform:               string | null;
+  transaction_id:         string | null;
+  product_id:             string | null;
+  product_name:           string | null;
+  buyer_email:            string | null;
+  buyer_name:             string | null;
+  purchase_date:          string | null;
+  access_start_date:      string | null;
+  subscription_status:    string; // MemberSubStatus — default 'active'
+  payment_status:         string; // MemberPaymentStatus — default 'approved'
+  last_event_received_at: string | null;
+}
+
+// ── Histórico de eventos ────────────────────────────────────────────────────
+
+export interface MemberEvent {
+  id: number;
+  member_id: number;
+  event_type: string;   // ExternalEventType
+  platform: string | null;
+  transaction_id: string | null;
+  payload: string | null;
+  action_taken: string | null;
+  created_at: string;
+}
+
+export interface CreateMemberEventInput {
+  member_id: number;
+  event_type: ExternalEventType;
+  platform?: string | null;
+  transaction_id?: string | null;
+  payload?: string | null;
+  action_taken?: string | null;
+}
+
+// ── Evento externo (input unificado para todas as plataformas) ──────────────
+
+export interface ExternalEvent {
+  platform: ExternalPlatform | string;
+  event_type: ExternalEventType;
+  transaction_id?: string | null;
+  email: string;
+  name?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  access_days?: number | null;   // null = vitalício
+  payload?: string | null;       // JSON do payload original
+}
+
+export interface ProcessEventResult {
+  member: Member;
+  action: string;
+  created: boolean;
 }
 
 export interface MemberWithRequest extends Member {
@@ -1230,9 +1294,21 @@ export interface CreateMemberInput {
   notes?: string | null;
   calendar_request_id?: number | null;
   entry_date?: string;
+  // Campos de compra
+  platform?: string | null;
+  transaction_id?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  buyer_email?: string | null;
+  buyer_name?: string | null;
+  purchase_date?: string | null;
+  access_start_date?: string | null;
+  subscription_status?: MemberSubStatus;
+  payment_status?: MemberPaymentStatus;
+  last_event_received_at?: string | null;
 }
 
-export type UpdateMemberInput = Partial<CreateMemberInput>;
+export interface UpdateMemberInput extends Partial<CreateMemberInput> {}
 
 export async function listMembers(db: D1Database): Promise<MemberWithRequest[]> {
   const result = await db
@@ -1285,9 +1361,16 @@ export async function createMember(db: D1Database, input: CreateMemberInput): Pr
 
   return insertReturning<Member>(
     db,
-    `INSERT INTO members (name, email, phone, product, status, profile, access_type, expires_at, password, origin, notes, calendar_request_id, entry_date)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
-     RETURNING *`,
+    `INSERT INTO members (
+       name, email, phone, product, status, profile, access_type, expires_at,
+       password, origin, notes, calendar_request_id, entry_date,
+       platform, transaction_id, product_id, product_name,
+       buyer_email, buyer_name, purchase_date, access_start_date,
+       subscription_status, payment_status, last_event_received_at
+     ) VALUES (
+       ?1,  ?2,  ?3,  ?4,  ?5,  ?6,  ?7,  ?8,  ?9,  ?10, ?11, ?12, ?13,
+       ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
+     ) RETURNING *`,
     [
       input.name,
       input.email,
@@ -1302,6 +1385,17 @@ export async function createMember(db: D1Database, input: CreateMemberInput): Pr
       input.notes ?? null,
       input.calendar_request_id ?? null,
       input.entry_date ?? new Date().toISOString().split("T")[0],
+      input.platform ?? null,
+      input.transaction_id ?? null,
+      input.product_id ?? null,
+      input.product_name ?? null,
+      input.buyer_email ?? null,
+      input.buyer_name ?? null,
+      input.purchase_date ?? null,
+      input.access_start_date ?? null,
+      input.subscription_status ?? "active",
+      input.payment_status ?? "approved",
+      input.last_event_received_at ?? null,
     ],
     "create member",
   );
@@ -1327,8 +1421,19 @@ export async function updateMember(
   if (patch.password !== undefined)            { fields.push(`password = ?${idx++}`);            params.push(patch.password); }
   if (patch.origin !== undefined)              { fields.push(`origin = ?${idx++}`);              params.push(patch.origin); }
   if (patch.notes !== undefined)               { fields.push(`notes = ?${idx++}`);               params.push(patch.notes); }
-  if (patch.calendar_request_id !== undefined) { fields.push(`calendar_request_id = ?${idx++}`); params.push(patch.calendar_request_id); }
-  if (patch.entry_date !== undefined)          { fields.push(`entry_date = ?${idx++}`);          params.push(patch.entry_date); }
+  if (patch.calendar_request_id !== undefined)     { fields.push(`calendar_request_id = ?${idx++}`);     params.push(patch.calendar_request_id); }
+  if (patch.entry_date !== undefined)              { fields.push(`entry_date = ?${idx++}`);              params.push(patch.entry_date); }
+  if (patch.platform !== undefined)                { fields.push(`platform = ?${idx++}`);                params.push(patch.platform); }
+  if (patch.transaction_id !== undefined)          { fields.push(`transaction_id = ?${idx++}`);          params.push(patch.transaction_id); }
+  if (patch.product_id !== undefined)              { fields.push(`product_id = ?${idx++}`);              params.push(patch.product_id); }
+  if (patch.product_name !== undefined)            { fields.push(`product_name = ?${idx++}`);            params.push(patch.product_name); }
+  if (patch.buyer_email !== undefined)             { fields.push(`buyer_email = ?${idx++}`);             params.push(patch.buyer_email); }
+  if (patch.buyer_name !== undefined)              { fields.push(`buyer_name = ?${idx++}`);              params.push(patch.buyer_name); }
+  if (patch.purchase_date !== undefined)           { fields.push(`purchase_date = ?${idx++}`);           params.push(patch.purchase_date); }
+  if (patch.access_start_date !== undefined)       { fields.push(`access_start_date = ?${idx++}`);       params.push(patch.access_start_date); }
+  if (patch.subscription_status !== undefined)     { fields.push(`subscription_status = ?${idx++}`);     params.push(patch.subscription_status); }
+  if (patch.payment_status !== undefined)          { fields.push(`payment_status = ?${idx++}`);          params.push(patch.payment_status); }
+  if (patch.last_event_received_at !== undefined)  { fields.push(`last_event_received_at = ?${idx++}`);  params.push(patch.last_event_received_at); }
 
   if (fields.length === 0) {
     const existing = await db.prepare(`SELECT * FROM members WHERE id = ?1`).bind(id).first<Member>();
@@ -1420,4 +1525,208 @@ export async function completeMemberOnboarding(
     )
     .bind(email, requestId)
     .run();
+}
+
+// =====================================================
+// MEMBER EVENTS — histórico de eventos externos
+// =====================================================
+
+export async function createMemberEvent(
+  db: D1Database,
+  input: CreateMemberEventInput,
+): Promise<MemberEvent> {
+  return insertReturning<MemberEvent>(
+    db,
+    `INSERT INTO member_events (member_id, event_type, platform, transaction_id, payload, action_taken)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+     RETURNING *`,
+    [
+      input.member_id,
+      input.event_type,
+      input.platform ?? null,
+      input.transaction_id ?? null,
+      input.payload ?? null,
+      input.action_taken ?? null,
+    ],
+    "create member event",
+  );
+}
+
+export async function getMemberEvents(
+  db: D1Database,
+  memberId: number,
+  limit = 50,
+): Promise<MemberEvent[]> {
+  const result = await db
+    .prepare(
+      `SELECT * FROM member_events
+       WHERE member_id = ?1
+       ORDER BY created_at DESC
+       LIMIT ?2`,
+    )
+    .bind(memberId, limit)
+    .all<MemberEvent>();
+  return result.results;
+}
+
+// =====================================================
+// PROCESS EXTERNAL EVENT — lógica de negócio unificada
+// =====================================================
+
+function calcExpiresAt(days: number | null | undefined, baseDate?: string | null): string | null {
+  if (days === null || days === undefined) return null; // vitalício
+  const base = baseDate && new Date(baseDate) > new Date() ? new Date(baseDate) : new Date();
+  base.setDate(base.getDate() + days);
+  return base.toISOString().split("T")[0] ?? null;
+}
+
+function daysToAccessType(days: number | null | undefined): MemberAccessType {
+  if (!days) return "lifetime";
+  if (days <= 30)  return "30d";
+  if (days <= 90)  return "90d";
+  if (days <= 365) return "365d";
+  return "lifetime";
+}
+
+export async function processExternalEvent(
+  db: D1Database,
+  event: ExternalEvent,
+): Promise<ProcessEventResult> {
+  // ── Idempotência: rejeitar evento duplicado ──────────────────────────────
+  if (event.transaction_id) {
+    const dup = await db
+      .prepare(`SELECT id FROM member_events WHERE transaction_id = ?1 AND event_type = ?2 LIMIT 1`)
+      .bind(event.transaction_id, event.event_type)
+      .first();
+    if (dup) throw new DbError(`Evento duplicado: ${event.transaction_id} / ${event.event_type}`);
+  }
+
+  // ── Localizar ou criar membro ────────────────────────────────────────────
+  let member = await getMemberByEmail(db, event.email);
+  let created = false;
+  const today = new Date().toISOString().split("T")[0];
+
+  if (!member) {
+    if (event.event_type !== "purchase") {
+      throw new DbError(`Membro não encontrado para o e-mail: ${event.email}`);
+    }
+    const expires_at = calcExpiresAt(event.access_days ?? null);
+    member = await createMember(db, {
+      name:             event.name ?? (event.email.split("@")[0] ?? event.email),
+      email:            event.email,
+      origin:           event.platform,
+      platform:         event.platform,
+      transaction_id:   event.transaction_id ?? null,
+      product_id:       event.product_id ?? null,
+      product_name:     event.product_name ?? null,
+      buyer_email:      event.email,
+      buyer_name:       event.name ?? null,
+      purchase_date:    today,
+      access_start_date: today,
+      access_type:      daysToAccessType(event.access_days ?? null),
+      expires_at,
+      subscription_status: "active",
+      payment_status:   "approved",
+      last_event_received_at: new Date().toISOString(),
+    });
+    created = true;
+  }
+
+  // ── Executar a ação conforme o tipo de evento ────────────────────────────
+  let patch: UpdateMemberInput = {
+    platform:               event.platform,
+    transaction_id:         event.transaction_id ?? member.transaction_id,
+    product_id:             event.product_id ?? member.product_id,
+    product_name:           event.product_name ?? member.product_name,
+    buyer_email:            event.email,
+    buyer_name:             event.name ?? member.buyer_name,
+    last_event_received_at: new Date().toISOString(),
+  };
+  let action: string;
+
+  switch (event.event_type) {
+    case "purchase": {
+      if (!created) {
+        const expires_at = calcExpiresAt(event.access_days ?? null);
+        patch = {
+          ...patch,
+          status:             "active",
+          subscription_status: "active",
+          payment_status:     "approved",
+          purchase_date:      today,
+          access_start_date:  today,
+          access_type:        daysToAccessType(event.access_days ?? null),
+          expires_at,
+        };
+      }
+      action = event.access_days
+        ? `access_granted_${event.access_days}d`
+        : "access_granted_lifetime";
+      break;
+    }
+    case "renewal": {
+      const expires_at = calcExpiresAt(event.access_days ?? null, member.expires_at);
+      patch = {
+        ...patch,
+        status:             "active",
+        subscription_status: "active",
+        payment_status:     "approved",
+        access_type:        daysToAccessType(event.access_days ?? null),
+        expires_at,
+      };
+      action = event.access_days
+        ? `access_extended_${event.access_days}d`
+        : "access_extended_lifetime";
+      break;
+    }
+    case "expiration": {
+      patch = { ...patch, status: "blocked", subscription_status: "expired" };
+      action = "access_blocked_expired";
+      break;
+    }
+    case "refund": {
+      patch = {
+        ...patch,
+        status:             "blocked",
+        subscription_status: "refunded",
+        payment_status:     "refunded",
+      };
+      action = "access_blocked_refunded";
+      break;
+    }
+    case "cancellation": {
+      // Acesso continua até expirar; apenas marca a assinatura como cancelada
+      patch = { ...patch, subscription_status: "canceled" };
+      action = "subscription_canceled";
+      break;
+    }
+    case "chargeback": {
+      patch = {
+        ...patch,
+        status:             "blocked",
+        subscription_status: "chargedback",
+        payment_status:     "chargedback",
+      };
+      action = "access_blocked_chargeback";
+      break;
+    }
+    default:
+      throw new DbError(`Tipo de evento desconhecido: ${event.event_type}`);
+  }
+
+  if (!created) {
+    member = await updateMember(db, member.id, patch);
+  }
+
+  // ── Registrar evento no histórico ────────────────────────────────────────
+  await createMemberEvent(db, {
+    member_id:      member.id,
+    event_type:     event.event_type,
+    platform:       event.platform,
+    transaction_id: event.transaction_id ?? null,
+    payload:        event.payload ?? null,
+    action_taken:   action,
+  });
+
+  return { member, action, created };
 }
