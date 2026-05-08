@@ -1210,6 +1210,8 @@ export interface Member {
 export interface MemberWithRequest extends Member {
   request_status: string | null;
   calendar_id: number | null;
+  cal_status: string | null;       // calendars.status ("draft" | "published")
+  cal_published_at: string | null; // calendars.published_at
   user_name: string | null;
   farm_name: string | null;
 }
@@ -1236,10 +1238,12 @@ export async function listMembers(db: D1Database): Promise<MemberWithRequest[]> 
   const result = await db
     .prepare(
       `SELECT m.*,
-              cr.status AS request_status,
-              c.id      AS calendar_id,
-              u.name    AS user_name,
-              f.name    AS farm_name
+              cr.status       AS request_status,
+              c.id            AS calendar_id,
+              c.status        AS cal_status,
+              c.published_at  AS cal_published_at,
+              u.name          AS user_name,
+              f.name          AS farm_name
        FROM members m
        LEFT JOIN calendar_requests cr ON cr.id = m.calendar_request_id
        LEFT JOIN calendars          c  ON c.request_id = cr.id
@@ -1255,10 +1259,12 @@ export async function getMember(db: D1Database, id: number): Promise<MemberWithR
   return db
     .prepare(
       `SELECT m.*,
-              cr.status AS request_status,
-              c.id      AS calendar_id,
-              u.name    AS user_name,
-              f.name    AS farm_name
+              cr.status       AS request_status,
+              c.id            AS calendar_id,
+              c.status        AS cal_status,
+              c.published_at  AS cal_published_at,
+              u.name          AS user_name,
+              f.name          AS farm_name
        FROM members m
        LEFT JOIN calendar_requests cr ON cr.id = m.calendar_request_id
        LEFT JOIN calendars          c  ON c.request_id = cr.id
