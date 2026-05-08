@@ -496,9 +496,8 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
 // ─── New member modal ─────────────────────────────────────────────────────────
 
 function NewMemberModal({
-  requests, onClose, onCreated,
+  onClose, onCreated,
 }: {
-  requests: AdminRequestRow[];
   onClose: () => void;
   onCreated: (m: MemberWithRequest) => void;
 }) {
@@ -510,10 +509,7 @@ function NewMemberModal({
   const [showPwd, setShowPwd]   = useState(false);
   const [profile, setProfile]   = useState<MemberProfile>("user");
   const [accessType, setAccessType] = useState<MemberAccessType>("30d");
-  const [product, setProduct]   = useState("");
   const [origin, setOrigin]     = useState("Manual");
-  const [reqSearch, setReqSearch] = useState("");
-  const [selectedReqId, setSelectedReqId] = useState<number | null>(null);
   const [notes, setNotes]       = useState("");
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState<string | null>(null);
@@ -521,19 +517,6 @@ function NewMemberModal({
   const DAYS_MAP: Record<MemberAccessType, number | null> = {
     "30d": 30, "90d": 90, "365d": 365, "lifetime": null,
   };
-
-  const filteredReqs = useMemo(() => {
-    const q = reqSearch.trim().toLowerCase();
-    if (!q) return requests.slice(0, 8);
-    return requests
-      .filter(r =>
-        r.user_name.toLowerCase().includes(q) ||
-        r.farm_name.toLowerCase().includes(q) ||
-        String(r.id).includes(q))
-      .slice(0, 8);
-  }, [requests, reqSearch]);
-
-  const selectedReq = requests.find(r => r.id === selectedReqId);
 
   async function handleSave() {
     if (!name.trim())  { setError("Nome é obrigatório"); return; }
@@ -556,8 +539,8 @@ function NewMemberModal({
           name: name.trim(), email: email.trim(), phone: phone.trim() || null,
           password: password.trim() || null,
           profile, access_type: accessType, expires_at: expiresAt,
-          product: product.trim() || null, origin: origin || null,
-          notes: notes.trim() || null, calendar_request_id: selectedReqId,
+          origin: origin || null,
+          notes: notes.trim() || null,
           entry_date: today,
         }),
       });
@@ -654,10 +637,6 @@ function NewMemberModal({
                 <option value="lifetime">Vitalício</option>
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Produto principal</label>
-              <input value={product} onChange={e => setProduct(e.target.value)} placeholder="Ex: Calendário Sanitário VPC" className={INPUT_LG} />
-            </div>
             <div className="space-y-1.5 sm:col-span-2">
               <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Origem da compra</label>
               <select value={origin} onChange={e => setOrigin(e.target.value)} className={SELECT}>
@@ -669,52 +648,6 @@ function NewMemberModal({
                 <option value="Outro">Outro</option>
               </select>
             </div>
-          </div>
-
-          {/* Calendar selector */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Vincular calendário</label>
-            {selectedReq ? (
-              <div className="flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text truncate">{selectedReq.user_name}</p>
-                  <p className="text-xs text-text-muted truncate">
-                    {selectedReq.farm_name} · Sol. #{selectedReq.id}
-                    {selectedReq.calendar_id ? ` · Cal. #${selectedReq.calendar_id}` : ""}
-                  </p>
-                </div>
-                <button type="button" onClick={() => { setSelectedReqId(null); setReqSearch(""); }} className="text-text-muted hover:text-text shrink-0">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted pointer-events-none" />
-                <input
-                  value={reqSearch}
-                  onChange={e => setReqSearch(e.target.value)}
-                  placeholder="Buscar por produtor ou nome do rebanho..."
-                  className={`${INPUT_LG} pl-9`}
-                />
-                {reqSearch && filteredReqs.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 overflow-hidden">
-                    {filteredReqs.map(r => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => { setSelectedReqId(r.id); setReqSearch(""); }}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-text/5 transition-colors border-b border-border last:border-0"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-text truncate">{r.user_name}</p>
-                          <p className="text-xs text-text-muted truncate">{r.farm_name} · Sol. #{r.id}{r.calendar_id ? ` · Cal. #${r.calendar_id}` : ""}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Notes */}
@@ -869,7 +802,7 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
         </div>
       )}
 
-      {showModal && <NewMemberModal requests={requests} onClose={() => setShowModal(false)} onCreated={onCreated} />}
+      {showModal && <NewMemberModal onClose={() => setShowModal(false)} onCreated={onCreated} />}
     </div>
   );
 }

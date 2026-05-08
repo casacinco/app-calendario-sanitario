@@ -1198,6 +1198,7 @@ export interface Member {
   last_access: string | null;
   password: string | null;
   device_info: string | null;
+  onboarding_completed: number; // 0 = pending, 1 = done
   origin: string | null;
   notes: string | null;
   calendar_request_id: number | null;
@@ -1391,4 +1392,26 @@ export async function extendMemberAccess(
 
 export async function deleteMember(db: D1Database, id: number): Promise<void> {
   await db.prepare(`DELETE FROM members WHERE id = ?1`).bind(id).run();
+}
+
+export async function getMemberByEmail(db: D1Database, email: string): Promise<Member | null> {
+  return db
+    .prepare(`SELECT * FROM members WHERE email = ?1`)
+    .bind(email)
+    .first<Member>();
+}
+
+export async function completeMemberOnboarding(
+  db: D1Database,
+  email: string,
+  requestId: number,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE members
+       SET onboarding_completed = 1, calendar_request_id = ?2, updated_at = datetime('now')
+       WHERE email = ?1`,
+    )
+    .bind(email, requestId)
+    .run();
 }

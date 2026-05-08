@@ -1,3 +1,4 @@
+import { NextRequest, NextResponse } from "next/server";
 import {
   createCalendarRequest,
   createFarm,
@@ -5,6 +6,7 @@ import {
   createHealthQuestionnaire,
   createUser,
   getUserByEmail,
+  completeMemberOnboarding,
 } from "@/lib/db";
 import { getEnv } from "@/lib/cf";
 
@@ -40,16 +42,16 @@ interface OnboardingBody {
   notes?: string;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let body: OnboardingBody;
   try {
     body = await request.json();
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   if (!body?.user?.email || !body?.user?.name || !body?.farm?.name) {
-    return Response.json(
+    return NextResponse.json(
       { error: "Missing required fields: user.email, user.name, farm.name" },
       { status: 400 },
     );
@@ -81,12 +83,18 @@ export async function POST(request: Request) {
       notes: body.notes,
     });
 
-    return Response.json(
+    // Auto-link member if one exists with this email
+    await completeMemberOnboarding(db, body.user.email, calendarRequest.id);
+
+    const res = NextResponse.json(
       { user, farm, flock, questionnaire, request: calendarRequest },
       { status: 201 },
     );
+    // Clear onboarding gate cookie
+    res.cookies.set("rb_onboarding", "", { httpOnly: true, path: "/", maxAge: 0 });
+    return res;
   } catch (err) {
-    return Response.json(
+    return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 },
     );
