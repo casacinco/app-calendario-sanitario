@@ -1181,7 +1181,9 @@ export async function saveCustomPreset(
 // MEMBERS
 // =====================================================
 
-export type MemberStatus = "active" | "inactive";
+export type MemberStatus     = "active" | "blocked";
+export type MemberProfile    = "user" | "support" | "admin";
+export type MemberAccessType = "30d" | "90d" | "365d" | "lifetime";
 
 export interface Member {
   id: number;
@@ -1190,6 +1192,10 @@ export interface Member {
   phone: string | null;
   product: string | null;
   status: MemberStatus;
+  profile: MemberProfile;
+  access_type: MemberAccessType;
+  expires_at: string | null;
+  last_access: string | null;
   origin: string | null;
   notes: string | null;
   calendar_request_id: number | null;
@@ -1211,6 +1217,9 @@ export interface CreateMemberInput {
   phone?: string | null;
   product?: string | null;
   status?: MemberStatus;
+  profile?: MemberProfile;
+  access_type?: MemberAccessType;
+  expires_at?: string | null;
   origin?: string | null;
   notes?: string | null;
   calendar_request_id?: number | null;
@@ -1266,8 +1275,8 @@ export async function createMember(db: D1Database, input: CreateMemberInput): Pr
 
   return insertReturning<Member>(
     db,
-    `INSERT INTO members (name, email, phone, product, status, origin, notes, calendar_request_id, entry_date)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+    `INSERT INTO members (name, email, phone, product, status, profile, access_type, expires_at, origin, notes, calendar_request_id, entry_date)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
      RETURNING *`,
     [
       input.name,
@@ -1275,6 +1284,9 @@ export async function createMember(db: D1Database, input: CreateMemberInput): Pr
       input.phone ?? null,
       input.product ?? null,
       input.status ?? "active",
+      input.profile ?? "user",
+      input.access_type ?? "30d",
+      input.expires_at ?? null,
       input.origin ?? null,
       input.notes ?? null,
       input.calendar_request_id ?? null,
@@ -1298,6 +1310,9 @@ export async function updateMember(
   if (patch.phone !== undefined)               { fields.push(`phone = ?${idx++}`);               params.push(patch.phone); }
   if (patch.product !== undefined)             { fields.push(`product = ?${idx++}`);             params.push(patch.product); }
   if (patch.status !== undefined)              { fields.push(`status = ?${idx++}`);              params.push(patch.status); }
+  if (patch.profile !== undefined)             { fields.push(`profile = ?${idx++}`);             params.push(patch.profile); }
+  if (patch.access_type !== undefined)         { fields.push(`access_type = ?${idx++}`);         params.push(patch.access_type); }
+  if (patch.expires_at !== undefined)          { fields.push(`expires_at = ?${idx++}`);          params.push(patch.expires_at); }
   if (patch.origin !== undefined)              { fields.push(`origin = ?${idx++}`);              params.push(patch.origin); }
   if (patch.notes !== undefined)               { fields.push(`notes = ?${idx++}`);               params.push(patch.notes); }
   if (patch.calendar_request_id !== undefined) { fields.push(`calendar_request_id = ?${idx++}`); params.push(patch.calendar_request_id); }
@@ -1324,12 +1339,48 @@ export async function toggleMemberStatus(db: D1Database, id: number): Promise<Me
   return insertReturning<Member>(
     db,
     `UPDATE members
-     SET status = CASE WHEN status = 'active' THEN 'inactive' ELSE 'active' END,
+     SET status = CASE WHEN status = 'active' THEN 'blocked' ELSE 'active' END,
          updated_at = datetime('now')
      WHERE id = ?1
      RETURNING *`,
     [id],
     "toggle member status",
+  );
+}
+
+export async function extendMemberAccess(
+  db: D1Database,
+  id: number,
+  input: { days?: number; type?: "lifetime" },
+): Promise<Member> {
+  if (input.type === "lifetime") {
+    return insertReturning<Member>(
+      db,
+      `UPDATE members
+       SET access_type = 'lifetime', expires_at = NULL, status = 'active',
+           updated_at = datetime('now')
+       WHERE id = ?1
+       RETURNING *`,
+      [id],
+      "make member lifetime",
+    );
+  }
+
+  const days = input.days ?? 30;
+  const interval = `+${days} days`;
+  const accessType = days <= 30 ? "30d" : days <= 90 ? "90d" : "365d";
+
+  return insertReturning<Member>(
+    db,
+    `UPDATE members
+     SET expires_at = date(CASE WHEN expires_at > date('now') THEN expires_at ELSE date('now') END, ?2),
+         access_type = ?3,
+         status = 'active',
+         updated_at = datetime('now')
+     WHERE id = ?1
+     RETURNING *`,
+    [id, interval, accessType],
+    "extend member access",
   );
 }
 

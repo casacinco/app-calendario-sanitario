@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       email: body.email.trim().toLowerCase(),
       phone: body.phone?.trim() || null,
       product: body.product?.trim() || null,
-      status: body.status === "inactive" ? "inactive" : "active",
+      status: body.status === "blocked" ? "blocked" : "active",
       origin: body.origin?.trim() || null,
       notes: body.notes?.trim() || null,
       calendar_request_id: body.calendar_request_id ?? null,
