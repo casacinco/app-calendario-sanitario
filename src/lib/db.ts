@@ -1741,6 +1741,12 @@ export type ModuleStatus    = "active" | "hidden" | "blocked";
 export type LessonStatus    = "published" | "draft" | "hidden";
 export type ContentFileType = "pdf" | "spreadsheet" | "image" | "document" | "other";
 
+export interface LibraryFileUsage {
+  lesson_id: number;
+  lesson_title: string;
+  module_title: string;
+}
+
 export interface ContentModule {
   id: number;
   title: string;
@@ -1801,6 +1807,7 @@ export interface LibraryFile {
   file_size: number | null;
   original_name: string | null;
   created_at: string;
+  usages?: LibraryFileUsage[];
 }
 
 // =====================================================
@@ -2170,11 +2177,34 @@ export async function deleteBanner(db: D1Database, id: number): Promise<void> {
 // BIBLIOTECA
 // =====================================================
 
+type LibraryFileRow = Omit<LibraryFile, "usages"> & { usages_json: string | null };
+
 export async function listLibraryFiles(db: D1Database): Promise<LibraryFile[]> {
   const result = await db
-    .prepare(`SELECT * FROM content_library_files ORDER BY id DESC`)
-    .all<LibraryFile>();
-  return result.results;
+    .prepare(
+      `SELECT f.*,
+         (
+           SELECT COALESCE(
+             json_group_array(json_object(
+               'lesson_id',    l.id,
+               'lesson_title', l.title,
+               'module_title', m.title
+             )),
+             '[]'
+           )
+           FROM content_lesson_files lf
+           JOIN content_lessons  l ON l.id = lf.lesson_id
+           JOIN content_modules  m ON m.id = l.module_id
+           WHERE lf.url = f.url
+         ) AS usages_json
+       FROM content_library_files f
+       ORDER BY f.id DESC`,
+    )
+    .all<LibraryFileRow>();
+  return result.results.map(({ usages_json, ...row }) => ({
+    ...row,
+    usages: JSON.parse(usages_json ?? "[]") as LibraryFileUsage[],
+  }));
 }
 
 export async function addLibraryFile(

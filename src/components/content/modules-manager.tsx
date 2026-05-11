@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import {
   GripVertical, Plus, Pencil, Trash2,
   Eye, EyeOff, Lock, ChevronDown, ChevronUp,
-  PlayCircle, Clock, Loader2, Paperclip, X, FileText,
+  PlayCircle, Clock, Loader2, Paperclip, X, FileText, Upload,
 } from "lucide-react";
 import type {
   ContentModule, ContentLesson, ContentLessonFile, LibraryFile,
@@ -18,6 +18,14 @@ function formatBytes(b: number): string {
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function mimeToFileType(mime: string): "pdf" | "spreadsheet" | "image" | "document" | "other" {
+  if (mime === "application/pdf") return "pdf";
+  if (mime.includes("spreadsheet") || mime.includes("excel") || mime === "text/csv") return "spreadsheet";
+  if (mime.startsWith("image/")) return "image";
+  if (mime.includes("word") || mime.includes("wordprocessingml")) return "document";
+  return "other";
 }
 
 // ─── Styling constants ────────────────────────────────────────────────────────
@@ -98,12 +106,16 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
   const [lesSaving,     setLesSaving]     = useState(false);
 
   // ── Materials state ──
-  const [lesFiles,   setLesFiles]   = useState<Record<number, ContentLessonFile[]>>({});
-  const [library,    setLibrary]    = useState<LibraryFile[]>([]);
-  const [libLoaded,  setLibLoaded]  = useState(false);
-  const [libLoading, setLibLoading] = useState(false);
-  const [matAdding,  setMatAdding]  = useState<number | null>(null);
-  const [libSearch,  setLibSearch]  = useState("");
+  const [lesFiles,     setLesFiles]     = useState<Record<number, ContentLessonFile[]>>({});
+  const [library,      setLibrary]      = useState<LibraryFile[]>([]);
+  const [libLoaded,    setLibLoaded]    = useState(false);
+  const [libLoading,   setLibLoading]   = useState(false);
+  const [matAdding,    setMatAdding]    = useState<number | null>(null);
+  const [libSearch,    setLibSearch]    = useState("");
+  const [lesUploading, setLesUploading] = useState(false);
+  const [lesUploadErr, setLesUploadErr] = useState("");
+
+  const lesUploadRef = useRef<HTMLInputElement>(null);
 
   const lesDragIdx = useRef<number | null>(null);
   const [lesOverIdx, setLesOverIdx] = useState<number | null>(null);
@@ -145,6 +157,42 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
   async function handleRemoveMaterial(lessonId: number, fileId: number) {
     await fetch(`/api/admin/lessons/${lessonId}/files/${fileId}`, { method: "DELETE" });
     setLesFiles((p) => ({ ...p, [lessonId]: (p[lessonId] ?? []).filter((f) => f.id !== fileId) }));
+  }
+
+  async function handleLessonUpload(lessonId: number, file: File) {
+    setLesUploading(true);
+    setLesUploadErr("");
+    try {
+      // 1. Upload to R2
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "library");
+      const uploadRes  = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const uploadData = await uploadRes.json() as { url?: string; name?: string; size?: number; type?: string; error?: string };
+      if (!uploadRes.ok || !uploadData.url) {
+        setLesUploadErr(uploadData.error ?? "Erro ao enviar arquivo");
+        return;
+      }
+
+      const fileType   = mimeToFileType(uploadData.type ?? file.type);
+      const displayName = file.name.replace(/\.[^.]+$/, "");
+
+      // 2. Save to library
+      const libRes  = await fetch("/api/admin/library", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: displayName, url: uploadData.url, file_type: fileType, file_size: uploadData.size ?? file.size, original_name: uploadData.name ?? file.name }),
+      });
+      const libData = await libRes.json() as { file?: LibraryFile };
+      if (libData.file) setLibrary((p) => [libData.file!, ...p]);
+
+      // 3. Link to lesson
+      const lesRes  = await fetch(`/api/admin/lessons/${lessonId}/files`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: displayName, url: uploadData.url, file_type: fileType }),
+      });
+      const lesData = await lesRes.json() as { file?: ContentLessonFile };
+      if (lesData.file) setLesFiles((p) => ({ ...p, [lessonId]: [...(p[lessonId] ?? []), lesData.file!] }));
+    } finally { setLesUploading(false); }
   }
 
   // ── Existing handlers ──
@@ -578,24 +626,43 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                                 </div>
                               ))}
 
+                              {/* Upload new file directly */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled={lesUploading}
+                                  onClick={() => lesUploadRef.current?.click()}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-text-muted hover:text-text hover:border-text/30 transition-colors disabled:opacity-50"
+                                >
+                                  {lesUploading
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <Upload className="h-3 w-3" />
+                                  }
+                                  {lesUploading ? "Enviando…" : "Subir novo arquivo"}
+                                </button>
+                                {lesUploadErr && <span className="text-xs text-red-400">{lesUploadErr}</span>}
+                              </div>
+
                               {/* Library picker */}
-                              <div className="border border-dashed border-border rounded-lg p-2.5 space-y-2">
-                                <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide">Vincular da biblioteca</p>
-                                {libLoading ? (
-                                  <div className="flex items-center gap-1.5 py-2 text-text-muted">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                    <span className="text-xs">Carregando biblioteca…</span>
-                                  </div>
+                              <div className="border border-dashed border-border rounded-lg overflow-hidden">
+                                <div className="px-2.5 py-2 border-b border-border/50 flex items-center gap-2">
+                                  <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide flex-1">Da biblioteca</p>
+                                  {libLoading && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}
+                                </div>
+                                {library.length === 0 && !libLoading ? (
+                                  <p className="text-[10px] text-text-muted text-center py-4 px-2">
+                                    Biblioteca vazia — use "Subir novo arquivo" ou adicione na aba Biblioteca
+                                  </p>
                                 ) : (
-                                  <>
+                                  <div className="p-2 space-y-1.5">
                                     <input
                                       type="text"
-                                      placeholder="Buscar arquivo…"
+                                      placeholder="Filtrar…"
                                       value={libSearch}
                                       onChange={(e) => setLibSearch(e.target.value)}
-                                      className={INPUT}
+                                      className="w-full rounded border border-border bg-bg px-2 py-1 text-xs focus:outline-none focus:border-text-muted transition-colors"
                                     />
-                                    <div className="max-h-40 overflow-y-auto space-y-0.5">
+                                    <div className="max-h-44 overflow-y-auto space-y-0.5">
                                       {filteredLib.map((f) => (
                                         <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-text/5 group">
                                           <FileText className="h-3 w-3 text-text-muted flex-shrink-0" />
@@ -609,24 +676,35 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                                             onClick={() => handleAddMaterial(lesson.id, f)}
                                             className="px-2 py-0.5 text-[10px] bg-text text-bg rounded hover:opacity-90 disabled:opacity-50 flex-shrink-0"
                                           >
-                                            {matAdding === f.id ? "…" : "Adicionar"}
+                                            {matAdding === f.id ? "…" : "Vincular"}
                                           </button>
                                         </div>
                                       ))}
-                                      {filteredLib.length === 0 && (
+                                      {filteredLib.length === 0 && library.length > 0 && (
                                         <p className="text-[10px] text-text-muted text-center py-3">
-                                          {library.length === 0
-                                            ? "Biblioteca vazia — adicione arquivos na aba Biblioteca"
-                                            : library.filter((f) => !attachedUrls.has(f.url)).length === 0
-                                              ? "Todos os arquivos da biblioteca já foram adicionados"
-                                              : "Nenhum arquivo encontrado"
+                                          {library.filter((f) => !attachedUrls.has(f.url)).length === 0
+                                            ? "Todos os arquivos já vinculados"
+                                            : "Nenhum arquivo encontrado"
                                           }
                                         </p>
                                       )}
                                     </div>
-                                  </>
+                                  </div>
                                 )}
                               </div>
+
+                              {/* Hidden file input for lesson upload */}
+                              <input
+                                ref={lesUploadRef}
+                                type="file"
+                                accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,image/jpeg,image/png,image/webp"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f && editLesId !== null) handleLessonUpload(editLesId, f);
+                                  e.target.value = "";
+                                }}
+                              />
                             </div>
 
                             <div className="flex gap-2">

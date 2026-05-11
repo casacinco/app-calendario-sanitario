@@ -6,7 +6,7 @@ import {
   FileSpreadsheet, File, ExternalLink, Download,
   Upload, X, Loader2, CheckCircle2,
 } from "lucide-react";
-import type { LibraryFile, ContentFileType } from "@/lib/db";
+import type { LibraryFile, LibraryFileUsage, ContentFileType } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -77,11 +77,12 @@ export function LibraryManager({ initialFiles }: Props) {
   const [uploadErr,  setUploadErr]  = useState("");
   const [saving,     setSaving]     = useState(false);
   const [formErr,    setFormErr]    = useState("");
-  const [deleteId,   setDeleteId]   = useState<number | null>(null);
-  const [deleting,   setDeleting]   = useState(false);
-  const [filterType, setFilterType] = useState<string>("all");
-  const [search,     setSearch]     = useState("");
-  const [dragOver,   setDragOver]   = useState(false);
+  const [deleteId,      setDeleteId]      = useState<number | null>(null);
+  const [deleting,      setDeleting]      = useState(false);
+  const [filterType,    setFilterType]    = useState<string>("all");
+  const [search,        setSearch]        = useState("");
+  const [dragOver,      setDragOver]      = useState(false);
+  const [expandUsageId, setExpandUsageId] = useState<number | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -357,7 +358,31 @@ export function LibraryManager({ initialFiles }: Props) {
                         <span className="text-[11px] text-text-muted truncate">{file.notes}</span>
                       )}
                       <span className="text-[10px] text-text-muted">{formatDateBR(file.created_at)}</span>
+                      {/* Usage badge */}
+                      {(file.usages?.length ?? 0) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandUsageId(expandUsageId === file.id ? null : file.id)}
+                          className="text-[10px] text-green border border-green/30 bg-green/10 rounded-full px-1.5 py-0.5 hover:bg-green/20 transition-colors"
+                        >
+                          {file.usages!.length} aula{file.usages!.length !== 1 ? "s" : ""} ▾
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-text-muted/50">Não veiculado</span>
+                      )}
                     </div>
+                    {/* Expanded usage list */}
+                    {expandUsageId === file.id && (file.usages?.length ?? 0) > 0 && (
+                      <ul className="mt-1.5 space-y-0.5">
+                        {(file.usages as LibraryFileUsage[]).map((u) => (
+                          <li key={u.lesson_id} className="text-[10px] text-text-muted flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-text-muted/40 flex-shrink-0" />
+                            <span className="font-medium text-text/80">{u.lesson_title}</span>
+                            <span className="text-text-muted/60">({u.module_title})</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-0.5 flex-shrink-0">
