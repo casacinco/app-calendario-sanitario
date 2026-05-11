@@ -1732,3 +1732,464 @@ export async function processExternalEvent(
 
   return { member, action, created };
 }
+
+// =====================================================
+// CONTENT MANAGEMENT — tipos
+// =====================================================
+
+export type ModuleStatus    = "active" | "hidden" | "blocked";
+export type LessonStatus    = "published" | "draft" | "hidden";
+export type ContentFileType = "pdf" | "spreadsheet" | "image" | "video" | "link";
+
+export interface ContentModule {
+  id: number;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  accent_color: string;
+  sort_order: number;
+  status: ModuleStatus;
+  created_at: string;
+  updated_at: string;
+  lesson_count: number;
+}
+
+export interface ContentLesson {
+  id: number;
+  module_id: number;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  video_url: string | null;
+  duration_minutes: number | null;
+  sort_order: number;
+  status: LessonStatus;
+  created_at: string;
+  updated_at: string;
+  module_title: string | null;
+}
+
+export interface ContentLessonFile {
+  id: number;
+  lesson_id: number;
+  name: string;
+  url: string;
+  file_type: ContentFileType;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Banner {
+  id: number;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  button_label: string | null;
+  button_link: string | null;
+  is_active: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LibraryFile {
+  id: number;
+  name: string;
+  url: string;
+  file_type: ContentFileType;
+  notes: string | null;
+  created_at: string;
+}
+
+// =====================================================
+// MÓDULOS
+// =====================================================
+
+export async function listModules(db: D1Database): Promise<ContentModule[]> {
+  const result = await db
+    .prepare(
+      `SELECT m.*,
+              COUNT(l.id) AS lesson_count
+         FROM content_modules m
+         LEFT JOIN content_lessons l ON l.module_id = m.id
+        GROUP BY m.id
+        ORDER BY m.sort_order ASC, m.id ASC`,
+    )
+    .all<ContentModule>();
+  return result.results;
+}
+
+export async function getModule(db: D1Database, id: number): Promise<ContentModule | null> {
+  const row = await db
+    .prepare(
+      `SELECT m.*,
+              COUNT(l.id) AS lesson_count
+         FROM content_modules m
+         LEFT JOIN content_lessons l ON l.module_id = m.id
+        WHERE m.id = ?1
+        GROUP BY m.id`,
+    )
+    .bind(id)
+    .first<ContentModule>();
+  return row ?? null;
+}
+
+export async function createModule(
+  db: D1Database,
+  input: {
+    title: string;
+    description?: string | null;
+    thumbnail_url?: string | null;
+    accent_color?: string;
+    status?: ModuleStatus;
+  },
+): Promise<ContentModule> {
+  const maxOrder = await db
+    .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS n FROM content_modules`)
+    .first<{ n: number }>();
+  const nextOrder = (maxOrder?.n ?? -1) + 1;
+
+  const row = await db
+    .prepare(
+      `INSERT INTO content_modules (title, description, thumbnail_url, accent_color, sort_order, status)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+       RETURNING *`,
+    )
+    .bind(
+      input.title,
+      input.description ?? null,
+      input.thumbnail_url ?? null,
+      input.accent_color ?? "#5FAF3E",
+      nextOrder,
+      input.status ?? "active",
+    )
+    .first<ContentModule>();
+  if (!row) throw new Error("Falha ao criar módulo");
+  return { ...row, lesson_count: 0 };
+}
+
+export async function updateModule(
+  db: D1Database,
+  id: number,
+  patch: Partial<{
+    title: string;
+    description: string | null;
+    thumbnail_url: string | null;
+    accent_color: string;
+    sort_order: number;
+    status: ModuleStatus;
+  }>,
+): Promise<ContentModule> {
+  const fields: string[] = ["updated_at = datetime('now')"];
+  const binds: unknown[] = [];
+  let i = 1;
+  if (patch.title !== undefined)         { fields.push(`title = ?${i++}`);         binds.push(patch.title); }
+  if (patch.description !== undefined)   { fields.push(`description = ?${i++}`);   binds.push(patch.description); }
+  if (patch.thumbnail_url !== undefined) { fields.push(`thumbnail_url = ?${i++}`); binds.push(patch.thumbnail_url); }
+  if (patch.accent_color !== undefined)  { fields.push(`accent_color = ?${i++}`);  binds.push(patch.accent_color); }
+  if (patch.sort_order !== undefined)    { fields.push(`sort_order = ?${i++}`);    binds.push(patch.sort_order); }
+  if (patch.status !== undefined)        { fields.push(`status = ?${i++}`);        binds.push(patch.status); }
+
+  binds.push(id);
+  const row = await db
+    .prepare(`UPDATE content_modules SET ${fields.join(", ")} WHERE id = ?${i} RETURNING *`)
+    .bind(...binds)
+    .first<ContentModule>();
+  if (!row) throw new Error("Módulo não encontrado");
+  const lc = await db
+    .prepare(`SELECT COUNT(*) AS n FROM content_lessons WHERE module_id = ?1`)
+    .bind(id)
+    .first<{ n: number }>();
+  return { ...row, lesson_count: lc?.n ?? 0 };
+}
+
+export async function deleteModule(db: D1Database, id: number): Promise<void> {
+  await db.prepare(`DELETE FROM content_modules WHERE id = ?1`).bind(id).run();
+}
+
+export async function reorderModules(db: D1Database, ids: number[]): Promise<void> {
+  const stmts = ids.map((id, i) =>
+    db.prepare(`UPDATE content_modules SET sort_order = ?1 WHERE id = ?2`).bind(i, id),
+  );
+  if (stmts.length > 0) await db.batch(stmts);
+}
+
+// =====================================================
+// AULAS
+// =====================================================
+
+export async function listLessons(
+  db: D1Database,
+  moduleId?: number,
+): Promise<ContentLesson[]> {
+  const where = moduleId !== undefined ? "WHERE l.module_id = ?1" : "";
+  const result = await db
+    .prepare(
+      `SELECT l.*, m.title AS module_title
+         FROM content_lessons l
+         LEFT JOIN content_modules m ON m.id = l.module_id
+         ${where}
+        ORDER BY l.sort_order ASC, l.id ASC`,
+    )
+    .bind(...(moduleId !== undefined ? [moduleId] : []))
+    .all<ContentLesson>();
+  return result.results;
+}
+
+export async function getLesson(db: D1Database, id: number): Promise<ContentLesson | null> {
+  const row = await db
+    .prepare(
+      `SELECT l.*, m.title AS module_title
+         FROM content_lessons l
+         LEFT JOIN content_modules m ON m.id = l.module_id
+        WHERE l.id = ?1`,
+    )
+    .bind(id)
+    .first<ContentLesson>();
+  return row ?? null;
+}
+
+export async function createLesson(
+  db: D1Database,
+  input: {
+    module_id: number;
+    title: string;
+    description?: string | null;
+    thumbnail_url?: string | null;
+    video_url?: string | null;
+    duration_minutes?: number | null;
+    status?: LessonStatus;
+  },
+): Promise<ContentLesson> {
+  const maxOrder = await db
+    .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS n FROM content_lessons WHERE module_id = ?1`)
+    .bind(input.module_id)
+    .first<{ n: number }>();
+  const nextOrder = (maxOrder?.n ?? -1) + 1;
+
+  const row = await db
+    .prepare(
+      `INSERT INTO content_lessons
+         (module_id, title, description, thumbnail_url, video_url, duration_minutes, sort_order, status)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+       RETURNING *`,
+    )
+    .bind(
+      input.module_id,
+      input.title,
+      input.description ?? null,
+      input.thumbnail_url ?? null,
+      input.video_url ?? null,
+      input.duration_minutes ?? null,
+      nextOrder,
+      input.status ?? "draft",
+    )
+    .first<ContentLesson>();
+  if (!row) throw new Error("Falha ao criar aula");
+  return { ...row, module_title: null };
+}
+
+export async function updateLesson(
+  db: D1Database,
+  id: number,
+  patch: Partial<{
+    module_id: number;
+    title: string;
+    description: string | null;
+    thumbnail_url: string | null;
+    video_url: string | null;
+    duration_minutes: number | null;
+    sort_order: number;
+    status: LessonStatus;
+  }>,
+): Promise<ContentLesson> {
+  const fields: string[] = ["updated_at = datetime('now')"];
+  const binds: unknown[] = [];
+  let i = 1;
+  if (patch.module_id !== undefined)         { fields.push(`module_id = ?${i++}`);         binds.push(patch.module_id); }
+  if (patch.title !== undefined)             { fields.push(`title = ?${i++}`);             binds.push(patch.title); }
+  if (patch.description !== undefined)       { fields.push(`description = ?${i++}`);       binds.push(patch.description); }
+  if (patch.thumbnail_url !== undefined)     { fields.push(`thumbnail_url = ?${i++}`);     binds.push(patch.thumbnail_url); }
+  if (patch.video_url !== undefined)         { fields.push(`video_url = ?${i++}`);         binds.push(patch.video_url); }
+  if (patch.duration_minutes !== undefined)  { fields.push(`duration_minutes = ?${i++}`);  binds.push(patch.duration_minutes); }
+  if (patch.sort_order !== undefined)        { fields.push(`sort_order = ?${i++}`);        binds.push(patch.sort_order); }
+  if (patch.status !== undefined)            { fields.push(`status = ?${i++}`);            binds.push(patch.status); }
+
+  binds.push(id);
+  const row = await db
+    .prepare(`UPDATE content_lessons SET ${fields.join(", ")} WHERE id = ?${i} RETURNING *`)
+    .bind(...binds)
+    .first<ContentLesson>();
+  if (!row) throw new Error("Aula não encontrada");
+  return { ...row, module_title: null };
+}
+
+export async function deleteLesson(db: D1Database, id: number): Promise<void> {
+  await db.prepare(`DELETE FROM content_lessons WHERE id = ?1`).bind(id).run();
+}
+
+export async function reorderLessons(
+  db: D1Database,
+  moduleId: number,
+  ids: number[],
+): Promise<void> {
+  const stmts = ids.map((id, i) =>
+    db
+      .prepare(`UPDATE content_lessons SET sort_order = ?1 WHERE id = ?2 AND module_id = ?3`)
+      .bind(i, id, moduleId),
+  );
+  if (stmts.length > 0) await db.batch(stmts);
+}
+
+// ── Materiais das aulas ─────────────────────────────────────────────────────
+
+export async function getLessonFiles(
+  db: D1Database,
+  lessonId: number,
+): Promise<ContentLessonFile[]> {
+  const result = await db
+    .prepare(
+      `SELECT * FROM content_lesson_files WHERE lesson_id = ?1 ORDER BY sort_order ASC, id ASC`,
+    )
+    .bind(lessonId)
+    .all<ContentLessonFile>();
+  return result.results;
+}
+
+export async function addLessonFile(
+  db: D1Database,
+  input: { lesson_id: number; name: string; url: string; file_type?: ContentFileType },
+): Promise<ContentLessonFile> {
+  const maxOrder = await db
+    .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS n FROM content_lesson_files WHERE lesson_id = ?1`)
+    .bind(input.lesson_id)
+    .first<{ n: number }>();
+  const nextOrder = (maxOrder?.n ?? -1) + 1;
+
+  const row = await db
+    .prepare(
+      `INSERT INTO content_lesson_files (lesson_id, name, url, file_type, sort_order)
+       VALUES (?1, ?2, ?3, ?4, ?5) RETURNING *`,
+    )
+    .bind(input.lesson_id, input.name, input.url, input.file_type ?? "link", nextOrder)
+    .first<ContentLessonFile>();
+  if (!row) throw new Error("Falha ao adicionar material");
+  return row;
+}
+
+export async function deleteLessonFile(db: D1Database, id: number): Promise<void> {
+  await db.prepare(`DELETE FROM content_lesson_files WHERE id = ?1`).bind(id).run();
+}
+
+// =====================================================
+// BANNERS
+// =====================================================
+
+export async function listBanners(db: D1Database): Promise<Banner[]> {
+  const result = await db
+    .prepare(`SELECT * FROM banners ORDER BY sort_order ASC, id ASC`)
+    .all<Banner>();
+  return result.results;
+}
+
+export async function createBanner(
+  db: D1Database,
+  input: {
+    title: string;
+    description?: string | null;
+    image_url?: string | null;
+    button_label?: string | null;
+    button_link?: string | null;
+    is_active?: number;
+  },
+): Promise<Banner> {
+  const maxOrder = await db
+    .prepare(`SELECT COALESCE(MAX(sort_order), -1) AS n FROM banners`)
+    .first<{ n: number }>();
+  const nextOrder = (maxOrder?.n ?? -1) + 1;
+
+  const row = await db
+    .prepare(
+      `INSERT INTO banners (title, description, image_url, button_label, button_link, is_active, sort_order)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) RETURNING *`,
+    )
+    .bind(
+      input.title,
+      input.description ?? null,
+      input.image_url ?? null,
+      input.button_label ?? null,
+      input.button_link ?? null,
+      input.is_active ?? 1,
+      nextOrder,
+    )
+    .first<Banner>();
+  if (!row) throw new Error("Falha ao criar banner");
+  return row;
+}
+
+export async function updateBanner(
+  db: D1Database,
+  id: number,
+  patch: Partial<{
+    title: string;
+    description: string | null;
+    image_url: string | null;
+    button_label: string | null;
+    button_link: string | null;
+    is_active: number;
+    sort_order: number;
+  }>,
+): Promise<Banner> {
+  const fields: string[] = ["updated_at = datetime('now')"];
+  const binds: unknown[] = [];
+  let i = 1;
+  if (patch.title !== undefined)        { fields.push(`title = ?${i++}`);        binds.push(patch.title); }
+  if (patch.description !== undefined)  { fields.push(`description = ?${i++}`);  binds.push(patch.description); }
+  if (patch.image_url !== undefined)    { fields.push(`image_url = ?${i++}`);    binds.push(patch.image_url); }
+  if (patch.button_label !== undefined) { fields.push(`button_label = ?${i++}`); binds.push(patch.button_label); }
+  if (patch.button_link !== undefined)  { fields.push(`button_link = ?${i++}`);  binds.push(patch.button_link); }
+  if (patch.is_active !== undefined)    { fields.push(`is_active = ?${i++}`);    binds.push(patch.is_active); }
+  if (patch.sort_order !== undefined)   { fields.push(`sort_order = ?${i++}`);   binds.push(patch.sort_order); }
+
+  binds.push(id);
+  const row = await db
+    .prepare(`UPDATE banners SET ${fields.join(", ")} WHERE id = ?${i} RETURNING *`)
+    .bind(...binds)
+    .first<Banner>();
+  if (!row) throw new Error("Banner não encontrado");
+  return row;
+}
+
+export async function deleteBanner(db: D1Database, id: number): Promise<void> {
+  await db.prepare(`DELETE FROM banners WHERE id = ?1`).bind(id).run();
+}
+
+// =====================================================
+// BIBLIOTECA
+// =====================================================
+
+export async function listLibraryFiles(db: D1Database): Promise<LibraryFile[]> {
+  const result = await db
+    .prepare(`SELECT * FROM content_library_files ORDER BY id DESC`)
+    .all<LibraryFile>();
+  return result.results;
+}
+
+export async function addLibraryFile(
+  db: D1Database,
+  input: { name: string; url: string; file_type?: ContentFileType; notes?: string | null },
+): Promise<LibraryFile> {
+  const row = await db
+    .prepare(
+      `INSERT INTO content_library_files (name, url, file_type, notes)
+       VALUES (?1, ?2, ?3, ?4) RETURNING *`,
+    )
+    .bind(input.name, input.url, input.file_type ?? "link", input.notes ?? null)
+    .first<LibraryFile>();
+  if (!row) throw new Error("Falha ao adicionar arquivo");
+  return row;
+}
+
+export async function deleteLibraryFile(db: D1Database, id: number): Promise<void> {
+  await db.prepare(`DELETE FROM content_library_files WHERE id = ?1`).bind(id).run();
+}
