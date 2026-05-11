@@ -237,7 +237,7 @@ export function LibraryManager({ initialFiles }: Props) {
                     Arraste aqui ou <span className="underline underline-offset-2">clique para selecionar</span>
                   </span>
                   <span className="text-xs text-text-muted">
-                    PDF, XLS, XLSX, CSV, DOC, DOCX, JPG, PNG, WEBP · máx. 10 MB
+                    PDF, XLS, XLSX, CSV, DOC, DOCX, JPG, PNG, WEBP · máx. 25 MB
                   </span>
                 </button>
               )}

@@ -16,7 +16,7 @@ const ALLOWED_DOC_TYPES = new Set([
 ]);
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;   // 5 MB
-const MAX_DOC_SIZE   = 10 * 1024 * 1024;  // 10 MB
+const MAX_DOC_SIZE   = 25 * 1024 * 1024;  // 25 MB
 
 function randomId(): string {
   return Math.random().toString(36).slice(2, 10);
