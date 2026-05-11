@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Search, ChevronRight, Users, TrendingUp, Activity, Clock, BookCheck,
+  Search, ChevronRight, ChevronLeft, Users, TrendingUp, Activity, Clock, BookCheck,
 } from "lucide-react";
+
+const PAGE_SIZE = 15;
 
 export type EngagementLevel = "Nenhum" | "Baixo" | "Médio" | "Alto";
 
@@ -51,6 +53,7 @@ export function EngagementOverview({ users, metrics }: Props) {
   const router   = useRouter();
   const [search,    setSearch]    = useState("");
   const [filterEng, setFilterEng] = useState("todos");
+  const [page,      setPage]      = useState(1);
 
   const filtered = users.filter((u) => {
     const q   = search.toLowerCase();
@@ -58,6 +61,24 @@ export function EngagementOverview({ users, metrics }: Props) {
     const eng = filterEng === "todos" || u.engagement === filterEng;
     return hit && eng;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function changePage(p: number) {
+    setPage(Math.max(1, Math.min(p, totalPages)));
+  }
+
+  function handleFilterChange(eng: string) {
+    setFilterEng(eng);
+    setPage(1);
+  }
+
+  function handleSearch(q: string) {
+    setSearch(q);
+    setPage(1);
+  }
 
   const CARDS = [
     { label: "Total de usuários",    value: String(metrics.total_users),         sub: "cadastrados na plataforma",     icon: Users },
@@ -92,13 +113,13 @@ export function EngagementOverview({ users, metrics }: Props) {
             type="text"
             placeholder="Buscar por nome ou e-mail…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-bg border border-border rounded-lg text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-border"
           />
         </div>
         <select
           value={filterEng}
-          onChange={(e) => setFilterEng(e.target.value)}
+          onChange={(e) => handleFilterChange(e.target.value)}
           className="px-3 py-2 text-sm bg-bg border border-border rounded-lg text-text focus:outline-none focus:border-border"
         >
           <option value="todos">Todos</option>
@@ -109,7 +130,8 @@ export function EngagementOverview({ users, metrics }: Props) {
         </select>
       </div>
 
-      {/* Table */}
+      {/* Table + pagination */}
+      <div className="space-y-3">
       <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
@@ -131,7 +153,7 @@ export function EngagementOverview({ users, metrics }: Props) {
                 </td>
               </tr>
             ) : (
-              filtered.map((u) => (
+              paginated.map((u) => (
                 <tr
                   key={u.id}
                   onClick={() => router.push(`/admin/conteudo/engajamento/${u.id}`)}
@@ -175,6 +197,63 @@ export function EngagementOverview({ users, metrics }: Props) {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-text-muted">
+            {filtered.length} usuário{filtered.length !== 1 ? "s" : ""} ·{" "}
+            página {safePage} de {totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => changePage(safePage - 1)}
+              disabled={safePage === 1}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-border text-text-muted hover:text-text hover:bg-text/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Anterior
+            </button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) =>
+                  p === "…" ? (
+                    <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-xs text-text-muted">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => changePage(p)}
+                      className={`min-w-[32px] px-2 py-1.5 text-xs rounded-lg border transition-colors ${
+                        p === safePage
+                          ? "border-text/30 bg-text/10 text-text font-medium"
+                          : "border-border text-text-muted hover:text-text hover:bg-text/5"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+            </div>
+
+            <button
+              onClick={() => changePage(safePage + 1)}
+              disabled={safePage === totalPages}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-border text-text-muted hover:text-text hover:bg-text/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Próxima
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
