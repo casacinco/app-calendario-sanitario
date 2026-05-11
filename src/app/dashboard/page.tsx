@@ -1,11 +1,17 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { Clock, CheckCircle2, BookOpen, Stethoscope, ShieldAlert, Lock } from "lucide-react";
+import Link from "next/link";
+import { Clock, CheckCircle2 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
-import { getUserById } from "@/lib/db";
+import {
+  getUserById,
+  listActiveBanners,
+  listPublishedModulesWithLessons,
+} from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import { LogoutButton } from "@/components/logout-button";
+import { ModulesList } from "@/components/content/modules-list";
 import type { RequestStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -18,27 +24,6 @@ interface RequestRow {
   cal_status: string | null;
   cal_id: number | null;
 }
-
-const CONTENT_CARDS = [
-  {
-    icon: BookOpen,
-    title: "Primeiros passos",
-    desc: "Fundamentos do manejo sanitário para pequenos e médios criadores.",
-    color: "from-blue-900/40 to-blue-800/20",
-  },
-  {
-    icon: Stethoscope,
-    title: "Manejos básicos",
-    desc: "Protocolos de vermifugação, vacinação e controle de ectoparasitas.",
-    color: "from-green-900/40 to-green-800/20",
-  },
-  {
-    icon: ShieldAlert,
-    title: "Principais doenças",
-    desc: "Reconheça os sinais clínicos mais comuns e saiba quando agir.",
-    color: "from-red-900/40 to-red-800/20",
-  },
-];
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -62,6 +47,9 @@ export default async function DashboardPage() {
     )
     .bind(Number(uid))
     .first<RequestRow>();
+
+  const banners = await listActiveBanners(db);
+  const modules = await listPublishedModulesWithLessons(db);
 
   const firstName = user.name.split(" ")[0];
   const isDelivered = request?.status === "delivered";
@@ -146,38 +134,81 @@ export default async function DashboardPage() {
           </p>
         )}
 
-        {/* Info block */}
-        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
-          <p className="text-sm text-white/70 leading-relaxed">
-            Enquanto seu calendário fica pronto, você já pode começar a aprender
-            mais sobre manejo sanitário e aumentar a eficiência do seu rebanho.
-          </p>
-        </div>
-
-        {/* Content cards */}
-        <div className="space-y-3">
-          {CONTENT_CARDS.map(({ icon: Icon, title, desc, color }) => (
-            <div
-              key={title}
-              className={`relative rounded-xl border border-white/8 bg-gradient-to-br ${color} p-5 flex items-start gap-4`}
-            >
-              <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                <Icon className="h-5 w-5 text-white/70" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="text-xs text-white/50 mt-0.5 leading-relaxed">{desc}</p>
-              </div>
-              <button
-                disabled
-                className="flex-shrink-0 flex items-center gap-1 text-xs text-white/30 border border-white/10 rounded-lg px-3 py-1.5 cursor-not-allowed"
+        {/* Banners */}
+        {banners.length > 0 && (
+          <div className="space-y-3">
+            {banners.map((banner) => (
+              <div
+                key={banner.id}
+                className="relative rounded-xl overflow-hidden border border-white/8"
               >
-                <Lock className="h-3 w-3" />
-                Acessar
-              </button>
-            </div>
-          ))}
-        </div>
+                {banner.image_url ? (
+                  <>
+                    <img
+                      src={banner.image_url}
+                      alt={banner.title}
+                      className="w-full object-cover max-h-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <p className="text-sm font-semibold text-white leading-snug">
+                        {banner.title}
+                      </p>
+                      {banner.description && (
+                        <p className="text-xs text-white/70 mt-0.5 line-clamp-2">
+                          {banner.description}
+                        </p>
+                      )}
+                      {banner.button_label && banner.button_link && (
+                        <Link
+                          href={banner.button_link}
+                          className="inline-block mt-2 px-3 py-1 bg-white text-black text-xs font-semibold rounded-md hover:bg-white/90 transition-opacity"
+                        >
+                          {banner.button_label}
+                        </Link>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-5 bg-[hsl(var(--card))]">
+                    <p className="text-sm font-semibold text-white">{banner.title}</p>
+                    {banner.description && (
+                      <p className="text-xs text-white/60 mt-1 leading-relaxed">
+                        {banner.description}
+                      </p>
+                    )}
+                    {banner.button_label && banner.button_link && (
+                      <Link
+                        href={banner.button_link}
+                        className="inline-block mt-3 px-4 py-1.5 bg-[hsl(var(--green))] text-white text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity"
+                      >
+                        {banner.button_label}
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modules */}
+        {modules.length > 0 ? (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+              Conteúdo educacional
+            </h2>
+            <ModulesList modules={modules} />
+          </div>
+        ) : (
+          <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
+            <p className="text-sm text-white/70 leading-relaxed">
+              Enquanto seu calendário fica pronto, você já pode começar a aprender
+              mais sobre manejo sanitário e aumentar a eficiência do seu rebanho.
+              Em breve novos conteúdos serão disponibilizados aqui.
+            </p>
+          </div>
+        )}
 
       </main>
     </div>

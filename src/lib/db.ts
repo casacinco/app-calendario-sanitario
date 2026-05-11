@@ -2239,3 +2239,69 @@ export async function addLibraryFile(
 export async function deleteLibraryFile(db: D1Database, id: number): Promise<void> {
   await db.prepare(`DELETE FROM content_library_files WHERE id = ?1`).bind(id).run();
 }
+
+// =====================================================
+// CONTEÚDO PUBLICADO (área do aluno)
+// =====================================================
+
+export type PublishedModule = Omit<ContentModule, "lesson_count"> & {
+  lessons: ContentLesson[];
+};
+
+export async function listPublishedModulesWithLessons(
+  db: D1Database,
+): Promise<PublishedModule[]> {
+  const modulesRes = await db
+    .prepare(
+      `SELECT * FROM content_modules WHERE status = 'active' ORDER BY sort_order ASC, id ASC`,
+    )
+    .all<Omit<ContentModule, "lesson_count">>();
+
+  if (modulesRes.results.length === 0) return [];
+
+  const lessonsRes = await db
+    .prepare(
+      `SELECT * FROM content_lessons WHERE status = 'published' ORDER BY sort_order ASC, id ASC`,
+    )
+    .all<Omit<ContentLesson, "module_title">>();
+
+  const byModule = new Map<number, ContentLesson[]>();
+  for (const l of lessonsRes.results) {
+    const arr = byModule.get(l.module_id) ?? [];
+    arr.push({ ...l, module_title: null });
+    byModule.set(l.module_id, arr);
+  }
+
+  return modulesRes.results.map((m) => ({
+    ...m,
+    lessons: (byModule.get(m.id) ?? []).map((l) => ({
+      ...l,
+      module_title: m.title,
+    })),
+  }));
+}
+
+export async function listActiveBanners(db: D1Database): Promise<Banner[]> {
+  const result = await db
+    .prepare(
+      `SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
+    )
+    .all<Banner>();
+  return result.results;
+}
+
+export async function getPublishedLesson(
+  db: D1Database,
+  id: number,
+): Promise<ContentLesson | null> {
+  const row = await db
+    .prepare(`SELECT * FROM content_lessons WHERE id = ?1 AND status = 'published'`)
+    .bind(id)
+    .first<Omit<ContentLesson, "module_title">>();
+  if (!row) return null;
+  const mod = await db
+    .prepare(`SELECT title FROM content_modules WHERE id = ?1`)
+    .bind(row.module_id)
+    .first<{ title: string }>();
+  return { ...row, module_title: mod?.title ?? null };
+}
