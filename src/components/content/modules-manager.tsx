@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type {
   ContentModule, ContentLesson, ContentLessonFile, LibraryFile,
-  ModuleStatus, LessonStatus,
+  ModuleStatus, LessonStatus, ContentFileType,
 } from "@/lib/db";
 import { MediaUpload } from "@/components/content/media-upload";
 
@@ -20,7 +20,7 @@ function formatBytes(b: number): string {
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function mimeToFileType(mime: string): "pdf" | "spreadsheet" | "image" | "document" | "other" {
+function mimeToFileType(mime: string): ContentFileType {
   if (mime === "application/pdf") return "pdf";
   if (mime.includes("spreadsheet") || mime.includes("excel") || mime === "text/csv") return "spreadsheet";
   if (mime.startsWith("image/")) return "image";
@@ -64,11 +64,138 @@ interface LessonForm {
 }
 const EMPTY_LES: LessonForm = { title: "", description: "", video_url: "", thumbnail_url: "", duration_minutes: "", status: "published" };
 
+interface PendingFile { name: string; url: string; file_type: ContentFileType; }
+
 function modToForm(m: ContentModule): ModuleForm {
   return { title: m.title, description: m.description ?? "", thumbnail_url: m.thumbnail_url ?? "", accent_color: m.accent_color, status: m.status };
 }
 function lesToForm(l: ContentLesson): LessonForm {
   return { title: l.title, description: l.description ?? "", video_url: l.video_url ?? "", thumbnail_url: l.thumbnail_url ?? "", duration_minutes: l.duration_minutes ? String(l.duration_minutes) : "", status: l.status };
+}
+
+// ─── Shared materials panel ───────────────────────────────────────────────────
+
+interface MaterialsPanelProps {
+  attached:       PendingFile[] | ContentLessonFile[];
+  library:        LibraryFile[];
+  libLoading:     boolean;
+  libSearch:      string;
+  onLibSearch:    (q: string) => void;
+  matAdding:      number | null;
+  uploading:      boolean;
+  uploadErr:      string;
+  uploadRef:      React.RefObject<HTMLInputElement | null>;
+  onUploadClick:  () => void;
+  onFileInput:    (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onLink:         (f: LibraryFile) => void;
+  onRemove:       (f: PendingFile | ContentLessonFile) => void;
+}
+
+function MaterialsPanel({
+  attached, library, libLoading, libSearch, onLibSearch,
+  matAdding, uploading, uploadErr, uploadRef,
+  onUploadClick, onFileInput, onLink, onRemove,
+}: MaterialsPanelProps) {
+  const attachedUrls = new Set(attached.map((f) => f.url));
+  const filtered     = library
+    .filter((f) => !attachedUrls.has(f.url))
+    .filter((f) => f.name.toLowerCase().includes(libSearch.toLowerCase()));
+
+  return (
+    <div className="border-t border-border pt-3 space-y-2">
+      <p className="text-xs font-medium text-text-muted uppercase tracking-wide">
+        Materiais{attached.length > 0 ? ` · ${attached.length}` : ""}
+      </p>
+
+      {/* Attached */}
+      {attached.map((f) => (
+        <div key={f.url} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-card border border-border">
+          <Paperclip className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
+          <span className="text-xs flex-1 truncate">{f.name}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(f)}
+            className="p-0.5 rounded hover:bg-red-500/10 text-text-muted hover:text-red-400 transition-colors flex-shrink-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+
+      {/* Upload new */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={onUploadClick}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-text-muted hover:text-text hover:border-text/30 transition-colors disabled:opacity-50"
+        >
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          {uploading ? "Enviando…" : "Subir novo arquivo"}
+        </button>
+        {uploadErr && <span className="text-xs text-red-400">{uploadErr}</span>}
+      </div>
+
+      {/* Library picker */}
+      <div className="border border-dashed border-border rounded-lg overflow-hidden">
+        <div className="px-2.5 py-2 border-b border-border/50 flex items-center gap-2">
+          <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide flex-1">Da biblioteca</p>
+          {libLoading && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}
+        </div>
+        {library.length === 0 && !libLoading ? (
+          <p className="text-[10px] text-text-muted text-center py-4 px-2">
+            Biblioteca vazia — use "Subir novo arquivo" ou adicione na aba Biblioteca
+          </p>
+        ) : (
+          <div className="p-2 space-y-1.5">
+            <input
+              type="text"
+              placeholder="Filtrar…"
+              value={libSearch}
+              onChange={(e) => onLibSearch(e.target.value)}
+              className="w-full rounded border border-border bg-bg px-2 py-1 text-xs focus:outline-none focus:border-text-muted transition-colors"
+            />
+            <div className="max-h-44 overflow-y-auto space-y-0.5">
+              {filtered.map((f) => (
+                <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-text/5 group">
+                  <FileText className="h-3 w-3 text-text-muted flex-shrink-0" />
+                  <span className="text-xs flex-1 truncate text-text-muted group-hover:text-text">{f.name}</span>
+                  {f.file_size != null && (
+                    <span className="text-[10px] text-text-muted/50 flex-shrink-0">{formatBytes(f.file_size)}</span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={matAdding === f.id}
+                    onClick={() => onLink(f)}
+                    className="px-2 py-0.5 text-[10px] bg-text text-bg rounded hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                  >
+                    {matAdding === f.id ? "…" : "Vincular"}
+                  </button>
+                </div>
+              ))}
+              {filtered.length === 0 && library.length > 0 && (
+                <p className="text-[10px] text-text-muted text-center py-3">
+                  {library.filter((f) => !attachedUrls.has(f.url)).length === 0
+                    ? "Todos os arquivos já vinculados"
+                    : "Nenhum arquivo encontrado"
+                  }
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={uploadRef}
+        type="file"
+        accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={onFileInput}
+      />
+    </div>
+  );
 }
 
 // ─── ModuleAccordionItem ─────────────────────────────────────────────────────
@@ -100,12 +227,16 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
 
   const [showAddLes,    setShowAddLes]    = useState(false);
   const [addForm,       setAddForm]       = useState<LessonForm>(EMPTY_LES);
+  const [addFormFiles,  setAddFormFiles]  = useState<PendingFile[]>([]);
+  const [addUploading,  setAddUploading]  = useState(false);
+  const [addUploadErr,  setAddUploadErr]  = useState("");
+
   const [editLesId,     setEditLesId]     = useState<number | null>(null);
   const [editLesForm,   setEditLesForm]   = useState<LessonForm>(EMPTY_LES);
   const [delLesId,      setDelLesId]      = useState<number | null>(null);
   const [lesSaving,     setLesSaving]     = useState(false);
 
-  // ── Materials state ──
+  // ── Shared materials state ──
   const [lesFiles,     setLesFiles]     = useState<Record<number, ContentLessonFile[]>>({});
   const [library,      setLibrary]      = useState<LibraryFile[]>([]);
   const [libLoaded,    setLibLoaded]    = useState(false);
@@ -115,12 +246,12 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
   const [lesUploading, setLesUploading] = useState(false);
   const [lesUploadErr, setLesUploadErr] = useState("");
 
+  const addUploadRef = useRef<HTMLInputElement>(null);
   const lesUploadRef = useRef<HTMLInputElement>(null);
-
-  const lesDragIdx = useRef<number | null>(null);
+  const lesDragIdx   = useRef<number | null>(null);
   const [lesOverIdx, setLesOverIdx] = useState<number | null>(null);
 
-  // ── Materials helpers ──
+  // ── Library helpers ──
 
   async function loadLessonFiles(lessonId: number) {
     if (lesFiles[lessonId] !== undefined) return;
@@ -142,6 +273,46 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
     } finally { setLibLoading(false); }
   }
 
+  async function uploadToLibrary(file: File): Promise<{ url: string; name: string; file_type: ContentFileType } | null> {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("folder", "library");
+    const uploadRes  = await fetch("/api/admin/upload", { method: "POST", body: fd });
+    const uploadData = await uploadRes.json() as { url?: string; name?: string; size?: number; type?: string; error?: string };
+    if (!uploadRes.ok || !uploadData.url) return null;
+
+    const fileType    = mimeToFileType(uploadData.type ?? file.type);
+    const displayName = file.name.replace(/\.[^.]+$/, "");
+
+    const libRes  = await fetch("/api/admin/library", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: displayName, url: uploadData.url, file_type: fileType, file_size: uploadData.size ?? file.size, original_name: uploadData.name ?? file.name }),
+    });
+    const libData = await libRes.json() as { file?: LibraryFile };
+    if (libData.file) setLibrary((p) => [libData.file!, ...p]);
+
+    return { url: uploadData.url, name: displayName, file_type: fileType };
+  }
+
+  // ── Add form materials ──
+
+  async function handleAddFormUpload(file: File) {
+    setAddUploading(true); setAddUploadErr("");
+    try {
+      const result = await uploadToLibrary(file);
+      if (!result) { setAddUploadErr("Erro ao enviar arquivo"); return; }
+      setAddFormFiles((p) => [...p, result]);
+    } finally { setAddUploading(false); }
+  }
+
+  function handleAddFormLink(libFile: LibraryFile) {
+    if (!addFormFiles.some((f) => f.url === libFile.url)) {
+      setAddFormFiles((p) => [...p, { name: libFile.name, url: libFile.url, file_type: libFile.file_type }]);
+    }
+  }
+
+  // ── Edit lesson materials ──
+
   async function handleAddMaterial(lessonId: number, libFile: LibraryFile) {
     setMatAdding(libFile.id);
     try {
@@ -160,42 +331,20 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
   }
 
   async function handleLessonUpload(lessonId: number, file: File) {
-    setLesUploading(true);
-    setLesUploadErr("");
+    setLesUploading(true); setLesUploadErr("");
     try {
-      // 1. Upload to R2
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("folder", "library");
-      const uploadRes  = await fetch("/api/admin/upload", { method: "POST", body: fd });
-      const uploadData = await uploadRes.json() as { url?: string; name?: string; size?: number; type?: string; error?: string };
-      if (!uploadRes.ok || !uploadData.url) {
-        setLesUploadErr(uploadData.error ?? "Erro ao enviar arquivo");
-        return;
-      }
-
-      const fileType   = mimeToFileType(uploadData.type ?? file.type);
-      const displayName = file.name.replace(/\.[^.]+$/, "");
-
-      // 2. Save to library
-      const libRes  = await fetch("/api/admin/library", {
+      const result = await uploadToLibrary(file);
+      if (!result) { setLesUploadErr("Erro ao enviar arquivo"); return; }
+      const res  = await fetch(`/api/admin/lessons/${lessonId}/files`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: displayName, url: uploadData.url, file_type: fileType, file_size: uploadData.size ?? file.size, original_name: uploadData.name ?? file.name }),
+        body: JSON.stringify(result),
       });
-      const libData = await libRes.json() as { file?: LibraryFile };
-      if (libData.file) setLibrary((p) => [libData.file!, ...p]);
-
-      // 3. Link to lesson
-      const lesRes  = await fetch(`/api/admin/lessons/${lessonId}/files`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: displayName, url: uploadData.url, file_type: fileType }),
-      });
-      const lesData = await lesRes.json() as { file?: ContentLessonFile };
-      if (lesData.file) setLesFiles((p) => ({ ...p, [lessonId]: [...(p[lessonId] ?? []), lesData.file!] }));
+      const data = await res.json() as { file?: ContentLessonFile };
+      if (data.file) setLesFiles((p) => ({ ...p, [lessonId]: [...(p[lessonId] ?? []), data.file!] }));
     } finally { setLesUploading(false); }
   }
 
-  // ── Existing handlers ──
+  // ── Module handlers ──
 
   async function handleExpand() {
     const next = !expanded;
@@ -257,14 +406,24 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
       if (data.lesson) {
         setLessons((p) => [...p, data.lesson!]);
         onUpdate({ ...mod, lesson_count: mod.lesson_count + 1 });
+
+        // Link buffered files to the new lesson
+        const linked: ContentLessonFile[] = [];
+        for (const pending of addFormFiles) {
+          try {
+            const r = await fetch(`/api/admin/lessons/${data.lesson.id}/files`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(pending),
+            });
+            const d = await r.json() as { file?: ContentLessonFile };
+            if (d.file) linked.push(d.file);
+          } catch {}
+        }
+        setLesFiles((p) => ({ ...p, [data.lesson!.id]: linked }));
+
+        setAddFormFiles([]);
         setAddForm(EMPTY_LES);
         setShowAddLes(false);
-        // Open edit form immediately so user can add materials
-        setEditLesId(data.lesson.id);
-        setEditLesForm(lesToForm(data.lesson));
-        setLibSearch("");
-        setLesFiles((p) => ({ ...p, [data.lesson!.id]: [] }));
-        loadLibrary();
       }
     } finally { setLesSaving(false); }
   }
@@ -319,14 +478,8 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
     });
   }
 
-  const ModStatusIcon = mod.status === "active" ? Eye : mod.status === "hidden" ? EyeOff : Lock;
-
-  // Derived for the currently-editing lesson's materials
-  const currentFiles = editLesId !== null ? (lesFiles[editLesId] ?? []) : [];
-  const attachedUrls = new Set(currentFiles.map((f) => f.url));
-  const filteredLib  = library
-    .filter((f) => !attachedUrls.has(f.url))
-    .filter((f) => f.name.toLowerCase().includes(libSearch.toLowerCase()));
+  const ModStatusIcon  = mod.status === "active" ? Eye : mod.status === "hidden" ? EyeOff : Lock;
+  const currentFiles   = editLesId !== null ? (lesFiles[editLesId] ?? []) : [];
 
   return (
     <div>
@@ -447,7 +600,7 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
             ) : (
               <div className="px-4 py-4 space-y-2">
 
-                {/* Add lesson trigger / form */}
+                {/* ── Add lesson form ── */}
                 {showAddLes ? (
                   <form onSubmit={handleAddLesson} className="border border-border rounded-lg p-3 space-y-3 bg-bg mb-3">
                     <p className="text-xs font-medium text-text-muted uppercase tracking-wide">Nova aula</p>
@@ -481,14 +634,32 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                         <input className={INPUT} type="number" min="1" value={addForm.duration_minutes} onChange={(e) => setAddForm((p) => ({ ...p, duration_minutes: e.target.value }))} placeholder="Ex: 15" />
                       </div>
                     </div>
+
+                    {/* Materials in add form */}
+                    <MaterialsPanel
+                      attached={addFormFiles}
+                      library={library}
+                      libLoading={libLoading}
+                      libSearch={libSearch}
+                      onLibSearch={setLibSearch}
+                      matAdding={null}
+                      uploading={addUploading}
+                      uploadErr={addUploadErr}
+                      uploadRef={addUploadRef}
+                      onUploadClick={() => addUploadRef.current?.click()}
+                      onFileInput={(e) => { const f = e.target.files?.[0]; if (f) handleAddFormUpload(f); e.target.value = ""; }}
+                      onLink={handleAddFormLink}
+                      onRemove={(f) => setAddFormFiles((p) => p.filter((x) => x.url !== f.url))}
+                    />
+
                     <div className="flex gap-2">
-                      <button type="submit" disabled={lesSaving} className={BTN_PRI}>{lesSaving ? "Adicionando…" : "Adicionar aula"}</button>
-                      <button type="button" onClick={() => { setShowAddLes(false); setAddForm(EMPTY_LES); }} className={BTN_GHOST}>Cancelar</button>
+                      <button type="submit" disabled={lesSaving || addUploading} className={BTN_PRI}>{lesSaving ? "Adicionando…" : "Adicionar aula"}</button>
+                      <button type="button" onClick={() => { setShowAddLes(false); setAddForm(EMPTY_LES); setAddFormFiles([]); setAddUploadErr(""); }} className={BTN_GHOST}>Cancelar</button>
                     </div>
                   </form>
                 ) : (
                   <button
-                    onClick={() => setShowAddLes(true)}
+                    onClick={() => { setShowAddLes(true); loadLibrary(); }}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-xs text-text-muted hover:text-text hover:border-text/30 transition-colors w-full mb-1"
                   >
                     <Plus className="h-3.5 w-3.5" /> Nova aula
@@ -610,108 +781,22 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                               </div>
                             </div>
 
-                            {/* ── Materials section ── */}
-                            <div className="border-t border-border pt-3 space-y-2">
-                              <p className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                                Materiais da aula{currentFiles.length > 0 ? ` · ${currentFiles.length}` : ""}
-                              </p>
-
-                              {/* Attached files */}
-                              {currentFiles.map((f) => (
-                                <div key={f.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-card border border-border">
-                                  <Paperclip className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
-                                  <span className="text-xs flex-1 truncate">{f.name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveMaterial(lesson.id, f.id)}
-                                    className="p-0.5 rounded hover:bg-red-500/10 text-text-muted hover:text-red-400 transition-colors flex-shrink-0"
-                                    title="Remover material"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              ))}
-
-                              {/* Upload new file directly */}
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  disabled={lesUploading}
-                                  onClick={() => lesUploadRef.current?.click()}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-text-muted hover:text-text hover:border-text/30 transition-colors disabled:opacity-50"
-                                >
-                                  {lesUploading
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Upload className="h-3 w-3" />
-                                  }
-                                  {lesUploading ? "Enviando…" : "Subir novo arquivo"}
-                                </button>
-                                {lesUploadErr && <span className="text-xs text-red-400">{lesUploadErr}</span>}
-                              </div>
-
-                              {/* Library picker */}
-                              <div className="border border-dashed border-border rounded-lg overflow-hidden">
-                                <div className="px-2.5 py-2 border-b border-border/50 flex items-center gap-2">
-                                  <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide flex-1">Da biblioteca</p>
-                                  {libLoading && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}
-                                </div>
-                                {library.length === 0 && !libLoading ? (
-                                  <p className="text-[10px] text-text-muted text-center py-4 px-2">
-                                    Biblioteca vazia — use "Subir novo arquivo" ou adicione na aba Biblioteca
-                                  </p>
-                                ) : (
-                                  <div className="p-2 space-y-1.5">
-                                    <input
-                                      type="text"
-                                      placeholder="Filtrar…"
-                                      value={libSearch}
-                                      onChange={(e) => setLibSearch(e.target.value)}
-                                      className="w-full rounded border border-border bg-bg px-2 py-1 text-xs focus:outline-none focus:border-text-muted transition-colors"
-                                    />
-                                    <div className="max-h-44 overflow-y-auto space-y-0.5">
-                                      {filteredLib.map((f) => (
-                                        <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-text/5 group">
-                                          <FileText className="h-3 w-3 text-text-muted flex-shrink-0" />
-                                          <span className="text-xs flex-1 truncate text-text-muted group-hover:text-text">{f.name}</span>
-                                          {f.file_size != null && (
-                                            <span className="text-[10px] text-text-muted/50 flex-shrink-0">{formatBytes(f.file_size)}</span>
-                                          )}
-                                          <button
-                                            type="button"
-                                            disabled={matAdding === f.id}
-                                            onClick={() => handleAddMaterial(lesson.id, f)}
-                                            className="px-2 py-0.5 text-[10px] bg-text text-bg rounded hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-                                          >
-                                            {matAdding === f.id ? "…" : "Vincular"}
-                                          </button>
-                                        </div>
-                                      ))}
-                                      {filteredLib.length === 0 && library.length > 0 && (
-                                        <p className="text-[10px] text-text-muted text-center py-3">
-                                          {library.filter((f) => !attachedUrls.has(f.url)).length === 0
-                                            ? "Todos os arquivos já vinculados"
-                                            : "Nenhum arquivo encontrado"
-                                          }
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Hidden file input for lesson upload */}
-                              <input
-                                ref={lesUploadRef}
-                                type="file"
-                                accept=".pdf,.xls,.xlsx,.csv,.doc,.docx,image/jpeg,image/png,image/webp"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0];
-                                  if (f && editLesId !== null) handleLessonUpload(editLesId, f);
-                                  e.target.value = "";
-                                }}
-                              />
-                            </div>
+                            {/* Materials in edit form */}
+                            <MaterialsPanel
+                              attached={currentFiles}
+                              library={library}
+                              libLoading={libLoading}
+                              libSearch={libSearch}
+                              onLibSearch={setLibSearch}
+                              matAdding={matAdding}
+                              uploading={lesUploading}
+                              uploadErr={lesUploadErr}
+                              uploadRef={lesUploadRef}
+                              onUploadClick={() => lesUploadRef.current?.click()}
+                              onFileInput={(e) => { const f = e.target.files?.[0]; if (f && editLesId !== null) handleLessonUpload(editLesId, f); e.target.value = ""; }}
+                              onLink={(f) => handleAddMaterial(lesson.id, f)}
+                              onRemove={(f) => { const lf = f as ContentLessonFile; if ("id" in lf) handleRemoveMaterial(lesson.id, lf.id); }}
+                            />
 
                             <div className="flex gap-2">
                               <button type="submit" disabled={lesSaving} className={BTN_PRI}>{lesSaving ? "Salvando…" : "Salvar"}</button>
