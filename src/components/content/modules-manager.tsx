@@ -7,6 +7,7 @@ import {
   PlayCircle, Clock, Loader2,
 } from "lucide-react";
 import type { ContentModule, ContentLesson, ModuleStatus, LessonStatus } from "@/lib/db";
+import { MediaUpload } from "@/components/content/media-upload";
 
 // ─── Styling constants ────────────────────────────────────────────────────────
 
@@ -296,8 +297,13 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                 <input className={INPUT} value={editForm.description} onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-text-muted">URL da capa</label>
-                <input className={INPUT} value={editForm.thumbnail_url} onChange={(e) => setEditForm((p) => ({ ...p, thumbnail_url: e.target.value }))} placeholder="https://..." />
+                <label className="text-xs text-text-muted">Capa do módulo</label>
+                <MediaUpload
+                  value={editForm.thumbnail_url || null}
+                  onChange={(url) => setEditForm((p) => ({ ...p, thumbnail_url: url ?? "" }))}
+                  folder="modules"
+                  aspect="thumbnail"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-text-muted">Cor de destaque</label>
@@ -587,8 +593,13 @@ export function ModulesManager({ initialModules }: Props) {
               <input className={INPUT} value={form.description} onChange={(e) => f({ description: e.target.value })} placeholder="Descrição curta do módulo" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-text-muted">URL da capa</label>
-              <input className={INPUT} value={form.thumbnail_url} onChange={(e) => f({ thumbnail_url: e.target.value })} placeholder="https://…" />
+              <label className="text-xs text-text-muted">Capa do módulo</label>
+              <MediaUpload
+                value={form.thumbnail_url || null}
+                onChange={(url) => f({ thumbnail_url: url ?? "" })}
+                folder="modules"
+                aspect="thumbnail"
+              />
             </div>
             <div className="space-y-1">
               <label className="text-xs text-text-muted">Cor de destaque</label>

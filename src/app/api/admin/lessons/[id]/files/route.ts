@@ -38,8 +38,8 @@ export async function POST(
       lesson_id: lessonId,
       name:      String(body.name).trim(),
       url:       String(body.url).trim(),
-      file_type: (["pdf","spreadsheet","image","video","link"].includes(String(body.file_type ?? ""))
-        ? body.file_type : "link") as "pdf"|"spreadsheet"|"image"|"video"|"link",
+      file_type: (["pdf","spreadsheet","image","document","other"].includes(String(body.file_type ?? ""))
+        ? body.file_type : "other") as "pdf"|"spreadsheet"|"image"|"document"|"other",
     });
     return Response.json({ file }, { status: 201 });
   } catch (err) {

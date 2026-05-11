@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Plus, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight, Image } from "lucide-react";
 import type { Banner } from "@/lib/db";
+import { MediaUpload } from "@/components/content/media-upload";
 
 const INPUT = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
 const TEXTAREA = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors resize-none";
@@ -125,8 +126,13 @@ export function BannersManager({ initialBanners }: Props) {
           <textarea className={TEXTAREA} rows={2} value={values.description} onChange={(e) => onChange({ description: e.target.value })} placeholder="Texto do banner" />
         </div>
         <div className="space-y-1 md:col-span-2">
-          <label className="text-xs text-text-muted">URL da imagem</label>
-          <input className={INPUT} value={values.image_url} onChange={(e) => onChange({ image_url: e.target.value })} placeholder="https://..." />
+          <label className="text-xs text-text-muted">Imagem do banner</label>
+          <MediaUpload
+            value={values.image_url || null}
+            onChange={(url) => onChange({ image_url: url ?? "" })}
+            folder="banners"
+            aspect="banner"
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs text-text-muted">Texto do botão</label>

@@ -1739,7 +1739,7 @@ export async function processExternalEvent(
 
 export type ModuleStatus    = "active" | "hidden" | "blocked";
 export type LessonStatus    = "published" | "draft" | "hidden";
-export type ContentFileType = "pdf" | "spreadsheet" | "image" | "video" | "link";
+export type ContentFileType = "pdf" | "spreadsheet" | "image" | "document" | "other";
 
 export interface ContentModule {
   id: number;
@@ -1798,6 +1798,8 @@ export interface LibraryFile {
   url: string;
   file_type: ContentFileType;
   notes: string | null;
+  file_size: number | null;
+  original_name: string | null;
   created_at: string;
 }
 
@@ -2177,14 +2179,28 @@ export async function listLibraryFiles(db: D1Database): Promise<LibraryFile[]> {
 
 export async function addLibraryFile(
   db: D1Database,
-  input: { name: string; url: string; file_type?: ContentFileType; notes?: string | null },
+  input: {
+    name: string;
+    url: string;
+    file_type?: ContentFileType;
+    notes?: string | null;
+    file_size?: number | null;
+    original_name?: string | null;
+  },
 ): Promise<LibraryFile> {
   const row = await db
     .prepare(
-      `INSERT INTO content_library_files (name, url, file_type, notes)
-       VALUES (?1, ?2, ?3, ?4) RETURNING *`,
+      `INSERT INTO content_library_files (name, url, file_type, notes, file_size, original_name)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6) RETURNING *`,
     )
-    .bind(input.name, input.url, input.file_type ?? "link", input.notes ?? null)
+    .bind(
+      input.name,
+      input.url,
+      input.file_type ?? "other",
+      input.notes ?? null,
+      input.file_size ?? null,
+      input.original_name ?? null,
+    )
     .first<LibraryFile>();
   if (!row) throw new Error("Falha ao adicionar arquivo");
   return row;
