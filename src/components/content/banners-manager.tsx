@@ -149,7 +149,7 @@ export function BannersManager({ initialBanners }: Props) {
           <h3 className="font-medium text-sm">Novo banner</h3>
           <BannerFormFields values={form} onChange={f} />
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-background text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">{saving ? "Salvando…" : "Criar banner"}</button>
+            <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-bg text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">{saving ? "Salvando…" : "Criar banner"}</button>
             <button type="button" onClick={() => { setShowCreate(false); setForm(EMPTY); setErr(""); }} className="px-4 py-2 text-sm text-text-muted hover:text-text border border-border rounded-md">Cancelar</button>
           </div>
         </form>
@@ -213,7 +213,7 @@ export function BannersManager({ initialBanners }: Props) {
                 <form onSubmit={handleEdit} className="border-t border-border p-4 space-y-3">
                   <BannerFormFields values={editForm} onChange={ef} />
                   <div className="flex gap-2 pt-1">
-                    <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-background text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">{saving ? "Salvando…" : "Salvar"}</button>
+                    <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-bg text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">{saving ? "Salvando…" : "Salvar"}</button>
                     <button type="button" onClick={() => setEditId(null)} className="px-4 py-2 text-sm text-text-muted hover:text-text border border-border rounded-md">Cancelar</button>
                   </div>
                 </form>

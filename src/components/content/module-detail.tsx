@@ -222,7 +222,7 @@ export function ModuleDetail({ module: initialModule, initialLessons }: Props) {
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-background text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-bg text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">
                 {saving ? "Salvando…" : "Salvar"}
               </button>
               <button type="button" onClick={() => setEditingModule(false)} className="px-4 py-2 text-sm text-text-muted hover:text-text border border-border rounded-md">Cancelar</button>
@@ -271,7 +271,7 @@ export function ModuleDetail({ module: initialModule, initialLessons }: Props) {
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-background text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">
+              <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-bg text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">
                 {saving ? "Salvando…" : "Criar aula"}
               </button>
               <button type="button" onClick={() => { setShowCreate(false); setLessonForm(EMPTY_LESSON); }} className="px-4 py-2 text-sm text-text-muted hover:text-text border border-border rounded-md">Cancelar</button>
@@ -372,7 +372,7 @@ export function ModuleDetail({ module: initialModule, initialLessons }: Props) {
                       </div>
                     </div>
                     <div className="flex gap-2 pt-1">
-                      <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-background text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">
+                      <button type="submit" disabled={saving} className="px-4 py-2 bg-text text-bg text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50">
                         {saving ? "Salvando…" : "Salvar"}
                       </button>
                       <button type="button" onClick={() => setEditLessonId(null)} className="px-4 py-2 text-sm text-text-muted hover:text-text border border-border rounded-md">Cancelar</button>

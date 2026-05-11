@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, PlayCircle, Image, FolderOpen } from "lucide-react";
+import { Layers, Image, FolderOpen } from "lucide-react";
 
 const subItems = [
-  { href: "/admin/conteudo/modulos",   label: "Módulos",    icon: Layers },
-  { href: "/admin/conteudo/aulas",     label: "Aulas",      icon: PlayCircle },
-  { href: "/admin/conteudo/banners",   label: "Banners",    icon: Image },
-  { href: "/admin/conteudo/biblioteca",label: "Biblioteca", icon: FolderOpen },
+  { href: "/admin/conteudo/modulos",    label: "Módulos",    icon: Layers },
+  { href: "/admin/conteudo/banners",    label: "Banners",    icon: Image },
+  { href: "/admin/conteudo/biblioteca", label: "Biblioteca", icon: FolderOpen },
 ];
 
 export default function ConteudoLayout({ children }: { children: React.ReactNode }) {
