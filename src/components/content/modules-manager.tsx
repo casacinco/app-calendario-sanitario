@@ -16,8 +16,8 @@ const STATUS_CLASS: Record<ModuleStatus, string> = {
   blocked: "bg-red-500/15 text-red-400 border-red-500/30",
 };
 
-const INPUT = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
-const SELECT = "rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
+const INPUT = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
+const SELECT = "rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
 
 interface Props {
   initialModules: ContentModule[];
@@ -174,7 +174,7 @@ export function ModulesManager({ initialModules }: Props) {
             <div className="space-y-1">
               <label className="text-xs text-text-muted">Cor de destaque</label>
               <div className="flex gap-2 items-center">
-                <input type="color" value={form.accent_color} onChange={(e) => f({ accent_color: e.target.value })} className="h-9 w-14 rounded border border-border cursor-pointer bg-background" />
+                <input type="color" value={form.accent_color} onChange={(e) => f({ accent_color: e.target.value })} className="h-9 w-14 rounded border border-border cursor-pointer bg-bg" />
                 <input className={INPUT} value={form.accent_color} onChange={(e) => f({ accent_color: e.target.value })} placeholder="#5FAF3E" />
               </div>
             </div>
@@ -304,7 +304,7 @@ export function ModulesManager({ initialModules }: Props) {
                     <div className="space-y-1">
                       <label className="text-xs text-text-muted">Cor de destaque</label>
                       <div className="flex gap-2 items-center">
-                        <input type="color" value={editForm.accent_color} onChange={(e) => ef({ accent_color: e.target.value })} className="h-9 w-14 rounded border border-border cursor-pointer bg-background" />
+                        <input type="color" value={editForm.accent_color} onChange={(e) => ef({ accent_color: e.target.value })} className="h-9 w-14 rounded border border-border cursor-pointer bg-bg" />
                         <input className={INPUT} value={editForm.accent_color} onChange={(e) => ef({ accent_color: e.target.value })} />
                       </div>
                     </div>

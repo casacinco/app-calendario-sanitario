@@ -20,9 +20,9 @@ const MODULE_STATUS_LABEL: Record<ModuleStatus, string> = {
   active: "Ativo", hidden: "Oculto", blocked: "Bloqueado",
 };
 
-const INPUT = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
-const SELECT = "rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
-const TEXTAREA = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30 resize-none";
+const INPUT = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
+const SELECT = "rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
+const TEXTAREA = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors resize-none";
 
 interface LessonForm {
   title: string; description: string; video_url: string;
@@ -216,7 +216,7 @@ export function ModuleDetail({ module: initialModule, initialLessons }: Props) {
               <div className="space-y-1">
                 <label className="text-xs text-text-muted">Cor de destaque</label>
                 <div className="flex gap-2 items-center">
-                  <input type="color" value={modForm.accent_color} onChange={(e) => mf({ accent_color: e.target.value })} className="h-9 w-14 rounded border border-border cursor-pointer bg-background" />
+                  <input type="color" value={modForm.accent_color} onChange={(e) => mf({ accent_color: e.target.value })} className="h-9 w-14 rounded border border-border cursor-pointer bg-bg" />
                   <input className={INPUT} value={modForm.accent_color} onChange={(e) => mf({ accent_color: e.target.value })} />
                 </div>
               </div>

@@ -29,8 +29,8 @@ const FILE_COLOR: Record<ContentFileType, string> = {
   link:        "text-text-muted",
 };
 
-const INPUT = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
-const SELECT = "rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
+const INPUT = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
+const SELECT = "rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
 
 interface Props { initialFiles: LibraryFile[]; }
 
@@ -131,7 +131,7 @@ export function LibraryManager({ initialFiles }: Props) {
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         <input
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none flex-1"
+          className="rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors flex-1"
           style={{ maxWidth: 240 }}
           placeholder="Buscar…"
           value={search}

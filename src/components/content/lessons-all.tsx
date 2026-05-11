@@ -38,8 +38,8 @@ export function LessonsAll({ initialLessons, modules }: Props) {
     });
   }, [initialLessons, filterModule, filterStatus, search]);
 
-  const SELECT = "rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none";
-  const INPUT = "rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none flex-1";
+  const SELECT = "rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
+  const INPUT = "rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors flex-1";
 
   return (
     <div className="space-y-4">
