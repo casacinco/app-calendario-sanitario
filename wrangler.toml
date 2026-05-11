@@ -11,3 +11,8 @@ binding = "DB"
 database_name = "app-calendario-sanitario-db"
 database_id = "0c5d5bd8-4e48-4e75-a536-d49499475675"
 migrations_dir = "migrations"
+
+# Bucket R2 para mídia e arquivos da área de conteúdo
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "app-calendario-media"
