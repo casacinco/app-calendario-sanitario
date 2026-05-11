@@ -29,8 +29,8 @@ const FILE_COLOR: Record<ContentFileType, string> = {
   link:        "text-text-muted",
 };
 
-const INPUT = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
-const SELECT = "rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
+const INPUT = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
+const SELECT = "rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
 
 interface Props { initialFiles: LibraryFile[]; }
 

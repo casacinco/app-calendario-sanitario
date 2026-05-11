@@ -4,8 +4,8 @@ import { useState, useRef } from "react";
 import { Plus, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight, Image } from "lucide-react";
 import type { Banner } from "@/lib/db";
 
-const INPUT = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
-const TEXTAREA = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30 resize-none";
+const INPUT = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30";
+const TEXTAREA = "w-full rounded-md border border-border bg-background text-text px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-text/30 resize-none";
 
 interface BannerForm {
   title: string; description: string; image_url: string;
