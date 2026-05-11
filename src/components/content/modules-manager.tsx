@@ -257,8 +257,15 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
       if (data.lesson) {
         setLessons((p) => [...p, data.lesson!]);
         onUpdate({ ...mod, lesson_count: mod.lesson_count + 1 });
+        setAddForm(EMPTY_LES);
+        setShowAddLes(false);
+        // Open edit form immediately so user can add materials
+        setEditLesId(data.lesson.id);
+        setEditLesForm(lesToForm(data.lesson));
+        setLibSearch("");
+        setLesFiles((p) => ({ ...p, [data.lesson!.id]: [] }));
+        loadLibrary();
       }
-      setAddForm(EMPTY_LES); setShowAddLes(false);
     } finally { setLesSaving(false); }
   }
 
@@ -474,7 +481,6 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                         <input className={INPUT} type="number" min="1" value={addForm.duration_minutes} onChange={(e) => setAddForm((p) => ({ ...p, duration_minutes: e.target.value }))} placeholder="Ex: 15" />
                       </div>
                     </div>
-                    <p className="text-[10px] text-text-muted">Materiais podem ser vinculados após criar a aula.</p>
                     <div className="flex gap-2">
                       <button type="submit" disabled={lesSaving} className={BTN_PRI}>{lesSaving ? "Adicionando…" : "Adicionar aula"}</button>
                       <button type="button" onClick={() => { setShowAddLes(false); setAddForm(EMPTY_LES); }} className={BTN_GHOST}>Cancelar</button>
