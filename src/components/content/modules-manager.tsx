@@ -4,10 +4,21 @@ import { useState, useRef } from "react";
 import {
   GripVertical, Plus, Pencil, Trash2,
   Eye, EyeOff, Lock, ChevronDown, ChevronUp,
-  PlayCircle, Clock, Loader2,
+  PlayCircle, Clock, Loader2, Paperclip, X, FileText,
 } from "lucide-react";
-import type { ContentModule, ContentLesson, ModuleStatus, LessonStatus } from "@/lib/db";
+import type {
+  ContentModule, ContentLesson, ContentLessonFile, LibraryFile,
+  ModuleStatus, LessonStatus,
+} from "@/lib/db";
 import { MediaUpload } from "@/components/content/media-upload";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatBytes(b: number): string {
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
+  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+}
 
 // ─── Styling constants ────────────────────────────────────────────────────────
 
@@ -86,8 +97,57 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
   const [delLesId,      setDelLesId]      = useState<number | null>(null);
   const [lesSaving,     setLesSaving]     = useState(false);
 
+  // ── Materials state ──
+  const [lesFiles,   setLesFiles]   = useState<Record<number, ContentLessonFile[]>>({});
+  const [library,    setLibrary]    = useState<LibraryFile[]>([]);
+  const [libLoaded,  setLibLoaded]  = useState(false);
+  const [libLoading, setLibLoading] = useState(false);
+  const [matAdding,  setMatAdding]  = useState<number | null>(null);
+  const [libSearch,  setLibSearch]  = useState("");
+
   const lesDragIdx = useRef<number | null>(null);
   const [lesOverIdx, setLesOverIdx] = useState<number | null>(null);
+
+  // ── Materials helpers ──
+
+  async function loadLessonFiles(lessonId: number) {
+    if (lesFiles[lessonId] !== undefined) return;
+    try {
+      const res  = await fetch(`/api/admin/lessons/${lessonId}/files`);
+      const data = await res.json() as { files?: ContentLessonFile[] };
+      setLesFiles((p) => ({ ...p, [lessonId]: data.files ?? [] }));
+    } catch {}
+  }
+
+  async function loadLibrary() {
+    if (libLoaded || libLoading) return;
+    setLibLoading(true);
+    try {
+      const res  = await fetch("/api/admin/library");
+      const data = await res.json() as { files?: LibraryFile[] };
+      setLibrary(data.files ?? []);
+      setLibLoaded(true);
+    } finally { setLibLoading(false); }
+  }
+
+  async function handleAddMaterial(lessonId: number, libFile: LibraryFile) {
+    setMatAdding(libFile.id);
+    try {
+      const res  = await fetch(`/api/admin/lessons/${lessonId}/files`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: libFile.name, url: libFile.url, file_type: libFile.file_type }),
+      });
+      const data = await res.json() as { file?: ContentLessonFile };
+      if (data.file) setLesFiles((p) => ({ ...p, [lessonId]: [...(p[lessonId] ?? []), data.file!] }));
+    } finally { setMatAdding(null); }
+  }
+
+  async function handleRemoveMaterial(lessonId: number, fileId: number) {
+    await fetch(`/api/admin/lessons/${lessonId}/files/${fileId}`, { method: "DELETE" });
+    setLesFiles((p) => ({ ...p, [lessonId]: (p[lessonId] ?? []).filter((f) => f.id !== fileId) }));
+  }
+
+  // ── Existing handlers ──
 
   async function handleExpand() {
     const next = !expanded;
@@ -135,8 +195,6 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
       onDelete(mod.id);
     } finally { setModSaving(false); }
   }
-
-  // ── Lesson CRUD ──
 
   async function handleAddLesson(e: React.FormEvent) {
     e.preventDefault();
@@ -190,8 +248,6 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
     if (res.ok) setLessons((p) => p.map((l) => l.id === lesson.id ? { ...l, status: next } : l));
   }
 
-  // ── Lesson drag ──
-
   function handleLesDragStart(e: React.DragEvent, i: number) { lesDragIdx.current = i; e.dataTransfer.effectAllowed = "move"; }
   function handleLesDragOver(e: React.DragEvent, i: number) { e.preventDefault(); setLesOverIdx(i); }
   async function handleLesDrop(e: React.DragEvent, dropIdx: number) {
@@ -208,9 +264,14 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
     });
   }
 
-  // ── Status icons ──
-
   const ModStatusIcon = mod.status === "active" ? Eye : mod.status === "hidden" ? EyeOff : Lock;
+
+  // Derived for the currently-editing lesson's materials
+  const currentFiles = editLesId !== null ? (lesFiles[editLesId] ?? []) : [];
+  const attachedUrls = new Set(currentFiles.map((f) => f.url));
+  const filteredLib  = library
+    .filter((f) => !attachedUrls.has(f.url))
+    .filter((f) => f.name.toLowerCase().includes(libSearch.toLowerCase()));
 
   return (
     <div>
@@ -365,6 +426,7 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                         <input className={INPUT} type="number" min="1" value={addForm.duration_minutes} onChange={(e) => setAddForm((p) => ({ ...p, duration_minutes: e.target.value }))} placeholder="Ex: 15" />
                       </div>
                     </div>
+                    <p className="text-[10px] text-text-muted">Materiais podem ser vinculados após criar a aula.</p>
                     <div className="flex gap-2">
                       <button type="submit" disabled={lesSaving} className={BTN_PRI}>{lesSaving ? "Adicionando…" : "Adicionar aula"}</button>
                       <button type="button" onClick={() => { setShowAddLes(false); setAddForm(EMPTY_LES); }} className={BTN_GHOST}>Cancelar</button>
@@ -387,7 +449,8 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                 {/* Lessons list */}
                 <div className="space-y-1">
                   {lessons.map((lesson, li) => {
-                    const LesIcon = lesson.status === "published" ? Eye : lesson.status === "hidden" ? EyeOff : Lock;
+                    const LesIcon   = lesson.status === "published" ? Eye : lesson.status === "hidden" ? EyeOff : Lock;
+                    const fileCount = lesFiles[lesson.id]?.length ?? 0;
                     return (
                       <div key={lesson.id}>
                         {lesOverIdx === li && lesDragIdx.current !== null && lesDragIdx.current !== li && (
@@ -412,7 +475,10 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                             <img src={lesson.thumbnail_url} alt="" className="h-8 w-12 object-cover rounded flex-shrink-0" />
                           ) : (
                             <div className="h-8 w-12 rounded bg-text/5 flex items-center justify-center flex-shrink-0">
-                              <PlayCircle className="h-3 w-3 text-text-muted/40" />
+                              {lesson.video_url
+                                ? <PlayCircle className="h-3 w-3 text-text-muted/40" />
+                                : <FileText className="h-3 w-3 text-text-muted/40" />
+                              }
                             </div>
                           )}
 
@@ -426,6 +492,11 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                             <div className="flex items-center gap-2 mt-0.5">
                               {lesson.video_url && <span className="text-[10px] text-text-muted flex items-center gap-0.5"><PlayCircle className="h-2.5 w-2.5" /> Vídeo</span>}
                               {lesson.duration_minutes && <span className="text-[10px] text-text-muted flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" /> {lesson.duration_minutes}min</span>}
+                              {fileCount > 0 && (
+                                <span className="text-[10px] text-text-muted flex items-center gap-0.5">
+                                  <Paperclip className="h-2.5 w-2.5" /> {fileCount} {fileCount === 1 ? "material" : "materiais"}
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -434,7 +505,13 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                               <LesIcon className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => { setEditLesId(lesson.id); setEditLesForm(lesToForm(lesson)); }}
+                              onClick={() => {
+                                setEditLesId(lesson.id);
+                                setEditLesForm(lesToForm(lesson));
+                                setLibSearch("");
+                                loadLessonFiles(lesson.id);
+                                loadLibrary();
+                              }}
                               className={`p-1.5 rounded hover:bg-text/5 transition-colors ${editLesId === lesson.id ? "text-text" : "text-text-muted hover:text-text"}`}
                             >
                               <Pencil className="h-3.5 w-3.5" />
@@ -478,6 +555,80 @@ function ModuleAccordionItem({ mod, index, onUpdate, onDelete, onDragStart, onDr
                                 <input className={INPUT} type="number" min="1" value={editLesForm.duration_minutes} onChange={(e) => setEditLesForm((p) => ({ ...p, duration_minutes: e.target.value }))} />
                               </div>
                             </div>
+
+                            {/* ── Materials section ── */}
+                            <div className="border-t border-border pt-3 space-y-2">
+                              <p className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                                Materiais da aula{currentFiles.length > 0 ? ` · ${currentFiles.length}` : ""}
+                              </p>
+
+                              {/* Attached files */}
+                              {currentFiles.map((f) => (
+                                <div key={f.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-card border border-border">
+                                  <Paperclip className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
+                                  <span className="text-xs flex-1 truncate">{f.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMaterial(lesson.id, f.id)}
+                                    className="p-0.5 rounded hover:bg-red-500/10 text-text-muted hover:text-red-400 transition-colors flex-shrink-0"
+                                    title="Remover material"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+
+                              {/* Library picker */}
+                              <div className="border border-dashed border-border rounded-lg p-2.5 space-y-2">
+                                <p className="text-[10px] text-text-muted font-medium uppercase tracking-wide">Vincular da biblioteca</p>
+                                {libLoading ? (
+                                  <div className="flex items-center gap-1.5 py-2 text-text-muted">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    <span className="text-xs">Carregando biblioteca…</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <input
+                                      type="text"
+                                      placeholder="Buscar arquivo…"
+                                      value={libSearch}
+                                      onChange={(e) => setLibSearch(e.target.value)}
+                                      className={INPUT}
+                                    />
+                                    <div className="max-h-40 overflow-y-auto space-y-0.5">
+                                      {filteredLib.map((f) => (
+                                        <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-text/5 group">
+                                          <FileText className="h-3 w-3 text-text-muted flex-shrink-0" />
+                                          <span className="text-xs flex-1 truncate text-text-muted group-hover:text-text">{f.name}</span>
+                                          {f.file_size != null && (
+                                            <span className="text-[10px] text-text-muted/50 flex-shrink-0">{formatBytes(f.file_size)}</span>
+                                          )}
+                                          <button
+                                            type="button"
+                                            disabled={matAdding === f.id}
+                                            onClick={() => handleAddMaterial(lesson.id, f)}
+                                            className="px-2 py-0.5 text-[10px] bg-text text-bg rounded hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                                          >
+                                            {matAdding === f.id ? "…" : "Adicionar"}
+                                          </button>
+                                        </div>
+                                      ))}
+                                      {filteredLib.length === 0 && (
+                                        <p className="text-[10px] text-text-muted text-center py-3">
+                                          {library.length === 0
+                                            ? "Biblioteca vazia — adicione arquivos na aba Biblioteca"
+                                            : library.filter((f) => !attachedUrls.has(f.url)).length === 0
+                                              ? "Todos os arquivos da biblioteca já foram adicionados"
+                                              : "Nenhum arquivo encontrado"
+                                          }
+                                        </p>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
                             <div className="flex gap-2">
                               <button type="submit" disabled={lesSaving} className={BTN_PRI}>{lesSaving ? "Salvando…" : "Salvar"}</button>
                               <button type="button" onClick={() => setEditLesId(null)} className={BTN_GHOST}>Cancelar</button>
