@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Inbox, CalendarDays, Shield, Users, BookOpen } from "lucide-react";
+import { Inbox, Shield, Users, BookOpen } from "lucide-react";
 
 const navItems = [
-  { href: "/admin",             label: "Solicitações", icon: Inbox },
-  { href: "/admin/calendarios", label: "Calendários",  icon: CalendarDays },
-  { href: "/admin/usuarios",    label: "Usuários",     icon: Users },
-  { href: "/admin/conteudo",    label: "Conteúdo",     icon: BookOpen },
+  { href: "/admin",           label: "Solicitações", icon: Inbox },
+  { href: "/admin/usuarios",  label: "Usuários",     icon: Users },
+  { href: "/admin/conteudo",  label: "Conteúdo",     icon: BookOpen },
 ];
 
 export default function AdminLayout({
