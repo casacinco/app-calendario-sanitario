@@ -6,8 +6,6 @@ import {
   Search, ChevronRight, ChevronLeft, Users, TrendingUp, Activity, Clock, BookCheck,
 } from "lucide-react";
 
-const PAGE_SIZE = 15;
-
 export type EngagementLevel = "Nenhum" | "Baixo" | "Médio" | "Alto";
 
 export interface EngagementUser {
@@ -54,6 +52,7 @@ export function EngagementOverview({ users, metrics }: Props) {
   const [search,    setSearch]    = useState("");
   const [filterEng, setFilterEng] = useState("todos");
   const [page,      setPage]      = useState(1);
+  const [pageSize,  setPageSize]  = useState(10);
 
   const filtered = users.filter((u) => {
     const q   = search.toLowerCase();
@@ -62,23 +61,13 @@ export function EngagementOverview({ users, metrics }: Props) {
     return hit && eng;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage   = Math.min(page, totalPages);
-  const paginated  = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paginated  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  function changePage(p: number) {
-    setPage(Math.max(1, Math.min(p, totalPages)));
-  }
-
-  function handleFilterChange(eng: string) {
-    setFilterEng(eng);
-    setPage(1);
-  }
-
-  function handleSearch(q: string) {
-    setSearch(q);
-    setPage(1);
-  }
+  function handleFilterChange(eng: string) { setFilterEng(eng); setPage(1); }
+  function handleSearch(q: string)         { setSearch(q);      setPage(1); }
+  function handlePageSize(n: number)       { setPageSize(n);    setPage(1); }
 
   const CARDS = [
     { label: "Total de usuários",    value: String(metrics.total_users),         sub: "cadastrados na plataforma",     icon: Users },
@@ -199,61 +188,55 @@ export function EngagementOverview({ users, metrics }: Props) {
         </table>
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <p className="text-xs text-text-muted">
-            {filtered.length} usuário{filtered.length !== 1 ? "s" : ""} ·{" "}
-            página {safePage} de {totalPages}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => changePage(safePage - 1)}
-              disabled={safePage === 1}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-border text-text-muted hover:text-text hover:bg-text/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Anterior
-            </button>
+      {/* Pagination footer */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border">
 
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
-                .reduce<(number | "…")[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("…");
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, i) =>
-                  p === "…" ? (
-                    <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-xs text-text-muted">…</span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => changePage(p)}
-                      className={`min-w-[32px] px-2 py-1.5 text-xs rounded-lg border transition-colors ${
-                        p === safePage
-                          ? "border-text/30 bg-text/10 text-text font-medium"
-                          : "border-border text-text-muted hover:text-text hover:bg-text/5"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ),
-                )}
-            </div>
-
-            <button
-              onClick={() => changePage(safePage + 1)}
-              disabled={safePage === totalPages}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg border border-border text-text-muted hover:text-text hover:bg-text/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              Próxima
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
+        {/* Per-page selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-text-muted">Exibir:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSize(Number(e.target.value))}
+            className="h-8 rounded border border-border bg-bg px-2 pr-6 text-xs text-text-muted focus:outline-none focus:border-text-muted transition-colors appearance-none cursor-pointer"
+            style={{ backgroundImage: "none" }}
+          >
+            <option value={10}>10 por página</option>
+            <option value={25}>25 por página</option>
+            <option value={50}>50 por página</option>
+            <option value={100}>100 por página</option>
+          </select>
+          <span className="text-xs text-text-muted/60 tabular-nums">
+            {filtered.length === 0
+              ? "0"
+              : `${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)}`
+            } de {filtered.length}
+          </span>
         </div>
-      )}
+
+        {/* Page controls */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            className="flex items-center justify-center w-8 h-8 rounded border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-xs text-text-muted tabular-nums px-2 min-w-[4rem] text-center">
+            {safePage} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            className="flex items-center justify-center w-8 h-8 rounded border border-border text-text-muted hover:bg-text/5 hover:text-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+      </div>
       </div>
     </div>
   );
