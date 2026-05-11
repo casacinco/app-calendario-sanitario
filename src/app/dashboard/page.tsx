@@ -6,6 +6,7 @@ import { Clock, CheckCircle2 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import {
   getUserById,
+  getUserAccess,
   listActiveBanners,
   listPublishedModulesWithLessons,
 } from "@/lib/db";
@@ -48,8 +49,11 @@ export default async function DashboardPage() {
     .bind(Number(uid))
     .first<RequestRow>();
 
-  const banners = await listActiveBanners(db);
-  const modules = await listPublishedModulesWithLessons(db);
+  const [banners, access] = await Promise.all([
+    listActiveBanners(db),
+    getUserAccess(db, Number(uid)),
+  ]);
+  const modules = await listPublishedModulesWithLessons(db, access);
 
   const firstName = user.name.split(" ")[0];
   const isDelivered = request?.status === "delivered";

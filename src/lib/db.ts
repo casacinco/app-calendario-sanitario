@@ -4,7 +4,10 @@
 // Funções de criação dos recursos principais do onboarding.
 // Cada função recebe a binding D1Database (definida em wrangler.toml como `DB`).
 
-export type UserRole = "user" | "admin";
+export type UserRole         = "user" | "admin";
+export type SubscriptionType = "free" | "basic" | "premium";
+export type AccessType       = "public" | "restricted" | "premium";
+export type UserProductStatus = "active" | "expired" | "cancelled";
 
 export type RequestStatus =
   | "pending"
@@ -21,8 +24,43 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  subscription_type: SubscriptionType;
   created_at: string;
   updated_at: string;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_active: number;
+  created_at: string;
+}
+
+export interface UserProduct {
+  id: number;
+  user_id: number;
+  product_id: number;
+  status: UserProductStatus;
+  expires_at: string | null;
+  granted_by: string | null;
+  created_at: string;
+}
+
+export interface UserPermission {
+  id: number;
+  user_id: number;
+  permission: string;
+  granted_by: string | null;
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface UserAccess {
+  subscription_type: SubscriptionType;
+  product_ids: number[];
+  permissions: string[];
 }
 
 export interface Farm {
@@ -1755,6 +1793,8 @@ export interface ContentModule {
   accent_color: string;
   sort_order: number;
   status: ModuleStatus;
+  access_type: AccessType;
+  product_id: number | null;
   created_at: string;
   updated_at: string;
   lesson_count: number;
@@ -1851,6 +1891,8 @@ export async function createModule(
     thumbnail_url?: string | null;
     accent_color?: string;
     status?: ModuleStatus;
+    access_type?: AccessType;
+    product_id?: number | null;
   },
 ): Promise<ContentModule> {
   const maxOrder = await db
@@ -1860,8 +1902,8 @@ export async function createModule(
 
   const row = await db
     .prepare(
-      `INSERT INTO content_modules (title, description, thumbnail_url, accent_color, sort_order, status)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+      `INSERT INTO content_modules (title, description, thumbnail_url, accent_color, sort_order, status, access_type, product_id)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
        RETURNING *`,
     )
     .bind(
@@ -1871,6 +1913,8 @@ export async function createModule(
       input.accent_color ?? "#5FAF3E",
       nextOrder,
       input.status ?? "active",
+      input.access_type ?? "public",
+      input.product_id ?? null,
     )
     .first<ContentModule>();
   if (!row) throw new Error("Falha ao criar módulo");
@@ -1887,6 +1931,8 @@ export async function updateModule(
     accent_color: string;
     sort_order: number;
     status: ModuleStatus;
+    access_type: AccessType;
+    product_id: number | null;
   }>,
 ): Promise<ContentModule> {
   const fields: string[] = ["updated_at = datetime('now')"];
@@ -1898,6 +1944,8 @@ export async function updateModule(
   if (patch.accent_color !== undefined)  { fields.push(`accent_color = ?${i++}`);  binds.push(patch.accent_color); }
   if (patch.sort_order !== undefined)    { fields.push(`sort_order = ?${i++}`);    binds.push(patch.sort_order); }
   if (patch.status !== undefined)        { fields.push(`status = ?${i++}`);        binds.push(patch.status); }
+  if (patch.access_type !== undefined)   { fields.push(`access_type = ?${i++}`);   binds.push(patch.access_type); }
+  if (patch.product_id !== undefined)    { fields.push(`product_id = ?${i++}`);    binds.push(patch.product_id); }
 
   binds.push(id);
   const row = await db
@@ -2248,8 +2296,58 @@ export type PublishedModule = Omit<ContentModule, "lesson_count"> & {
   lessons: ContentLesson[];
 };
 
+export function canAccessModule(
+  module: Pick<ContentModule, "id" | "access_type" | "product_id">,
+  access: UserAccess,
+): boolean {
+  if (module.access_type === "public") return true;
+  if (access.permissions.includes(`module:${module.id}`)) return true;
+  if (module.access_type === "premium") {
+    if (access.subscription_type === "premium") return true;
+    if (access.permissions.includes("premium")) return true;
+    if (module.product_id !== null && access.product_ids.includes(module.product_id)) return true;
+    return false;
+  }
+  // restricted
+  if (module.product_id !== null && access.product_ids.includes(module.product_id)) return true;
+  return false;
+}
+
+export async function getUserAccess(db: D1Database, userId: number): Promise<UserAccess> {
+  const user = await db
+    .prepare(`SELECT subscription_type FROM users WHERE id = ?1`)
+    .bind(userId)
+    .first<{ subscription_type: SubscriptionType }>();
+
+  const products = await db
+    .prepare(
+      `SELECT product_id FROM user_products
+        WHERE user_id = ?1
+          AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > datetime('now'))`,
+    )
+    .bind(userId)
+    .all<{ product_id: number }>();
+
+  const permissions = await db
+    .prepare(
+      `SELECT permission FROM user_permissions
+        WHERE user_id = ?1
+          AND (expires_at IS NULL OR expires_at > datetime('now'))`,
+    )
+    .bind(userId)
+    .all<{ permission: string }>();
+
+  return {
+    subscription_type: user?.subscription_type ?? "free",
+    product_ids: products.results.map((p) => p.product_id),
+    permissions: permissions.results.map((p) => p.permission),
+  };
+}
+
 export async function listPublishedModulesWithLessons(
   db: D1Database,
+  access?: UserAccess,
 ): Promise<PublishedModule[]> {
   const modulesRes = await db
     .prepare(
@@ -2272,13 +2370,15 @@ export async function listPublishedModulesWithLessons(
     byModule.set(l.module_id, arr);
   }
 
-  return modulesRes.results.map((m) => ({
-    ...m,
-    lessons: (byModule.get(m.id) ?? []).map((l) => ({
-      ...l,
-      module_title: m.title,
-    })),
-  }));
+  return modulesRes.results
+    .filter((m) => !access || canAccessModule(m, access))
+    .map((m) => ({
+      ...m,
+      lessons: (byModule.get(m.id) ?? []).map((l) => ({
+        ...l,
+        module_title: m.title,
+      })),
+    }));
 }
 
 export async function listActiveBanners(db: D1Database): Promise<Banner[]> {
