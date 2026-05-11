@@ -987,10 +987,12 @@ const DEFAULT_BLOCK_NOTES: { block_position: number; text: string; position: num
   { block_position: 3, position: 3, text: "A vacina contra leptospirose tem sua indicação de uso em todos os animais destinados à reprodução, entretanto, animais destinados ao abate, se mantidos junto ao rebanho, também devem ser vacinados;" },
   { block_position: 3, position: 4, text: "ATENÇÃO: A dose reforço é obrigatória para todos os animais PRIMOVACINADOS (1ª vez). A partir do segundo ano, se já receberam a mesma vacina no ano anterior, não é necessário reforço em adultos;" },
   { block_position: 3, position: 5, text: "OBS: Se mudar a marca da vacina, é obrigatório fazer dose reforço." },
-  { block_position: 4, position: 1, text: "Realizar a cura do umbigo com iodo 10% logo após o nascimento ou produto compatível + PROBEZERRO + CATOFÓS;" },
-  { block_position: 4, position: 2, text: "Recomendação de tratamento preventivo contra EIMERIOSE com uma dose entre 21 e 30 dias após o nascimento (produtos à base de Toltrazuril)." },
+  { block_position: 4, position: 1, text: "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS (1ml por cordeiro por via subcutânea)" },
+  { block_position: 4, position: 2, text: "Recomendação de dose preventiva contra EIMERIOSE com uma dose entre 21 e 30 dias após o nascimento (produtos à base de Toltrazuril - USAR A DOSE RECOMENDADA EM BULA)." },
   { block_position: 5, position: 1, text: "ATENÇÃO ao vermifugar ovelhas com prenhez positiva: usar droga compatível com a categoria." },
   { block_position: 5, position: 2, text: "A dose reforço do vermífugo deve ser administrado entre 17 e 21 dias após a 1ª dose." },
+  { block_position: 5, position: 3, text: "Drogas mais seguras para serem utilizadas na gestação: Moxidectina 1%, Doramectina 1%, Fosfato de Levamizol - utilizar dose recomendada em bula do produto" },
+  { block_position: 5, position: 4, text: "ATENÇÃO: Recomendo não vermifugar fêmeas em final de gestação" },
 ];
 
 export async function insertDefaultBlockNotes(

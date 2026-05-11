@@ -54,12 +54,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SUL SEM ESTAÇÃO CHUVAS SET,OUT,NOV,DEZ",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",               9, 12, "PERÍODO DAS CHUVAS",                                                               C.azul),
+      bar("Período das chuvas",               9, 12, "",                                                               C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                 1, 12, "ESTAÇÃO DE MONTA",                                                                  C.verde),
-      bar("Nascimento",                       1, 12, "NASCIMENTO",                                                                        C.azul),
-      bar("Desmama",                          1, 12, "DESMAMA",                                                                           C.vermelho),
+      bar("Estação de monta",                 1, 12, "",                                                                  C.verde),
+      bar("Nascimento",                       1, 12, "",                                                                        C.azul),
+      bar("Desmama",                          1, 12, "",                                                                           C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",         1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                   C.verde),
@@ -80,8 +80,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Foot-rot — Adultos",               4,  5, "DOSE + REFORÇO",                                                                   C.ciano),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                   1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",              C.cinza),
-      bar("Prevenção de eimeriose",           1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EIMERIOSE",                                 C.roxo),
+      bar("Cura do umbigo",                   1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",              C.cinza),
+      bar("Prevenção de eimeriose",           1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                 C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                        1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                    C.vermifugacao),
@@ -97,12 +97,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SUL ESTAÇÃO MARÇO CHUVAS MAI,JUN,JUL,AGO",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",               4,  7, "PERÍODO DAS CHUVAS",                                                               C.azul),
+      bar("Período das chuvas",               4,  7, "",                                                               C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                 3,  3, "ESTAÇÃO DE MONTA",                                                                  C.verde),
-      bar("Nascimento",        7, "end",      9, "start",  "NASCIMENTO",                                                                 C.azul),
-      bar("Desmama",          10, "end",     12, "start",  "DESMAMA",                                                                    C.vermelho),
+      bar("Estação de monta",                 3,  3, "",                                                                  C.verde),
+      bar("Nascimento",        7, "end",      9, "start",  "",                                                                 C.azul),
+      bar("Desmama",          10, "end",     12, "start",  "",                                                                    C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",         9, "end",  12, "end",    "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                          C.verde),
@@ -123,8 +123,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Foot-rot — Adultos",               1,  2, "DOSE + REFORÇO",                                                                 C.ciano),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                   7, "end",  12, "middle", "CURA DO UMBIGO + PROBEZERRO + CATOFÓS",                        C.cinza),
-      bar("Prevenção de eimeriose",           8, "middle",12, "end",   "PREVENTIVO EIMERIOSE",                                         C.roxo),
+      bar("Cura do umbigo",                   7, "end",  12, "middle", "CURA DO UMBIGO + CATOFÓS",                        C.cinza),
+      bar("Prevenção de eimeriose",           8, "middle",12, "end",   "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                         C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                        1, "start",12, "middle", "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO", C.vermifugacao),
@@ -140,13 +140,13 @@ export const PRESETS: CalendarPreset[] = [
     name: "SUL ESTAÇÃO JAN,FEV,MAR,ABRI CHUVAS MAR,ABRI,MAIO,JUN,JUL",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",               3,  3, "PERÍODO DAS CHUVAS",                                                               C.azul),
-      bar("Período das chuvas",               9,  9, "PERÍODO DAS CHUVAS",                                                               C.azul),
+      bar("Período das chuvas",               3,  3, "",                                                               C.azul),
+      bar("Período das chuvas",               9,  9, "",                                                               C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                 1,  4, "ESTAÇÃO DE MONTA",                                                                  C.verde),
-      bar("Nascimento",        7, "start",   10, "start",  "NASCIMENTO",                                                                 C.azul),
-      bar("Desmama",           9, 12, "DESMAMA",                                                                                         C.vermelho),
+      bar("Estação de monta",                 1,  4, "",                                                                  C.verde),
+      bar("Nascimento",        7, "start",   10, "start",  "",                                                                 C.azul),
+      bar("Desmama",           9, 12, "",                                                                                         C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",         7, "start", 11, "start", "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                          C.verde),
@@ -167,8 +167,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Foot-rot — Adultos",              11, "start", 12, "middle", "DOSE + REFORÇO",                                              C.ciano),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                   6, "start", 10, "middle", "CURA DO UMBIGO + PROBEZERRO + CATOFÓS",                       C.cinza),
-      bar("Prevenção de eimeriose",           6, "end",   11, "start",  "PREVENTIVO EIMERIOSE",                                        C.roxo),
+      bar("Cura do umbigo",                   6, "start", 10, "middle", "CURA DO UMBIGO + CATOFÓS",                       C.cinza),
+      bar("Prevenção de eimeriose",           6, "end",   11, "start",  "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                        C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                        1, "start", 12, "middle", "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO", C.vermifugacao),
@@ -183,12 +183,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS MAR,ABR,MAI",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          3,  5, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          3,  5, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 E 60 DIAS + REFORÇO",                                               C.verde),
@@ -209,8 +209,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",      10, 10, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -226,12 +226,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS MAI,JUN,JUL",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          5,  7, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          5,  7, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                     C.verde),
@@ -252,8 +252,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",       1,  1, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -269,12 +269,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS JUN,JUL,AGO,SET",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          6,  9, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          6,  9, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                     C.verde),
@@ -295,8 +295,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",       1,  1, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -312,12 +312,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS JAN,FEV,MAR,ABR",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          1,  4, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          1,  4, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                     C.verde),
@@ -338,8 +338,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",       9,  9, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -355,12 +355,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS JAN,FEV,MAR,ABR,MAIO",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          1,  5, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          1,  5, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                     C.verde),
@@ -374,15 +374,15 @@ export const PRESETS: CalendarPreset[] = [
       bar("Leptospirose — Cordeiras",                    1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO",                                                   C.roxo),
       bar("Leptospirose — Matrizes",                     9, 10, "DOSE + REFORÇO",                                                                    C.roxo),
 
-      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO APÓS 30 DIAS",                                       C.vermelho),
+      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                       C.vermelho),
       bar("Raiva — Adultos",                            10, 10, "DOSE",                                                                              C.vermelho),
 
-      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO APÓS 30 DIAS",                                       C.azul),
+      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                       C.azul),
       bar("Linfadeite caseosa — Adulto imunizado",       9,  9, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -398,35 +398,35 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS JAN,FEV,MAR,ABR,OUT,NOV,DEZ",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          1,  4, "PERÍODO DAS CHUVAS",                                                                  C.azul),
-      bar("Período das chuvas",                         10, 12, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          1,  4, "",                                                                  C.azul),
+      bar("Período das chuvas",                         10, 12, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
-      bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO APÓS 30 DIAS",                                  C.verde),
+      bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                                  C.verde),
       bar("Pasteurelose — Adultos",                      4,  5, "DOSE + REFORÇO",                                                                     C.verde),
       bar("Pasteurelose — Adultos",                     11, 11, "DOSE",                                                                               C.verde),
 
-      bar("Clostridiose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO APÓS 30 DIAS",                                 C.laranja),
+      bar("Clostridiose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                                 C.laranja),
       bar("Clostridiose — Adultos",                      4,  5, "DOSE + REFORÇO",                                                                    C.laranja),
       bar("Clostridiose — Adultos",                     11, 11, "DOSE",                                                                              C.laranja),
 
-      bar("Leptospirose — Cordeiras",                    1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO APÓS 30 DIAS",                                      C.roxo),
+      bar("Leptospirose — Cordeiras",                    1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO",                                      C.roxo),
       bar("Leptospirose — Matrizes",                     8,  9, "DOSE + REFORÇO",                                                                    C.roxo),
 
-      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO APÓS 30 DIAS",                                       C.vermelho),
+      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                       C.vermelho),
       bar("Raiva — Adultos",                             9,  9, "DOSE",                                                                              C.vermelho),
 
-      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO APÓS 30 DIAS",                                       C.azul),
+      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                       C.azul),
       bar("Linfadeite caseosa — Adulto imunizado",       8,  8, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -442,12 +442,12 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS ABRI,MAIO,JUN,JUL",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          4,  7, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          4,  7, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                                     C.verde),
@@ -468,8 +468,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",      10, 10, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -485,34 +485,34 @@ export const PRESETS: CalendarPreset[] = [
     name: "SEM ESTAÇÃO CHUVAS SET,OUT,NOV,DEZ",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          9, 12, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          9, 12, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            1, 12, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  1, 12, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                     1, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            1, 12, "",                                                                    C.verde),
+      bar("Nascimento",                                  1, 12, "",                                                                          C.azul),
+      bar("Desmama",                                     1, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
-      bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO APÓS 30 DIAS",                                  C.verde),
+      bar("Pasteurelose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                                  C.verde),
       bar("Pasteurelose — Adultos",                      1,  2, "DOSE + REFORÇO",                                                                     C.verde),
       bar("Pasteurelose — Adultos",                      8,  8, "DOSE",                                                                               C.verde),
 
-      bar("Clostridiose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO APÓS 30 DIAS",                                 C.laranja),
+      bar("Clostridiose — Cordeiros",                    1, 12, "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                                 C.laranja),
       bar("Clostridiose — Adultos",                      1,  2, "DOSE + REFORÇO",                                                                    C.laranja),
       bar("Clostridiose — Adultos",                      8,  8, "DOSE",                                                                              C.laranja),
 
-      bar("Leptospirose — Cordeiras",                    1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO APÓS 30 DIAS",                                      C.roxo),
+      bar("Leptospirose — Cordeiras",                    1, 12, "1ª DOSE APÓS 150 DIAS + REFORÇO",                                      C.roxo),
       bar("Leptospirose — Matrizes",                     5,  6, "DOSE + REFORÇO",                                                                    C.roxo),
 
-      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO APÓS 30 DIAS",                                       C.vermelho),
+      bar("Raiva — Cordeiros",                           1, 12, "1ª DOSE APÓS 60 DIAS + REFORÇO",                                       C.vermelho),
       bar("Raiva — Adultos",                             6,  6, "DOSE",                                                                              C.vermelho),
 
-      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO APÓS 30 DIAS",                                       C.azul),
+      bar("Linfadeite caseosa — Cordeiros",              1, 12, "1ª DOSE APÓS 90 DIAS + REFORÇO",                                       C.azul),
       bar("Linfadeite caseosa — Adulto imunizado",       5,  5, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                                     C.roxo),
+      bar("Cura do umbigo",                              1, 12, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                      1, 12, "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                                     C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),
@@ -528,13 +528,13 @@ export const PRESETS: CalendarPreset[] = [
     name: "COM ESTAÇÃO ABRIL CHUVAS JAN,FEV,MAR,OUT,NOV,DEZ",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          1,  3, "PERÍODO DAS CHUVAS",                                                                  C.azul),
-      bar("Período das chuvas",                         10, 12, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          1,  3, "",                                                                  C.azul),
+      bar("Período das chuvas",                         10, 12, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                            4,  4, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",                                  9,  9, "NASCIMENTO",                                                                          C.azul),
-      bar("Desmama",                                    12, 12, "DESMAMA",                                                                             C.vermelho),
+      bar("Estação de monta",                            4,  4, "",                                                                    C.verde),
+      bar("Nascimento",                                  9,  9, "",                                                                          C.azul),
+      bar("Desmama",                                    12, 12, "",                                                                             C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                   9, "middle", 12, "end",   "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                             C.verde),
@@ -555,7 +555,7 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",       3,  3, "REFORÇO",                                                                           C.ciano),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              8, 11, "CURA DO UMBIGO + PROBEZERRO + CATOFÓS",                                              C.cinza),
+      bar("Cura do umbigo",                              8, 11, "CURA DO UMBIGO + CATOFÓS",                                              C.cinza),
       bar("Prevenção de eimeriose",                     9, "start", 10, "end",   "ENTRE 21 E 30 DIAS",                                               C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
@@ -572,13 +572,13 @@ export const PRESETS: CalendarPreset[] = [
     name: "COM ESTAÇÃO OUT E NOV CHUVAS JAN,FEV,MAR,NOV,DEZ",
     bars: [
       // ── DISTRIBUIÇÃO ──────────────────────────────────────────────────────────
-      bar("Período das chuvas",                          1,  3, "PERÍODO DAS CHUVAS",                                                                  C.azul),
-      bar("Período das chuvas",                         11, 12, "PERÍODO DAS CHUVAS",                                                                  C.azul),
+      bar("Período das chuvas",                          1,  3, "",                                                                  C.azul),
+      bar("Período das chuvas",                         11, 12, "",                                                                  C.azul),
 
       // ── PROGRAMAÇÃO REPRODUTIVA ───────────────────────────────────────────────
-      bar("Estação de monta",                           10, 11, "ESTAÇÃO DE MONTA",                                                                    C.verde),
-      bar("Nascimento",        2, "end",    5, "start",  "NASCIMENTO",                                                                                 C.azul),
-      bar("Desmama",           5, "end",    8, "start",  "DESMAMA",                                                                                    C.vermelho),
+      bar("Estação de monta",                           10, 11, "",                                                                    C.verde),
+      bar("Nascimento",        2, "end",    5, "start",  "",                                                                                 C.azul),
+      bar("Desmama",           5, "end",    8, "start",  "",                                                                                    C.vermelho),
 
       // ── VACINAÇÃO ─────────────────────────────────────────────────────────────
       bar("Pasteurelose — Cordeiros",                   5, "end",    8, "middle", "1ª DOSE ENTRE 30 A 60 DIAS + REFORÇO",                             C.verde),
@@ -599,8 +599,8 @@ export const PRESETS: CalendarPreset[] = [
       bar("Linfadeite caseosa — Adulto imunizado",      10, 10, "DOSE",                                                                              C.azul),
 
       // ── MANEJO COM O NEONATO ──────────────────────────────────────────────────
-      bar("Cura do umbigo",                              3,  7, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + PROBEZERRO + CATOFÓS",                 C.cinza),
-      bar("Prevenção de eimeriose",                     3, "end",    7, "end",   "REALIZAR TRATAMENTO PREVENTIVO CONTRA EMERIOSE",                    C.roxo),
+      bar("Cura do umbigo",                              3,  7, "REALIZAR A CURA DO UMBIGO APÓS O NASCIMENTO + CATOFÓS",                 C.cinza),
+      bar("Prevenção de eimeriose",                     3, "end",    7, "end",   "REALIZAR DOSE PREVENTIVA CONTRA EIMERIOSE",                    C.roxo),
 
       // ── VERMIFUGAÇÃO ──────────────────────────────────────────────────────────
       bar("Cordeiros",                                   1, 12, "1ª DOSE + REFORÇO AOS 30 DIAS E 2ª DOSE APARTAÇÃO + REFORÇO",                       C.vermifugacao),

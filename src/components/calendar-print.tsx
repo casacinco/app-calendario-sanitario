@@ -320,7 +320,7 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
                   CALENDÁRIO SANITÁRIO
                 </div>
                 <div style={{ fontSize: "7.5px", color: "#FFFFFF", marginTop: "3px", letterSpacing: "0.02em" }}>
-                  Programa Rebanho Blindado 3.0 por Léo Pinto
+                  Programa Rebanho Blindado por Léo Pinto
                 </div>
               </td>
               <td style={{ width: "66px", padding: "6px 8px", verticalAlign: "middle", textAlign: "right" }}>
