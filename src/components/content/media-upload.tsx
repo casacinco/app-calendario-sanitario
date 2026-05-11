@@ -4,7 +4,11 @@ import { useRef, useState } from "react";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 
 const ACCEPT = "image/jpeg,image/jpg,image/png,image/webp";
-const ACCEPT_LABEL = "JPG, PNG ou WEBP · máx. 5 MB";
+
+const HINT: Record<"thumbnail" | "banner", string> = {
+  thumbnail: "1280 × 720px recomendado · JPG, PNG ou WEBP · máx. 5 MB",
+  banner:    "1920 × 550px recomendado · JPG, PNG ou WEBP · máx. 5 MB",
+};
 
 interface Props {
   value: string | null;
@@ -136,7 +140,7 @@ export function MediaUpload({ value, onChange, folder = "uploads", aspect = "thu
 
       {/* Format hint */}
       {!value && !uploading && (
-        <p className="text-[10px] text-text-muted">{ACCEPT_LABEL}</p>
+        <p className="text-[10px] text-text-muted">{HINT[aspect]}</p>
       )}
 
       {/* Error */}
