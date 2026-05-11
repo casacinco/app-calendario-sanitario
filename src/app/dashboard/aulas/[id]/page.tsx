@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Clock, FileText, FileSpreadsheet, ImageIcon, File, ExternalLink } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import { getUserById, getPublishedLesson, getLessonFiles } from "@/lib/db";
+import { LessonTracker } from "@/components/content/lesson-tracker";
 import type { ContentFileType } from "@/lib/db";
 
 export const runtime = "edge";
@@ -75,6 +76,8 @@ export default async function AulaPage({
           <p className="text-sm text-white/70 truncate">{lesson.module_title}</p>
         </div>
       </header>
+
+      <LessonTracker lessonId={lessonId} />
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
 

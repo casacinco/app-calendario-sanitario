@@ -35,6 +35,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 });
       }
 
+      await db.prepare(`INSERT INTO user_events (user_id, event_type) VALUES (?1, 'login')`)
+        .bind(user.id).run().catch(() => {});
+
       const res = NextResponse.json({
         user: { id: user.id, name: user.name, email: user.email },
       });
@@ -70,6 +73,9 @@ export async function POST(req: NextRequest) {
         password_hash,
       });
     }
+
+    await db.prepare(`INSERT INTO user_events (user_id, event_type) VALUES (?1, 'login')`)
+      .bind(linkedUser.id).run().catch(() => {});
 
     const res = NextResponse.json({
       user: { id: linkedUser.id, name: linkedUser.name, email: linkedUser.email },
