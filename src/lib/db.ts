@@ -122,6 +122,7 @@ export interface CalendarRequest {
   estimated_delivery_date: string | null;
   deadline: string | null;
   notes: string | null;
+  first_viewed_at: string | null;
   created_at: string;
   updated_at: string;
 }

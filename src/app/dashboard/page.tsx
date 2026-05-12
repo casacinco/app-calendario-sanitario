@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Clock, CheckCircle2, ArrowRightLeft, Wrench, LogOut, CalendarDays, Bell,
+  ChevronRight, AlertCircle,
 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import {
@@ -27,6 +28,7 @@ interface RequestRow {
   deadline: string | null;
   cal_status: string | null;
   cal_id: number | null;
+  first_viewed_at: string | null;
 }
 
 const MIGRATION_LABEL: Record<MigrationStatus, string> = {
@@ -36,10 +38,6 @@ const MIGRATION_LABEL: Record<MigrationStatus, string> = {
   published:          "Disponível",
   delivered:          "Entregue",
 };
-
-async function ProducerLogout() {
-  "use server";
-}
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -53,7 +51,7 @@ export default async function DashboardPage() {
   const request = await db
     .prepare(
       `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
-              cr.estimated_delivery_date, cr.deadline,
+              cr.estimated_delivery_date, cr.deadline, cr.first_viewed_at,
               c.status AS cal_status, c.id AS cal_id
        FROM calendar_requests cr
        LEFT JOIN calendars c ON c.request_id = cr.id
@@ -69,11 +67,12 @@ export default async function DashboardPage() {
     getSetting(db, "content_home_banner_url"),
   ]);
 
-  const firstName   = user.name.split(" ")[0];
-  const isMigration = request?.solicitation_type === "migration";
-  const migStatus   = request?.migration_status ?? null;
-  const migDone     = migStatus === "published" || migStatus === "delivered";
-  const isDelivered = request?.status === "delivered" || migDone;
+  const firstName    = user.name.split(" ")[0];
+  const isMigration  = request?.solicitation_type === "migration";
+  const migStatus    = request?.migration_status ?? null;
+  const migDone      = migStatus === "published" || migStatus === "delivered";
+  const isDelivered  = request?.status === "delivered" || migDone;
+  const firstViewed  = !!request?.first_viewed_at;
 
   return (
     <div className="bg-[#F6F6F6] min-h-screen">
@@ -119,23 +118,83 @@ export default async function DashboardPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-5 space-y-5">
 
-        {/* ── Calendar status card ─────────────────────────────────────────── */}
-        {request && (
-          <div className={`rounded-2xl overflow-hidden shadow-sm ${
-            isDelivered
-              ? "bg-[#111111]"
-              : isMigration
-                ? "bg-[#111111]"
-                : "bg-[#111111]"
-          }`}>
+        {/* ── Calendário: estado de entrega ───────────────────────────────── */}
+        {request && isDelivered && !firstViewed && (
+          /* Card "disponível" — some após o primeiro clique */
+          <div className="rounded-2xl overflow-hidden shadow-sm bg-[#111111]">
+            <div className="p-5 space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-[#CC0000]/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-[#CC0000]" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest font-medium">Seu calendário</p>
+                  <h2 className="text-base font-bold text-white leading-tight">Calendário disponível!</h2>
+                </div>
+              </div>
+              <p className="text-sm text-white/55 leading-relaxed">
+                Seu calendário sanitário personalizado está pronto e disponível para uso.
+              </p>
+              <Link
+                href="/api/dashboard/calendar/viewed"
+                className="block w-full py-3 rounded-xl bg-[#CC0000] text-white text-sm font-bold text-center hover:bg-[#AA0000] transition-colors"
+              >
+                Abrir Calendário
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {request && isDelivered && firstViewed && (
+          /* Dashboard de gestão — exibe após a primeira visualização */
+          <div className="space-y-3">
+
+            {/* Acesso rápido ao calendário */}
+            <Link
+              href="/dashboard/calendario"
+              className="flex items-center justify-between bg-[#111111] rounded-2xl p-4 shadow-sm hover:bg-[#1a1a1a] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#CC0000]/20 flex items-center justify-center flex-shrink-0">
+                  <CalendarDays className="h-5 w-5 text-[#CC0000]" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest font-medium leading-none">Disponível</p>
+                  <p className="text-sm font-bold text-white leading-tight mt-0.5">Abrir Calendário</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-white/30 flex-shrink-0" />
+            </Link>
+
+            {/* Próximos manejos */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Próximos manejos</p>
+              <div className="flex flex-col items-center py-3 gap-1">
+                <CalendarDays className="h-8 w-8 text-gray-200" />
+                <p className="text-sm text-gray-400">Em breve nesta área</p>
+                <p className="text-xs text-gray-300">Consulte seu calendário para os manejos programados.</p>
+              </div>
+            </div>
+
+            {/* Alertas */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Alertas</p>
+              <div className="flex items-center gap-3 py-2">
+                <AlertCircle className="h-5 w-5 text-gray-200 flex-shrink-0" />
+                <p className="text-sm text-gray-400">Nenhum alerta no momento.</p>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {request && !isDelivered && (
+          /* Card de status/progresso — enquanto calendário não está entregue */
+          <div className="rounded-2xl overflow-hidden shadow-sm bg-[#111111]">
             <div className="p-5 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  {isDelivered ? (
-                    <div className="w-9 h-9 rounded-full bg-[#CC0000]/20 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 className="h-5 w-5 text-[#CC0000]" />
-                    </div>
-                  ) : isMigration ? (
+                  {isMigration ? (
                     <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
                       <ArrowRightLeft className="h-5 w-5 text-white/70" />
                     </div>
@@ -149,11 +208,7 @@ export default async function DashboardPage() {
                       {isMigration ? "Migração de calendário" : "Seu calendário"}
                     </p>
                     <h2 className="text-base font-bold text-white leading-tight">
-                      {isDelivered
-                        ? "Calendário disponível!"
-                        : isMigration
-                          ? "Em transferência"
-                          : "Em produção"}
+                      {isMigration ? "Em transferência" : "Em produção"}
                     </h2>
                   </div>
                 </div>
@@ -165,21 +220,13 @@ export default async function DashboardPage() {
                 )}
               </div>
 
-              {!isDelivered && (
-                <p className="text-sm text-white/55 leading-relaxed">
-                  {isMigration
-                    ? "Nossa equipe irá localizar o PDF do seu calendário existente, transcrevê-lo e publicá-lo aqui para você."
-                    : "Recebemos suas informações e nossa equipe já está trabalhando na criação do seu calendário sanitário personalizado."}
-                </p>
-              )}
+              <p className="text-sm text-white/55 leading-relaxed">
+                {isMigration
+                  ? "Nossa equipe irá localizar o PDF do seu calendário existente, transcrevê-lo e publicá-lo aqui para você."
+                  : "Recebemos suas informações e nossa equipe já está trabalhando na criação do seu calendário sanitário personalizado."}
+              </p>
 
-              {isDelivered && (
-                <p className="text-sm text-white/55 leading-relaxed">
-                  Seu calendário sanitário personalizado está pronto e disponível para uso.
-                </p>
-              )}
-
-              {!isDelivered && (isMigration ? request.estimated_delivery_date : request.deadline) && (
+              {(isMigration ? request.estimated_delivery_date : request.deadline) && (
                 <div className="flex items-center gap-2 bg-white/5 rounded-xl px-3 py-2.5 w-fit">
                   <CalendarDays className="h-3.5 w-3.5 text-white/30" />
                   <span className="text-xs text-white/50">
@@ -190,15 +237,9 @@ export default async function DashboardPage() {
                   </span>
                 </div>
               )}
-
-              {isDelivered && (
-                <button className="w-full py-3 rounded-xl bg-[#CC0000] text-white text-sm font-bold hover:bg-[#AA0000] transition-colors">
-                  Abrir Calendário
-                </button>
-              )}
             </div>
 
-            {/* Progress bar for migration */}
+            {/* Progress bar para migração */}
             {isMigration && !migDone && migStatus && (
               <div className="bg-white/5 px-5 py-3">
                 <div className="flex justify-between items-center mb-1.5">
@@ -269,11 +310,10 @@ export default async function DashboardPage() {
           )}
         </Link>
 
-        {/* ── Banners ──────────────────────────────────────────────────────── */}
+        {/* ── Banners comerciais ───────────────────────────────────────────── */}
         <PlacementBanners banners={banners} />
 
-
-        {/* ── Quick tools ──────────────────────────────────────────────────── */}
+        {/* ── Ferramentas rápidas ──────────────────────────────────────────── */}
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
             Ferramentas

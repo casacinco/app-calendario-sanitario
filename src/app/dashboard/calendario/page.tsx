@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { CalendarDays, Clock, CheckCircle2, ArrowRightLeft } from "lucide-react";
+import { Printer, CalendarDays, Clock, CheckCircle2, ArrowRightLeft } from "lucide-react";
+import Link from "next/link";
 import { getEnv } from "@/lib/cf";
 import { getUserById, listActiveBannersByPlacement } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
@@ -63,6 +64,8 @@ export default async function CalendarioPage() {
   const migStatus   = request?.migration_status ?? null;
   const migDone     = migStatus === "published" || migStatus === "delivered";
   const isDelivered = request?.status === "delivered" || migDone;
+  const calId       = request?.cal_id ?? null;
+  const calPublished = request?.cal_status === "published";
 
   return (
     <div className="bg-[#F6F6F6] min-h-screen">
@@ -70,7 +73,17 @@ export default async function CalendarioPage() {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-2">
           <BackButton />
-          <h1 className="text-base font-bold text-gray-900">Meu Calendário</h1>
+          <h1 className="text-base font-bold text-gray-900 flex-1">Meu Calendário</h1>
+          {isDelivered && calId && calPublished && (
+            <Link
+              href={`/calendarios/${calId}/print`}
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              Imprimir / Salvar PDF
+            </Link>
+          )}
         </div>
       </header>
 
@@ -78,9 +91,45 @@ export default async function CalendarioPage() {
 
         <PlacementBanners banners={banners} />
 
-        {request ? (
+        {isDelivered && calId && calPublished ? (
+          /* ── Calendário inline ────────────────────────────────────────── */
+          <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
+            {/* Cabeçalho da seção */}
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-[#CC0000]" />
+                <span className="text-sm font-bold text-gray-900">Calendário Sanitário</span>
+              </div>
+              <span className="text-[10px] text-gray-400">Scroll horizontal para visualizar completo</span>
+            </div>
+
+            {/* Calendar iframe — scroll horizontal/vertical */}
+            <div className="overflow-auto" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+              <iframe
+                src={`/calendarios/${calId}/print?embed=1`}
+                title="Calendário Sanitário"
+                scrolling="no"
+                className="border-0 block"
+                style={{ width: "794px", height: "1200px" }}
+              />
+            </div>
+
+            {/* Botão de imprimir no rodapé do card */}
+            <div className="px-4 py-3 border-t border-gray-100 flex justify-end">
+              <Link
+                href={`/calendarios/${calId}/print`}
+                target="_blank"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#CC0000] text-white text-sm font-bold hover:bg-[#AA0000] transition-colors"
+              >
+                <Printer className="h-4 w-4" />
+                Imprimir / Salvar PDF
+              </Link>
+            </div>
+          </div>
+
+        ) : request ? (
+          /* ── Status / progresso ───────────────────────────────────────── */
           <>
-            {/* Status card */}
             <div className="bg-[#111111] rounded-2xl overflow-hidden shadow-sm">
               <div className="p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
@@ -103,11 +152,7 @@ export default async function CalendarioPage() {
                         {isMigration ? "Migração de calendário" : "Seu calendário"}
                       </p>
                       <h2 className="text-base font-bold text-white leading-tight">
-                        {isDelivered
-                          ? "Calendário disponível!"
-                          : isMigration
-                            ? "Em transferência"
-                            : "Em produção"}
+                        {isDelivered ? "Calendário disponível!" : isMigration ? "Em transferência" : "Em produção"}
                       </h2>
                     </div>
                   </div>
@@ -144,22 +189,14 @@ export default async function CalendarioPage() {
                     </span>
                   </div>
                 )}
-
-                {isDelivered && (
-                  <button className="w-full py-3 rounded-xl bg-[#CC0000] text-white text-sm font-bold hover:bg-[#AA0000] transition-colors">
-                    Abrir Calendário
-                  </button>
-                )}
               </div>
 
-              {/* Migration progress bar */}
+              {/* Progress bar migração */}
               {isMigration && !migDone && migStatus && (
                 <div className="bg-white/5 px-5 py-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-[10px] text-white/30 uppercase tracking-wider">Progresso</span>
-                    <span className="text-[10px] text-white/30">
-                      {STEP_KEYS.indexOf(migStatus) + 1}/4
-                    </span>
+                    <span className="text-[10px] text-white/30">{STEP_KEYS.indexOf(migStatus) + 1}/4</span>
                   </div>
                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div
@@ -181,7 +218,6 @@ export default async function CalendarioPage() {
               )}
             </div>
 
-            {/* Info box */}
             {!isDelivered && (
               <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
                 <p className="text-xs font-bold text-gray-700">O que está incluído no seu calendário?</p>
@@ -201,7 +237,9 @@ export default async function CalendarioPage() {
               </div>
             )}
           </>
+
         ) : (
+          /* ── Sem solicitação ─────────────────────────────────────────── */
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
             <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <CalendarDays className="h-6 w-6 text-gray-400" />

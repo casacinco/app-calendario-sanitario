@@ -8,11 +8,13 @@ export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params:       Promise<{ id: string }>;
+  searchParams: Promise<{ embed?: string }>;
 }
 
-export default async function PrintPage({ params }: PageProps) {
+export default async function PrintPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const sp = await searchParams;
   const calendarId = Number(id);
   if (!Number.isInteger(calendarId) || calendarId <= 0) notFound();
 
@@ -20,7 +22,6 @@ export default async function PrintPage({ params }: PageProps) {
   if (!data) notFound();
 
   const { calendar, user, farm, blocks } = data;
-
   const location = [farm.city, farm.state].filter(Boolean).join("/") || "—";
 
   return (
@@ -30,6 +31,7 @@ export default async function PrintPage({ params }: PageProps) {
       farmName={farm.name}
       location={location}
       createdAt={formatDateBR(calendar.created_at)}
+      hideActions={sp.embed === "1"}
     />
   );
 }

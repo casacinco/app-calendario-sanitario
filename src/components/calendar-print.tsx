@@ -278,14 +278,15 @@ function BlockTable({ block }: { block: CalendarBlockGroup }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 interface CalendarPrintProps {
-  blocks:    CalendarBlockGroup[];
-  ownerName: string;
-  farmName:  string;
-  location:  string;
-  createdAt: string;
+  blocks:      CalendarBlockGroup[];
+  ownerName:   string;
+  farmName:    string;
+  location:    string;
+  createdAt:   string;
+  hideActions?: boolean;
 }
 
-export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt }: CalendarPrintProps) {
+export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt, hideActions = false }: CalendarPrintProps) {
   return (
     <>
       <style>{`
@@ -302,10 +303,12 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
 
       <div className="pw">
 
-        {/* Botão de impressão — só na tela */}
-        <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-          <PrintButton />
-        </div>
+        {/* Botão de impressão — só na tela, oculto no modo embed */}
+        {!hideActions && (
+          <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <PrintButton />
+          </div>
+        )}
 
         {/* ── Cabeçalho ── */}
         <table style={{ width: "100%", borderCollapse: "collapse", background: "#000000", marginBottom: "4px" }}>
