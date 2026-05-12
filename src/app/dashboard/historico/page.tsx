@@ -1,4 +1,5 @@
 import { Clock } from "lucide-react";
+import { BackButton } from "@/components/producer/back-button";
 
 export const runtime = "edge";
 
@@ -7,7 +8,8 @@ export default function HistoricoPage() {
     <div className="bg-[#F6F6F6] min-h-screen">
 
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-2">
+          <BackButton />
           <h1 className="text-base font-bold text-gray-900">Histórico</h1>
         </div>
       </header>

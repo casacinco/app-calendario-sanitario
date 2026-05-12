@@ -5,6 +5,7 @@ import { getEnv } from "@/lib/cf";
 import { getUserById, listActiveBannersByPlacement } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
+import { BackButton } from "@/components/producer/back-button";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -67,7 +68,8 @@ export default async function CalendarioPage() {
     <div className="bg-[#F6F6F6] min-h-screen">
 
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-2">
+          <BackButton />
           <h1 className="text-base font-bold text-gray-900">Meu Calendário</h1>
         </div>
       </header>

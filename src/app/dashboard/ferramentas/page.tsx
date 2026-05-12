@@ -2,6 +2,7 @@ import { Wrench, Calculator, BookOpen, BarChart3 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import { listActiveBannersByPlacement } from "@/lib/db";
 import { PlacementBanners } from "@/components/producer/placement-banners";
+import { BackButton } from "@/components/producer/back-button";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,8 @@ export default async function FerramentasPage() {
     <div className="bg-[#F6F6F6] min-h-screen">
 
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-2">
+          <BackButton />
           <h1 className="text-base font-bold text-gray-900">Ferramentas</h1>
         </div>
       </header>
