@@ -9,6 +9,7 @@ import { getEnv } from "@/lib/cf";
 import {
   getUserById,
   listActiveBannersByPlacement,
+  getSetting,
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
@@ -62,7 +63,10 @@ export default async function DashboardPage() {
     .bind(Number(uid))
     .first<RequestRow>();
 
-  const banners = await listActiveBannersByPlacement(db, "home");
+  const [banners, contentBannerUrl] = await Promise.all([
+    listActiveBannersByPlacement(db, "home"),
+    getSetting(db, "content_home_banner_url"),
+  ]);
 
   const firstName   = user.name.split(" ")[0];
   const isMigration = request?.solicitation_type === "migration";
@@ -231,6 +235,31 @@ export default async function DashboardPage() {
             )}
           </div>
         )}
+
+        {/* ── Content navigation banner ────────────────────────────────── */}
+        <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm focus:outline-none">
+          {contentBannerUrl ? (
+            <img
+              src={contentBannerUrl}
+              alt="Conteúdos Técnicos Exclusivos"
+              className="w-full object-cover"
+              style={{ display: "block" }}
+            />
+          ) : (
+            <div className="bg-[#111111] p-5 space-y-3">
+              <div>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest font-medium">Área exclusiva</p>
+                <h2 className="text-base font-bold text-white leading-tight">Conteúdos Técnicos Exclusivos</h2>
+              </div>
+              <p className="text-sm text-white/55 leading-relaxed">
+                Aprenda manejos sanitários, boas práticas e protocolos com os especialistas do Rebanho Blindado.
+              </p>
+              <span className="inline-block px-4 py-2.5 rounded-xl bg-[#CC0000] text-white text-sm font-bold">
+                Acessar conteúdos
+              </span>
+            </div>
+          )}
+        </Link>
 
         {/* ── Banners ──────────────────────────────────────────────────────── */}
         {banners.length > 0 && (

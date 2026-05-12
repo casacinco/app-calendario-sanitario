@@ -2683,3 +2683,26 @@ export async function getPublishedLesson(
     .first<{ title: string }>();
   return { ...row, module_title: mod?.title ?? null };
 }
+
+// =====================================================
+// Site settings
+// =====================================================
+
+export async function getSetting(db: D1Database, key: string): Promise<string | null> {
+  const row = await db
+    .prepare(`SELECT value FROM site_settings WHERE key = ?1`)
+    .bind(key)
+    .first<{ value: string | null }>();
+  return row?.value ?? null;
+}
+
+export async function setSetting(db: D1Database, key: string, value: string | null): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO site_settings (key, value, updated_at)
+       VALUES (?1, ?2, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    )
+    .bind(key, value)
+    .run();
+}
