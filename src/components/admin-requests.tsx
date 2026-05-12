@@ -5,11 +5,11 @@ import Link from "next/link";
 import {
   Search, Clock, AlertTriangle, CalendarDays,
   LayoutGrid, List, CheckCircle2, ChevronLeft, ChevronRight,
-  FileText, Mail,
+  FileText, Mail, ArrowRightLeft, Download, X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDateBR } from "@/lib/format";
-import type { AdminRequestRow, RequestStatus } from "@/lib/db";
+import type { AdminRequestRow, RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,6 +21,12 @@ function getPlusDaysStr(days: number) {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+function sladays(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const ms = new Date(dateStr + "T00:00:00").getTime() - new Date(getTodayStr() + "T00:00:00").getTime();
+  return Math.round(ms / 86400000);
 }
 
 type CardStatus = "pending" | "late" | "delivered";
@@ -41,6 +47,22 @@ function sortByDeadline(a: AdminRequestRow, b: AdminRequestRow) {
   return (a.deadline ?? "9999") < (b.deadline ?? "9999") ? -1 : 1;
 }
 
+const MIG_STATUS_LABEL: Record<MigrationStatus, string> = {
+  awaiting_migration: "Aguardando",
+  in_migration:       "Em migração",
+  internal_review:    "Revisão",
+  published:          "Publicado",
+  delivered:          "Entregue",
+};
+
+const MIG_STATUS_CLS: Record<MigrationStatus, string> = {
+  awaiting_migration: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",
+  in_migration:       "bg-blue-500/15   text-blue-400   border-blue-500/25",
+  internal_review:    "bg-purple-500/15 text-purple-400 border-purple-500/25",
+  published:          "bg-green/15      text-green       border-green/30",
+  delivered:          "bg-emerald-400/15 text-emerald-400 border-emerald-400/25",
+};
+
 // ─── Status pill ──────────────────────────────────────────────────────────────
 
 function StatusPill({ cs }: { cs: CardStatus }) {
@@ -57,16 +79,73 @@ function StatusPill({ cs }: { cs: CardStatus }) {
   );
 }
 
+// ─── Migration badge ──────────────────────────────────────────────────────────
+
+function MigrationBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/25">
+      <ArrowRightLeft className="h-2.5 w-2.5" />
+      MIGRAÇÃO
+    </span>
+  );
+}
+
+function MigrationSourceBadge({ source }: { source: string | null }) {
+  if (!source) return null;
+  return (
+    <span className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded font-semibold bg-white/5 text-white/35 border border-white/10 uppercase">
+      {source === "manual" ? "MANUAL" : source.toUpperCase()}
+    </span>
+  );
+}
+
+function MigrationStatusBadge({ status }: { status: MigrationStatus }) {
+  return (
+    <span className={`inline-flex text-[10px] px-1.5 py-0.5 rounded font-medium border ${MIG_STATUS_CLS[status]}`}>
+      {MIG_STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+// ─── SLA Badge ────────────────────────────────────────────────────────────────
+
+function SlaBadge({ estimatedDate, migStatus }: { estimatedDate: string | null; migStatus: MigrationStatus | null }) {
+  if (!estimatedDate) return null;
+  if (migStatus === "published" || migStatus === "delivered") return null;
+  const days = sladays(estimatedDate);
+  if (days === null) return null;
+
+  const cls =
+    days < 0  ? "bg-red/15 text-red border-red/30" :
+    days <= 3 ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/25" :
+                "bg-green/15 text-green border-green/30";
+
+  const label =
+    days < 0  ? `${Math.abs(days)}d atrasado` :
+    days === 0 ? "Hoje" :
+    `${days}d restantes`;
+
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium border ${cls}`}>
+      <Clock className="h-2.5 w-2.5" />
+      {label}
+    </span>
+  );
+}
+
 // ─── Kanban card ──────────────────────────────────────────────────────────────
 
 function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
   const cs = getCardStatus(r, today);
   const phone = parsePhone(r.raw_responses);
   const location = [r.farm_city, r.farm_state].filter(Boolean).join("/");
+  const isMigration = r.solicitation_type === "migration";
 
   return (
     <div className={`rounded-xl border p-4 space-y-3 bg-white ${
-      cs === "late" ? "border-red-500/30" : "border-white/8"
+      cs === "late" ? "border-red-500/30" :
+      isMigration   ? "border-blue-400/30" :
+      "border-white/8"
     }`}>
       <div>
         <div className="flex items-start justify-between gap-2 mb-0.5">
@@ -75,18 +154,41 @@ function KanbanCard({ r, today }: { r: AdminRequestRow; today: string }) {
         </div>
         <p className="text-xs text-gray-800">{r.farm_name}</p>
         {location && <p className="text-xs text-gray-700">{location}</p>}
+        {isMigration && (
+          <div className="mt-1 flex items-center gap-1 flex-wrap">
+            <MigrationBadge />
+            {r.migration_source && <MigrationSourceBadge source={r.migration_source} />}
+          </div>
+        )}
       </div>
+
+      {/* Migration status */}
+      {isMigration && r.migration_status && (
+        <MigrationStatusBadge status={r.migration_status} />
+      )}
+
+      {/* SLA */}
+      {isMigration && (
+        <SlaBadge estimatedDate={r.estimated_delivery_date} migStatus={r.migration_status} />
+      )}
 
       <div className="space-y-1">
         <div className="flex items-center gap-1.5 text-xs">
           <Clock className="h-3 w-3 text-gray-600 flex-shrink-0" />
-          <span className="text-gray-700">Prazo:</span>
+          <span className="text-gray-700">
+            {isMigration ? "Previsão:" : "Prazo:"}
+          </span>
           <span className="text-gray-900 font-medium">
-            {formatDateBR(r.deadline)}
+            {isMigration
+              ? formatDateBR(r.estimated_delivery_date)
+              : formatDateBR(r.deadline)}
           </span>
         </div>
-        {phone !== "—" && (
+        {phone !== "—" && !isMigration && (
           <p className="text-xs text-gray-700 pl-4">{phone}</p>
+        )}
+        {isMigration && r.migration_assignee_role && (
+          <p className="text-xs text-gray-700 pl-4 capitalize">{r.migration_assignee_role.replace(/_/g, " ")}</p>
         )}
       </div>
 
@@ -146,6 +248,60 @@ function ActionButtons({
   );
 }
 
+// ─── CSV Export ───────────────────────────────────────────────────────────────
+
+function exportCSV(rows: AdminRequestRow[], today: string) {
+  const ASSIGNEE_LABELS: Record<string, string> = {
+    operador: "Operador", suporte: "Suporte",
+    equipe_interna: "Equipe interna", administrador: "Administrador",
+  };
+
+  const header = [
+    "ID", "Produtor", "E-mail", "Telefone", "Fazenda", "Cidade", "UF",
+    "Tipo", "Status", "Status Migração", "Origem Migração",
+    "Responsável", "Previsão Entrega", "SLA (dias)", "Prazo",
+    "Data Publicação", "Data Entrega", "Criado em",
+  ];
+
+  const csvRows = rows.map(r => {
+    const phone = parsePhone(r.raw_responses);
+    const days = sladays(r.estimated_delivery_date);
+    const slaLabel = days === null ? "" : days < 0 ? `${Math.abs(days)}d atrasado` : `${days}d`;
+    return [
+      r.id,
+      r.user_name,
+      r.user_email,
+      phone,
+      r.farm_name,
+      r.farm_city ?? "",
+      r.farm_state ?? "",
+      r.solicitation_type === "migration" ? "Migração" : "Standard",
+      r.status,
+      r.migration_status ? (MIG_STATUS_LABEL[r.migration_status] ?? r.migration_status) : "",
+      r.migration_source ?? "",
+      r.migration_assignee_role ? (ASSIGNEE_LABELS[r.migration_assignee_role] ?? r.migration_assignee_role) : "",
+      r.estimated_delivery_date ?? "",
+      slaLabel,
+      r.deadline ?? "",
+      r.migration_published_at ? r.migration_published_at.slice(0, 10) : "",
+      r.delivered_at ? r.delivered_at.slice(0, 10) : "",
+      r.created_at.slice(0, 10),
+    ];
+  });
+
+  const csv = [header, ...csvRows]
+    .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = `solicitacoes-${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Input helpers ────────────────────────────────────────────────────────────
 
 const inputCls =
@@ -155,15 +311,18 @@ const inputCls =
 
 type Tab = "kanban" | "tabela" | "entregues";
 type PerPage = 10 | 25 | 50;
+type SlaFilter = "" | "ok" | "warning" | "late";
 
 export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
-  // Computed once per render — cheap date ops, no useMemo to avoid T|undefined with noUncheckedIndexedAccess
   const today: string = getTodayStr();
   const plus7: string = getPlusDaysStr(7);
 
   const [tab,           setTab]           = useState<Tab>("kanban");
   const [search,        setSearch]        = useState("");
   const [statusFilter,  setStatusFilter]  = useState<RequestStatus | "late" | "">("");
+  const [typeFilter,    setTypeFilter]    = useState<SolicitationType | "">("");
+  const [migFilter,     setMigFilter]     = useState<MigrationStatus | "">("");
+  const [slaFilter,     setSlaFilter]     = useState<SlaFilter>("");
   const [createdStart,  setCreatedStart]  = useState("");
   const [createdEnd,    setCreatedEnd]    = useState("");
   const [deadlineStart, setDeadlineStart] = useState("");
@@ -200,32 +359,52 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
           if (r.status !== statusFilter) return false;
         }
       }
+      if (typeFilter && r.solicitation_type !== typeFilter) return false;
+      if (migFilter && r.migration_status !== migFilter) return false;
+      if (slaFilter) {
+        const days = sladays(r.estimated_delivery_date);
+        if (slaFilter === "ok"      && !(days !== null && days > 3))                return false;
+        if (slaFilter === "warning" && !(days !== null && days >= 0 && days <= 3))  return false;
+        if (slaFilter === "late"    && !(days !== null && days < 0))                return false;
+      }
       if (createdStart && r.created_at.slice(0, 10) < createdStart) return false;
       if (createdEnd   && r.created_at.slice(0, 10) > createdEnd)   return false;
       if (deadlineStart && (r.deadline ?? "") < deadlineStart)       return false;
       if (deadlineEnd   && (r.deadline ?? "9999") > deadlineEnd)     return false;
       return true;
     });
-  }, [requests, search, statusFilter, createdStart, createdEnd, deadlineStart, deadlineEnd, today]);
+  }, [requests, search, statusFilter, typeFilter, migFilter, slaFilter, createdStart, createdEnd, deadlineStart, deadlineEnd, today]);
 
   // ─── Kanban buckets ───────────────────────────────────────────────────────
 
-  const active     = filtered.filter((r) => r.status !== "delivered");
-  const todayItems = active.filter((r) => r.deadline === today).sort(sortByDeadline);
-  const next7Items = active.filter((r) => r.deadline && r.deadline > today && r.deadline <= plus7).sort(sortByDeadline);
-  const lateItems  = active.filter((r) => r.deadline && r.deadline < today).sort(sortByDeadline);
+  // For migration requests, use migration_status — split into open buckets
+  const migrationActive = filtered.filter(r =>
+    r.solicitation_type === "migration" &&
+    r.migration_status !== "published" &&
+    r.migration_status !== "delivered"
+  ).sort((a, b) => (a.estimated_delivery_date ?? "9999") < (b.estimated_delivery_date ?? "9999") ? -1 : 1);
+
+  const standardActive = filtered.filter(r => r.solicitation_type !== "migration" && r.status !== "delivered");
+  const todayItems = standardActive.filter((r) => r.deadline === today).sort(sortByDeadline);
+  const next7Items = standardActive.filter((r) => r.deadline && r.deadline > today && r.deadline <= plus7).sort(sortByDeadline);
+  const lateItems  = standardActive.filter((r) => r.deadline && r.deadline < today).sort(sortByDeadline);
 
   // ─── Table buckets ────────────────────────────────────────────────────────
 
-  const tableRows     = tab === "entregues"
-    ? filtered.filter((r) => r.status === "delivered")
-    : filtered.filter((r) => r.status !== "delivered");
+  const tableRows = tab === "entregues"
+    ? filtered.filter((r) => r.status === "delivered" || r.migration_status === "published" || r.migration_status === "delivered")
+    : filtered.filter((r) => r.status !== "delivered" && r.migration_status !== "delivered");
 
   const totalPages    = Math.ceil(tableRows.length / perPage);
   const paginated     = tableRows.slice((page - 1) * perPage, page * perPage);
-  const deliveredCount = requests.filter((r) => r.status === "delivered").length;
+  const deliveredCount = requests.filter((r) => r.status === "delivered" || r.migration_status === "published" || r.migration_status === "delivered").length;
 
-  const hasFilters = search || statusFilter || createdStart || createdEnd || deadlineStart || deadlineEnd;
+  const hasFilters = search || statusFilter || typeFilter || migFilter || slaFilter || createdStart || createdEnd || deadlineStart || deadlineEnd;
+
+  function clearFilters() {
+    setSearch(""); setStatusFilter(""); setTypeFilter(""); setMigFilter(""); setSlaFilter("");
+    setCreatedStart(""); setCreatedEnd(""); setDeadlineStart(""); setDeadlineEnd(""); resetPage();
+  }
 
   // ─── Table ────────────────────────────────────────────────────────────────
 
@@ -240,13 +419,13 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
     return (
       <div className="bg-[hsl(var(--card))] border border-white/8 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[820px]">
+          <table className="w-full text-sm min-w-[960px]">
             <thead>
               <tr className="border-b border-white/8">
                 {[
-                  "Nome", "E-mail", "Telefone", "Rebanho", "Cidade/UF",
-                  "Solicitação", "Prazo",
-                  ...(tab === "entregues" ? ["Entrega"] : []),
+                  "Nome", "E-mail", "Fazenda", "Cidade/UF",
+                  "Tipo / Status Migração", "SLA / Previsão", "Prazo",
+                  ...(tab === "entregues" ? ["Publicado"] : []),
                   "Status", "Ações",
                 ].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-white/40 whitespace-nowrap">
@@ -258,8 +437,8 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
             <tbody>
               {paginated.map((r) => {
                 const cs = getCardStatus(r, today);
-                const phone = parsePhone(r.raw_responses);
                 const loc = [r.farm_city, r.farm_state].filter(Boolean).join("/") || "—";
+                const isMigration = r.solicitation_type === "migration";
                 return (
                   <tr key={r.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3">
@@ -268,18 +447,51 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-xs text-white/50">{r.user_email}</td>
-                    <td className="px-4 py-3 text-xs text-white/50 whitespace-nowrap">{phone}</td>
                     <td className="px-4 py-3 text-xs text-white/60">{r.farm_name}</td>
                     <td className="px-4 py-3 text-xs text-white/45">{loc}</td>
-                    <td className="px-4 py-3 text-xs text-white/45 whitespace-nowrap">{formatDateBR(r.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        {isMigration ? (
+                          <>
+                            <MigrationBadge />
+                            {r.migration_source && <MigrationSourceBadge source={r.migration_source} />}
+                            {r.migration_status && <MigrationStatusBadge status={r.migration_status} />}
+                            {r.migration_assignee_role && (
+                              <span className="text-[10px] text-white/40 capitalize">{r.migration_assignee_role.replace(/_/g, " ")}</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-white/50">Standard</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {isMigration ? (
+                        <div className="flex flex-col gap-1">
+                          <SlaBadge estimatedDate={r.estimated_delivery_date} migStatus={r.migration_status} />
+                          <span className="text-xs text-white/40">{formatDateBR(r.estimated_delivery_date)}</span>
+                        </div>
+                      ) : (
+                        <span className={`text-xs ${cs === "late" ? "text-red-400 font-medium" : "text-white/45"}`}>
+                          {formatDateBR(r.deadline)}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      <span className={cs === "late" ? "text-red-400 font-medium" : "text-white/45"}>
-                        {formatDateBR(r.deadline)}
-                      </span>
+                      {!isMigration && (
+                        <span className={cs === "late" ? "text-red-400 font-medium" : "text-white/45"}>
+                          {formatDateBR(r.deadline)}
+                        </span>
+                      )}
+                      {isMigration && (
+                        <span className="text-white/25 text-[11px]">—</span>
+                      )}
                     </td>
                     {tab === "entregues" && (
                       <td className="px-4 py-3 text-xs text-green-400 whitespace-nowrap">
-                        {r.delivered_at ? formatDateBR(r.delivered_at) : "—"}
+                        {r.migration_published_at
+                          ? formatDateBR(r.migration_published_at.slice(0, 10))
+                          : r.delivered_at ? formatDateBR(r.delivered_at) : "—"}
                       </td>
                     )}
                     <td className="px-4 py-3"><StatusPill cs={cs} /></td>
@@ -337,9 +549,10 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const kanbanColumns: { title: string; items: AdminRequestRow[]; Icon: LucideIcon; accent: string }[] = [
-    { title: "Hoje",            items: todayItems, Icon: Clock,         accent: "text-yellow-400" },
-    { title: "Próximos 7 dias", items: next7Items, Icon: CalendarDays,  accent: "text-blue-400" },
-    { title: "Atrasadas",       items: lateItems,  Icon: AlertTriangle, accent: "text-red-400" },
+    { title: "Hoje",            items: todayItems,      Icon: Clock,           accent: "text-yellow-400" },
+    { title: "Próximos 7 dias", items: next7Items,      Icon: CalendarDays,    accent: "text-blue-400" },
+    { title: "Atrasadas",       items: lateItems,       Icon: AlertTriangle,   accent: "text-red-400" },
+    { title: "Migrações ativas", items: migrationActive, Icon: ArrowRightLeft, accent: "text-blue-400" },
   ];
 
   return (
@@ -374,14 +587,25 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
 
       {/* Filters */}
       <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
-          <input
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-            placeholder="Buscar por nome, e-mail, rebanho ou telefone…"
-            className={`${inputCls} w-full pl-9`}
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+              placeholder="Buscar por nome, e-mail, fazenda ou telefone…"
+              className={`${inputCls} w-full pl-9`}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => exportCSV(filtered, today)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/10 text-white/50 hover:text-white hover:border-white/25 transition-colors text-sm whitespace-nowrap"
+            title="Exportar CSV"
+          >
+            <Download className="h-4 w-4" />
+            CSV
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2 items-center">
@@ -395,6 +619,44 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
             <option value="late">Atrasado</option>
             <option value="delivered">Entregue</option>
           </select>
+
+          <select
+            value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value as SolicitationType | ""); resetPage(); }}
+            className={inputCls}
+          >
+            <option value="">Todos os tipos</option>
+            <option value="standard">Standard</option>
+            <option value="migration">Migração</option>
+          </select>
+
+          {(typeFilter === "migration" || migFilter) && (
+            <select
+              value={migFilter}
+              onChange={(e) => { setMigFilter(e.target.value as MigrationStatus | ""); resetPage(); }}
+              className={inputCls}
+            >
+              <option value="">Status da migração</option>
+              <option value="awaiting_migration">Aguardando</option>
+              <option value="in_migration">Em migração</option>
+              <option value="internal_review">Revisão interna</option>
+              <option value="published">Publicado</option>
+              <option value="delivered">Entregue</option>
+            </select>
+          )}
+
+          {(typeFilter === "migration" || slaFilter) && (
+            <select
+              value={slaFilter}
+              onChange={(e) => { setSlaFilter(e.target.value as SlaFilter); resetPage(); }}
+              className={inputCls}
+            >
+              <option value="">SLA — Todos</option>
+              <option value="ok">No prazo (verde)</option>
+              <option value="warning">Atenção (≤ 3 dias)</option>
+              <option value="late">Atrasado (SLA)</option>
+            </select>
+          )}
 
           <label className="flex items-center gap-1.5 text-xs text-white/40 whitespace-nowrap">
             Solicitação:
@@ -424,13 +686,10 @@ export function AdminRequests({ requests }: { requests: AdminRequestRow[] }) {
 
           {hasFilters && (
             <button
-              onClick={() => {
-                setSearch(""); setStatusFilter(""); setCreatedStart(""); setCreatedEnd("");
-                setDeadlineStart(""); setDeadlineEnd(""); resetPage();
-              }}
-              className="text-xs text-white/35 border border-white/10 rounded-lg px-3 py-2 hover:text-white/60 transition-colors"
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 text-xs text-white/35 border border-white/10 rounded-lg px-3 py-2 hover:text-white/60 transition-colors"
             >
-              Limpar filtros
+              <X className="h-3.5 w-3.5" /> Limpar filtros
             </button>
           )}
         </div>

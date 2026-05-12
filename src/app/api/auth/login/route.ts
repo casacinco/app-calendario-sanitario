@@ -84,11 +84,18 @@ export async function POST(req: NextRequest) {
       httpOnly: true, path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 30,
     });
 
-    // Force onboarding for members who haven't completed it yet
-    if (!member.onboarding_completed) {
+    // Standard onboarding: only if neither standard nor migration flow was completed
+    if (!member.onboarding_completed && !member.migration_completed) {
       res.cookies.set("rb_onboarding", "1", {
         httpOnly: true, path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
       });
+      // Identify migration users so they land on the simplified migration form
+      const isMigration = member.product_name?.toLowerCase().includes("migração aplicativo") ?? false;
+      if (isMigration) {
+        res.cookies.set("rb_migration", "1", {
+          httpOnly: true, path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 7,
+        });
+      }
     }
 
     return res;

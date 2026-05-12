@@ -1,9 +1,15 @@
 import { cookies } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, FileText, FileSpreadsheet, ImageIcon, File, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft, Clock, FileText, FileSpreadsheet, ImageIcon, File,
+  ExternalLink, Play, CheckCircle2, ChevronRight,
+} from "lucide-react";
 import { getEnv } from "@/lib/cf";
-import { getUserById, getPublishedLesson, getLessonFiles } from "@/lib/db";
+import {
+  getUserById, getPublishedLesson, getLessonFiles,
+  getUserAccess, listPublishedModulesWithLessons,
+} from "@/lib/db";
 import { LessonTracker } from "@/components/content/lesson-tracker";
 import type { ContentFileType } from "@/lib/db";
 
@@ -47,84 +53,99 @@ export default async function AulaPage({
   if (!lessonId) notFound();
 
   const db = getEnv().DB;
-  const [user, lesson] = await Promise.all([
+  const [user, lesson, access] = await Promise.all([
     getUserById(db, Number(uid)),
     getPublishedLesson(db, lessonId),
+    getUserAccess(db, Number(uid)),
   ]);
 
   if (!user) redirect("/auth");
   if (!lesson) notFound();
 
-  const files = await getLessonFiles(db, lessonId);
+  const [files, modules, progressRes] = await Promise.all([
+    getLessonFiles(db, lessonId),
+    listPublishedModulesWithLessons(db, access),
+    db
+      .prepare(`SELECT lesson_id FROM lesson_progress WHERE user_id = ?1 AND completed = 1`)
+      .bind(Number(uid))
+      .all<{ lesson_id: number }>(),
+  ]);
+
+  const currentModule = modules.find((m) => m.id === lesson.module_id);
+  const completedIds = new Set(progressRes.results.map((r) => r.lesson_id));
 
   const ytId = lesson.video_url ? getYouTubeId(lesson.video_url) : null;
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--bg))]">
+    <div className="bg-[#F6F6F6] min-h-screen">
 
       {/* Header */}
-      <header className="border-b border-[hsl(var(--border))] bg-[hsl(var(--card))] sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
+            href="/dashboard/conteudos"
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Link>
-          <span className="text-white/20 text-sm">|</span>
-          <p className="text-sm text-white/70 truncate">{lesson.module_title}</p>
+          {lesson.module_title && (
+            <>
+              <span className="text-gray-200 text-sm">|</span>
+              <p className="text-sm text-gray-500 truncate">{lesson.module_title}</p>
+            </>
+          )}
         </div>
       </header>
 
       <LessonTracker lessonId={lessonId} />
 
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-5">
-
-        {/* Video */}
-        {lesson.video_url && (
-          <div className="rounded-xl overflow-hidden aspect-video bg-black">
-            {ytId ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${ytId}`}
-                title={lesson.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              />
-            ) : (
-              <video
-                src={lesson.video_url}
-                controls
-                className="w-full h-full"
-                poster={lesson.thumbnail_url ?? undefined}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Thumbnail (when no video) */}
-        {!lesson.video_url && lesson.thumbnail_url && (
-          <div className="rounded-xl overflow-hidden aspect-video">
-            <img
-              src={lesson.thumbnail_url}
-              alt={lesson.title}
-              className="w-full h-full object-cover"
+      {/* Video — edge-to-edge on mobile */}
+      {lesson.video_url && (
+        <div className="aspect-video w-full bg-black">
+          {ytId ? (
+            <iframe
+              src={`https://www.youtube.com/embed/${ytId}`}
+              title={lesson.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
             />
-          </div>
-        )}
+          ) : (
+            <video
+              src={lesson.video_url}
+              controls
+              className="w-full h-full"
+              poster={lesson.thumbnail_url ?? undefined}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Thumbnail when no video */}
+      {!lesson.video_url && lesson.thumbnail_url && (
+        <div className="aspect-video w-full bg-black">
+          <img
+            src={lesson.thumbnail_url}
+            alt={lesson.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      <main className="max-w-2xl mx-auto px-4 py-5 space-y-5">
 
         {/* Title & meta */}
-        <div className="space-y-2">
-          <h1 className="text-lg font-bold text-white leading-snug">{lesson.title}</h1>
+        <div className="space-y-1.5">
+          <h1 className="text-lg font-bold text-gray-900 leading-snug">{lesson.title}</h1>
           {lesson.duration_minutes && (
-            <span className="inline-flex items-center gap-1.5 text-xs text-white/40">
+            <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
               <Clock className="h-3.5 w-3.5" />
               {lesson.duration_minutes} min
             </span>
           )}
           {lesson.description && (
-            <p className="text-sm text-white/60 leading-relaxed pt-1">
+            <p className="text-sm text-gray-600 leading-relaxed pt-1">
               {lesson.description}
             </p>
           )}
@@ -133,10 +154,10 @@ export default async function AulaPage({
         {/* Materials */}
         {files.length > 0 && (
           <div className="space-y-2">
-            <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
               Materiais de apoio
             </h2>
-            <div className="rounded-xl border border-white/8 bg-[hsl(var(--card))] overflow-hidden divide-y divide-white/5">
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-gray-50">
               {files.map((file) => {
                 const Icon = FILE_ICONS[file.file_type] ?? File;
                 return (
@@ -145,15 +166,79 @@ export default async function AulaPage({
                     href={file.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                   >
-                    <Icon className="h-4 w-4 text-white/40 flex-shrink-0" />
+                    <Icon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white/80 truncate">{file.name}</p>
-                      <p className="text-[10px] text-white/30">{FILE_LABELS[file.file_type]}</p>
+                      <p className="text-sm text-gray-800 truncate">{file.name}</p>
+                      <p className="text-[10px] text-gray-400">{FILE_LABELS[file.file_type]}</p>
                     </div>
-                    <ExternalLink className="h-3.5 w-3.5 text-white/20 flex-shrink-0" />
+                    <ExternalLink className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
                   </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Other lessons in this module */}
+        {currentModule && currentModule.lessons.length > 1 && (
+          <div className="space-y-2">
+            <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              Aulas deste módulo
+            </h2>
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm divide-y divide-gray-50">
+              {currentModule.lessons.map((ls) => {
+                const isCurrent = ls.id === lessonId;
+                const isDone = completedIds.has(ls.id);
+                return (
+                  <Link
+                    key={ls.id}
+                    href={`/dashboard/aulas/${ls.id}`}
+                    className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                      isCurrent ? "bg-[#CC0000]/5" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    {ls.thumbnail_url ? (
+                      <img
+                        src={ls.thumbnail_url}
+                        alt={ls.title}
+                        className="h-9 w-14 rounded-lg object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          isCurrent ? "bg-[#CC0000]/10" : "bg-gray-100"
+                        }`}
+                      >
+                        <Play
+                          className={`h-3.5 w-3.5 ${isCurrent ? "text-[#CC0000]" : "text-gray-400"}`}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm truncate font-medium ${
+                        isCurrent ? "text-[#CC0000]" : isDone ? "text-gray-400" : "text-gray-800"
+                      }`}>
+                        {ls.title}
+                      </p>
+                      {ls.duration_minutes && (
+                        <span className="flex items-center gap-1 text-[10px] text-gray-400 mt-0.5">
+                          <Clock className="h-2.5 w-2.5" />
+                          {ls.duration_minutes} min
+                        </span>
+                      )}
+                    </div>
+                    {isCurrent ? (
+                      <span className="text-[10px] font-bold text-[#CC0000] bg-[#CC0000]/10 px-2 py-0.5 rounded-full flex-shrink-0">
+                        Agora
+                      </span>
+                    ) : isDone ? (
+                      <CheckCircle2 className="h-4 w-4 text-[#CC0000] flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-gray-200 flex-shrink-0" />
+                    )}
+                  </Link>
                 );
               })}
             </div>

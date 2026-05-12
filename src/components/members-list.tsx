@@ -8,10 +8,11 @@ import {
   ExternalLink, Users, X, Clock, Mail, KeyRound,
   Eye, EyeOff, Copy, Check, MonitorSmartphone,
   Download, Printer, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal,
+  History, ArrowRightLeft,
 } from "lucide-react";
 import type {
   MemberWithRequest, Member, AdminRequestRow,
-  MemberProfile, MemberAccessType,
+  MemberProfile, MemberAccessType, MemberEvent,
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 
@@ -281,6 +282,25 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
   const [inlineLoad, setInlineLoad]     = useState(false);
   const [showPwd, setShowPwd]           = useState(false);
   const [pendingAction, setPendingAction] = useState<ConfirmAction | null>(null);
+  const [showHistory, setShowHistory]   = useState(false);
+  const [historyData, setHistoryData]   = useState<MemberEvent[] | null>(null);
+  const [historyLoad, setHistoryLoad]   = useState(false);
+
+  async function loadHistory() {
+    if (historyData !== null) { setShowHistory(s => !s); return; }
+    setHistoryLoad(true);
+    try {
+      const res = await fetch(`/api/admin/members/${member.id}/events`);
+      const json = await res.json<{ events: MemberEvent[] }>();
+      setHistoryData(json.events ?? []);
+      setShowHistory(true);
+    } catch {
+      setHistoryData([]);
+      setShowHistory(true);
+    } finally {
+      setHistoryLoad(false);
+    }
+  }
 
   const ds        = getDisplayStatus(member);
   const calStatus = getCalendarStatus(member);
@@ -510,6 +530,54 @@ function MemberCard({ member, onUpdate }: { member: MemberWithRequest; onUpdate:
                 <p className="text-[10px] text-text-muted/50 font-mono truncate">
                   txn: {member.transaction_id}
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Histórico Hotmart ─────────────────────────────────────────── */}
+          {member.platform && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <button
+                type="button"
+                onClick={loadHistory}
+                disabled={historyLoad}
+                className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-text-muted font-medium hover:text-text transition-colors"
+              >
+                {historyLoad
+                  ? <RefreshCw className="h-3 w-3 animate-spin" />
+                  : <History className="h-3 w-3" />
+                }
+                Histórico de eventos
+                <ChevronDown className={`h-3 w-3 transition-transform ${showHistory ? "rotate-180" : ""}`} />
+              </button>
+              {showHistory && historyData !== null && (
+                <div className="mt-2 space-y-1">
+                  {historyData.length === 0 ? (
+                    <p className="text-[10px] text-text-muted/50 italic pl-0.5">Nenhum evento registrado.</p>
+                  ) : (
+                    historyData.map((ev) => (
+                      <div key={ev.id} className="flex items-start gap-2 py-1.5 border-b border-border/30 last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-medium text-text capitalize">
+                            {ev.event_type.replace(/_/g, " ")}
+                            {ev.action_taken && (
+                              <span className="ml-1 text-text-muted/60 font-normal">→ {ev.action_taken}</span>
+                            )}
+                          </p>
+                          {ev.transaction_id && (
+                            <p className="text-[9px] text-text-muted/40 font-mono truncate">{ev.transaction_id}</p>
+                          )}
+                        </div>
+                        <time className="text-[9px] text-text-muted/50 whitespace-nowrap flex-shrink-0">
+                          {new Date(ev.created_at).toLocaleString("pt-BR", {
+                            day: "2-digit", month: "2-digit", year: "2-digit",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </time>
+                      </div>
+                    ))
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -792,6 +860,155 @@ function NewMemberModal({ onClose, onCreated }: {
   );
 }
 
+// ─── New migration member modal ───────────────────────────────────────────────
+
+function NewMigrationMemberModal({ onClose, onCreated }: {
+  onClose: () => void;
+  onCreated: (m: MemberWithRequest) => void;
+}) {
+  const [name,      setName]      = useState("");
+  const [email,     setEmail]     = useState("");
+  const [phone,     setPhone]     = useState("");
+  const [password,  setPassword]  = useState("");
+  const [pwdConf,   setPwdConf]   = useState("");
+  const [showPwd,   setShowPwd]   = useState(false);
+  const [accessType, setAccessType] = useState<MemberAccessType>("lifetime");
+  const [farmName,  setFarmName]  = useState("");
+  const [state,     setState]     = useState("");
+  const [city,      setCity]      = useState("");
+  const [notes,     setNotes]     = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!name.trim())     { setError("Nome é obrigatório"); return; }
+    if (!email.trim())    { setError("E-mail é obrigatório"); return; }
+    if (!farmName.trim()) { setError("Nome da fazenda é obrigatório"); return; }
+    if (!state.trim() || state.trim().length > 2) { setError("UF deve ter 2 letras"); return; }
+    if (!city.trim())     { setError("Cidade é obrigatória"); return; }
+    if (!password.trim()) { setError("Senha é obrigatória"); return; }
+    if (password !== pwdConf) { setError("As senhas não coincidem"); return; }
+    setSaving(true); setError(null);
+    try {
+      const res = await fetch("/api/admin/members/migration", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(), email: email.trim(), phone: phone.trim() || null,
+          password: password.trim(), access_type: accessType,
+          farm_name: farmName.trim(), state: state.trim().toUpperCase(), city: city.trim(),
+          notes: notes.trim() || null,
+        }),
+      });
+      const data = await res.json<{ member?: MemberWithRequest; error?: string }>();
+      if (!res.ok) { setError(data.error ?? "Erro ao criar usuário"); return; }
+      onCreated(data.member!);
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={e => { if (e.key === "Escape") onClose(); }}>
+      <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4 text-blue-400" />
+              <h2 className="text-base font-semibold text-text">Novo usuário de migração</h2>
+            </div>
+            <p className="text-xs text-text-muted mt-0.5">Criação manual — calendário existente (PDF)</p>
+          </div>
+          <button onClick={onClose} className="text-text-muted hover:text-text p-1 transition-colors"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+          {/* User data */}
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-text-muted font-medium mb-3">Dados do usuário</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Nome completo *</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome do produtor" className={INPUT_LG} autoFocus />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">E-mail *</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" className={INPUT_LG} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Telefone</label>
+                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" className={INPUT_LG} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Tipo de acesso</label>
+                <select value={accessType} onChange={e => setAccessType(e.target.value as MemberAccessType)} className={SELECT}>
+                  <option value="30d">30 dias</option>
+                  <option value="90d">90 dias</option>
+                  <option value="365d">365 dias</option>
+                  <option value="lifetime">Vitalício</option>
+                </select>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Senha de acesso *</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input type={showPwd ? "text" : "password"} autoComplete="new-password"
+                      value={password} onChange={e => setPassword(e.target.value)} placeholder="Definir senha..." className={`${INPUT_LG} pr-9`} />
+                    <button type="button" onClick={() => setShowPwd(p => !p)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text">
+                      {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <button type="button" onClick={() => { const p = generatePassword(); setPassword(p); setPwdConf(p); setShowPwd(true); }}
+                    className="h-9 px-3 rounded-md border border-border text-sm text-text-muted hover:bg-text/5 hover:text-text transition-colors whitespace-nowrap">Gerar senha</button>
+                </div>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Confirmar senha *</label>
+                <input type={showPwd ? "text" : "password"} autoComplete="new-password"
+                  value={pwdConf} onChange={e => setPwdConf(e.target.value)} placeholder="Repita a senha..." className={INPUT_LG} />
+              </div>
+            </div>
+          </div>
+
+          {/* Farm data */}
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-text-muted font-medium mb-3">Dados da propriedade</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Nome da fazenda *</label>
+                <input value={farmName} onChange={e => setFarmName(e.target.value)} placeholder="Nome da fazenda" className={INPUT_LG} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">UF *</label>
+                <input value={state} onChange={e => setState(e.target.value.toUpperCase())} placeholder="MG" maxLength={2} className={INPUT_LG} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Cidade *</label>
+                <input value={city} onChange={e => setCity(e.target.value)} placeholder="Nome da cidade" className={INPUT_LG} />
+              </div>
+            </div>
+          </div>
+
+          {/* Internal notes */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Observação interna</label>
+            <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)}
+              placeholder="Localização do PDF, histórico do aluno, instruções..." className={TEXTAREA} />
+          </div>
+
+          {error && <p className="text-sm text-red bg-red/10 border border-red/20 rounded-md px-3 py-2">{error}</p>}
+        </div>
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between shrink-0">
+          <button onClick={onClose} className="text-sm px-4 h-9 rounded-md border border-border hover:bg-text/5 transition-colors">Cancelar</button>
+          <button type="button" onClick={handleSave} disabled={saving}
+            className="flex items-center gap-2 text-sm px-5 h-9 rounded-md bg-blue-600 text-white hover:opacity-90 transition-opacity disabled:opacity-50">
+            {saving ? <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Criando…</> : <><ArrowRightLeft className="h-3.5 w-3.5" /> Criar usuário de migração</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 type FilterKey    = "all" | DisplayStatus | "inactive";
@@ -827,8 +1044,9 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
   const [expiryTo, setExpiryTo]         = useState("");
   const [page, setPage]                 = useState(1);
   const [pageSize, setPageSize]         = useState(25);
-  const [showModal, setShowModal]       = useState(false);
-  const [showExport, setShowExport]     = useState(false);
+  const [showModal, setShowModal]             = useState(false);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [showExport, setShowExport]           = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filtersLoaded, setFiltersLoaded]     = useState(false);
 
@@ -1083,6 +1301,10 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
           )}
         </div>
 
+        <button type="button" onClick={() => setShowMigrationModal(true)}
+          className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm hover:bg-blue-500/20 transition-colors shrink-0">
+          <ArrowRightLeft className="h-4 w-4" /> Migração manual
+        </button>
         <button type="button" onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 h-9 px-4 rounded-md bg-text text-bg text-sm hover:opacity-90 transition-opacity shrink-0">
           <Plus className="h-4 w-4" /> Novo usuário
@@ -1313,7 +1535,8 @@ export function MembersList({ members: initial, requests }: { members: MemberWit
         </>
       )}
 
-      {showModal && <NewMemberModal onClose={() => setShowModal(false)} onCreated={onCreated} />}
+      {showModal          && <NewMemberModal          onClose={() => setShowModal(false)}          onCreated={onCreated} />}
+      {showMigrationModal && <NewMigrationMemberModal onClose={() => setShowMigrationModal(false)} onCreated={onCreated} />}
     </div>
   );
 }

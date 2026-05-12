@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, ArrowRightLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RequestStatusBadge } from "@/components/status-badge";
 import { CreateCalendarButton } from "@/components/create-calendar-button";
+import { MigrationPanel } from "@/components/migration-panel";
 import { getRequestFullDetails } from "@/lib/db";
 import { getEnv } from "@/lib/cf";
 import { formatDateBR } from "@/lib/format";
@@ -177,6 +178,25 @@ export default async function RequestDetailPage({ params }: PageProps) {
         </div>
       </header>
 
+      {/* MIGRAÇÃO — painel interno (somente para solicitações de migração) */}
+      {request.solicitation_type === "migration" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4 text-blue-400" />
+              Gestão da Migração
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MigrationPanel request={request} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Campos do formulário padrão — ocultos para migrações (não foram preenchidos) */}
+      {request.solicitation_type !== "migration" && (
+      <>
+
       {/* 1. IDENTIFICAÇÃO */}
       <Card>
         <CardHeader><CardTitle>Identificação</CardTitle></CardHeader>
@@ -287,6 +307,9 @@ export default async function RequestDetailPage({ params }: PageProps) {
           </dl>
         </CardContent>
       </Card>
+
+      </>
+      )}
     </div>
   );
 }

@@ -9,11 +9,12 @@ export type SubscriptionType = "free" | "basic" | "premium";
 export type AccessType       = "public" | "restricted" | "premium";
 export type UserProductStatus = "active" | "expired" | "cancelled";
 
-export type RequestStatus =
-  | "pending"
-  | "in_progress"
-  | "delivered"
-  | "archived";
+export type RequestStatus        = "pending" | "in_progress" | "delivered" | "archived";
+export type SolicitationType     = "standard" | "migration" | "revision" | "update";
+export type CalendarOrigin       = "standard" | "imported";
+export type MigrationStatus      = "awaiting_migration" | "in_migration" | "internal_review" | "published" | "delivered";
+export type MigrationAssigneeRole = "operador" | "suporte" | "equipe_interna" | "administrador";
+export type MigrationSource      = "hotmart" | "manual" | "other";
 
 // =====================================================
 // Tipos de entidades (espelham as tabelas)
@@ -107,6 +108,18 @@ export interface CalendarRequest {
   user_id: number;
   farm_id: number;
   status: RequestStatus;
+  solicitation_type: SolicitationType;
+  calendar_origin: CalendarOrigin;
+  migration_status: MigrationStatus | null;
+  migration_pdf_url: string | null;
+  migration_assignee: string | null;        // kept for backwards compat (now stores role value)
+  migration_assignee_role: MigrationAssigneeRole | null;
+  migration_assigned_at: string | null;
+  migration_started_at: string | null;
+  migration_published_at: string | null;
+  migration_notes: string | null;
+  migration_source: MigrationSource | null;
+  estimated_delivery_date: string | null;
   deadline: string | null;
   notes: string | null;
   created_at: string;
@@ -189,6 +202,10 @@ export interface CreateCalendarRequestInput {
   user_id: number;
   farm_id: number;
   status?: RequestStatus;
+  solicitation_type?: SolicitationType;
+  calendar_origin?: CalendarOrigin;
+  migration_status?: MigrationStatus | null;
+  migration_source?: MigrationSource | null;
   deadline?: string | null;
   notes?: string | null;
 }
@@ -394,18 +411,203 @@ export async function createCalendarRequest(
 ): Promise<CalendarRequest> {
   return insertReturning<CalendarRequest>(
     db,
-    `INSERT INTO calendar_requests (user_id, farm_id, status, deadline, notes)
-     VALUES (?1, ?2, ?3, ?4, ?5)
+    `INSERT INTO calendar_requests
+       (user_id, farm_id, status, solicitation_type, calendar_origin, migration_status, migration_source, deadline, notes)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
      RETURNING *`,
     [
       input.user_id,
       input.farm_id,
       input.status ?? "pending",
+      input.solicitation_type ?? "standard",
+      input.calendar_origin ?? "standard",
+      input.migration_status ?? null,
+      input.migration_source ?? null,
       input.deadline ?? null,
       input.notes ?? null,
     ],
     "create calendar request",
   );
+}
+
+export async function updateMigrationRequest(
+  db: D1Database,
+  requestId: number,
+  input: {
+    migration_status?:          MigrationStatus | null;
+    migration_pdf_url?:         string | null;
+    migration_assignee_role?:   MigrationAssigneeRole | null;
+    migration_assigned_at?:     string | null;
+    migration_started_at?:      string | null;
+    migration_published_at?:    string | null;
+    migration_notes?:           string | null;
+    estimated_delivery_date?:   string | null;
+  },
+): Promise<CalendarRequest> {
+  const fields: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+
+  if (input.migration_status         !== undefined) { fields.push(`migration_status = ?${idx++}`);          params.push(input.migration_status);         }
+  if (input.migration_pdf_url        !== undefined) { fields.push(`migration_pdf_url = ?${idx++}`);         params.push(input.migration_pdf_url);        }
+  if (input.migration_assignee_role  !== undefined) { fields.push(`migration_assignee_role = ?${idx++}`);   params.push(input.migration_assignee_role);  }
+  if (input.migration_assigned_at    !== undefined) { fields.push(`migration_assigned_at = ?${idx++}`);     params.push(input.migration_assigned_at);    }
+  if (input.migration_started_at     !== undefined) { fields.push(`migration_started_at = ?${idx++}`);      params.push(input.migration_started_at);     }
+  if (input.migration_published_at   !== undefined) { fields.push(`migration_published_at = ?${idx++}`);    params.push(input.migration_published_at);   }
+  if (input.migration_notes          !== undefined) { fields.push(`migration_notes = ?${idx++}`);           params.push(input.migration_notes);          }
+  if (input.estimated_delivery_date  !== undefined) { fields.push(`estimated_delivery_date = ?${idx++}`);   params.push(input.estimated_delivery_date);  }
+
+  if (fields.length === 0) {
+    const existing = await db
+      .prepare(`SELECT * FROM calendar_requests WHERE id = ?1`)
+      .bind(requestId)
+      .first<CalendarRequest>();
+    if (!existing) throw new DbError("Request not found");
+    return existing;
+  }
+
+  fields.push(`updated_at = datetime('now')`);
+  params.push(requestId);
+
+  return insertReturning<CalendarRequest>(
+    db,
+    `UPDATE calendar_requests SET ${fields.join(", ")} WHERE id = ?${idx} RETURNING *`,
+    params,
+    "update migration request",
+  );
+}
+
+// ── Eventos de migração (histórico auditável) ────────────────────────────────
+
+export interface MigrationEvent {
+  id: number;
+  request_id: number;
+  event_type: string;
+  old_value: string | null;
+  new_value: string | null;
+  performed_by: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface CreateMigrationEventInput {
+  request_id: number;
+  event_type: string;
+  old_value?: string | null;
+  new_value?: string | null;
+  performed_by?: string | null;
+  notes?: string | null;
+}
+
+export async function createMigrationEvent(
+  db: D1Database,
+  input: CreateMigrationEventInput,
+): Promise<MigrationEvent> {
+  return insertReturning<MigrationEvent>(
+    db,
+    `INSERT INTO migration_events (request_id, event_type, old_value, new_value, performed_by, notes)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+     RETURNING *`,
+    [
+      input.request_id,
+      input.event_type,
+      input.old_value ?? null,
+      input.new_value ?? null,
+      input.performed_by ?? null,
+      input.notes ?? null,
+    ],
+    "create migration event",
+  );
+}
+
+export async function getMigrationEvents(
+  db: D1Database,
+  requestId: number,
+): Promise<MigrationEvent[]> {
+  const result = await db
+    .prepare(`SELECT * FROM migration_events WHERE request_id = ?1 ORDER BY created_at DESC`)
+    .bind(requestId)
+    .all<MigrationEvent>();
+  return result.results;
+}
+
+// ── Notificações de automação ──────────────────────────────────────────────────
+
+export type NotificationChannel   = "dashboard" | "email" | "whatsapp";
+export type NotificationStatus    = "pending" | "processing" | "sent" | "failed";
+export type NotificationEventType =
+  | "migration_started"
+  | "migration_published"
+  | "migration_delivered"
+  | "calendar_published"
+  | "access_expired"
+  | "refund_requested"
+  | "payment_late"
+  | "access_restored"
+  | "renewal_approved";
+
+export interface NotificationEvent {
+  id: number;
+  user_id: number;
+  request_id: number | null;
+  event_type: NotificationEventType | string;
+  channel: NotificationChannel;
+  title: string | null;
+  message: string | null;
+  payload: string;
+  status: NotificationStatus;
+  retries: number;
+  last_error: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+
+export interface CreateNotificationInput {
+  user_id: number;
+  request_id?: number | null;
+  event_type: NotificationEventType | string;
+  channel?: NotificationChannel;
+  title?: string;
+  message?: string;
+  payload: Record<string, unknown>;
+}
+
+export async function createNotificationEvent(
+  db: D1Database,
+  input: CreateNotificationInput,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO notification_events (user_id, request_id, event_type, channel, title, message, payload)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+    )
+    .bind(
+      input.user_id,
+      input.request_id ?? null,
+      input.event_type,
+      input.channel ?? "dashboard",
+      input.title ?? null,
+      input.message ?? null,
+      JSON.stringify(input.payload),
+    )
+    .run();
+}
+
+// ── Separar semântica: completeMemberMigration (NÃO usa onboarding_completed) ─
+
+export async function completeMemberMigration(
+  db: D1Database,
+  email: string,
+  requestId: number,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE members
+       SET migration_completed = 1, calendar_request_id = ?2, updated_at = datetime('now')
+       WHERE email = ?1`,
+    )
+    .bind(email, requestId)
+    .run();
 }
 
 // =====================================================
@@ -621,6 +823,12 @@ export interface AdminRequestRow {
   user_id: number;
   farm_id: number;
   status: RequestStatus;
+  solicitation_type: SolicitationType;
+  migration_status: MigrationStatus | null;
+  migration_assignee_role: MigrationAssigneeRole | null;
+  migration_source: MigrationSource | null;
+  migration_published_at: string | null;
+  estimated_delivery_date: string | null;
   deadline: string | null;
   created_at: string;
   delivered_at: string | null;
@@ -641,8 +849,11 @@ export async function listAdminRequests(
   const result = await db
     .prepare(
       `SELECT
-         cr.id, cr.user_id, cr.farm_id, cr.status, cr.deadline,
-         cr.created_at,
+         cr.id, cr.user_id, cr.farm_id, cr.status,
+         cr.solicitation_type, cr.migration_status,
+         cr.migration_assignee_role, cr.migration_source,
+         cr.migration_published_at, cr.estimated_delivery_date,
+         cr.deadline, cr.created_at,
          c.published_at AS delivered_at,
          c.id AS calendar_id,
          u.name  AS user_name,
@@ -664,6 +875,38 @@ export async function listAdminRequests(
     )
     .all<AdminRequestRow>();
   return result.results;
+}
+
+// ── Admin migration stats ─────────────────────────────────────────────────────
+
+export interface AdminMigrationStats {
+  total: number;
+  awaiting: number;
+  in_progress: number;
+  review: number;
+  published: number;
+  delivered: number;
+  late: number;
+}
+
+export async function getAdminMigrationStats(db: D1Database): Promise<AdminMigrationStats> {
+  const row = await db
+    .prepare(
+      `SELECT
+         COUNT(*) AS total,
+         SUM(CASE WHEN migration_status = 'awaiting_migration' THEN 1 ELSE 0 END) AS awaiting,
+         SUM(CASE WHEN migration_status = 'in_migration'       THEN 1 ELSE 0 END) AS in_progress,
+         SUM(CASE WHEN migration_status = 'internal_review'    THEN 1 ELSE 0 END) AS review,
+         SUM(CASE WHEN migration_status = 'published'          THEN 1 ELSE 0 END) AS published,
+         SUM(CASE WHEN migration_status = 'delivered'          THEN 1 ELSE 0 END) AS delivered,
+         SUM(CASE WHEN migration_status NOT IN ('published','delivered')
+                   AND estimated_delivery_date IS NOT NULL
+                   AND estimated_delivery_date < date('now') THEN 1 ELSE 0 END) AS late
+       FROM calendar_requests
+       WHERE solicitation_type = 'migration'`,
+    )
+    .first<AdminMigrationStats>();
+  return row ?? { total: 0, awaiting: 0, in_progress: 0, review: 0, published: 0, delivered: 0, late: 0 };
 }
 
 export async function listRequestsWithDetails(
@@ -1248,7 +1491,8 @@ export interface Member {
   last_access: string | null;
   password: string | null;
   device_info: string | null;
-  onboarding_completed: number; // 0 = pending, 1 = done
+  onboarding_completed: number;  // 0 = pending, 1 = done (standard flow)
+  migration_completed:  number;  // 0 = pending, 1 = done (migration flow)
   origin: string | null;
   notes: string | null;
   calendar_request_id: number | null;

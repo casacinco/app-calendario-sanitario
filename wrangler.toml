@@ -16,3 +16,6 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "MEDIA"
 bucket_name = "app-calendario-media"
+
+# Variáveis de ambiente — definir via dashboard Cloudflare Pages ou wrangler secret
+# HOTMART_WEBHOOK_SECRET = "seu-token-aqui"
