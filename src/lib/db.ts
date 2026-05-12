@@ -2357,6 +2357,20 @@ export async function getLessonFiles(
   return result.results;
 }
 
+export async function listAllPublishedLessonFiles(
+  db: D1Database,
+): Promise<ContentLessonFile[]> {
+  const result = await db
+    .prepare(
+      `SELECT clf.* FROM content_lesson_files clf
+       INNER JOIN content_lessons cl ON cl.id = clf.lesson_id
+       WHERE cl.status = 'published'
+       ORDER BY clf.sort_order ASC, clf.id ASC`,
+    )
+    .all<ContentLessonFile>();
+  return result.results;
+}
+
 export async function addLessonFile(
   db: D1Database,
   input: { lesson_id: number; name: string; url: string; file_type?: ContentFileType },

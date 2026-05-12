@@ -9,9 +9,7 @@ import {
 import { getEnv } from "@/lib/cf";
 import {
   getUserById,
-  getUserAccess,
   listActiveBanners,
-  listPublishedModulesWithLessons,
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
@@ -65,11 +63,7 @@ export default async function DashboardPage() {
     .bind(Number(uid))
     .first<RequestRow>();
 
-  const [banners, access] = await Promise.all([
-    listActiveBanners(db),
-    getUserAccess(db, Number(uid)),
-  ]);
-  const modules = await listPublishedModulesWithLessons(db, access);
+  const banners = await listActiveBanners(db);
 
   const firstName   = user.name.split(" ")[0];
   const isMigration = request?.solicitation_type === "migration";
@@ -288,70 +282,37 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── Educational content ───────────────────────────────────────────── */}
-        {modules.length > 0 ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-                Conteúdo educacional
-              </h2>
-              <Link
-                href="/dashboard/conteudos"
-                className="flex items-center gap-1 text-xs text-[#CC0000] font-semibold hover:underline"
-              >
-                Ver todos <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+        {/* ── Content banner ────────────────────────────────────────────────── */}
+        <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm">
+          <div className="relative bg-[#111111] min-h-[172px] flex flex-col justify-end">
+            {/* Red gradient accent */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#CC0000]/30 via-transparent to-transparent" />
+            {/* Bottom fade */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/60 to-transparent" />
 
-            {/* Module cards — horizontal scroll on mobile, grid on desktop */}
-            <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 sm:overflow-visible">
-              {modules.slice(0, 4).map((mod) => (
-                <Link
-                  key={mod.id}
-                  href="/dashboard/conteudos"
-                  className="flex-shrink-0 w-44 sm:w-auto bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                >
-                  {mod.thumbnail_url ? (
-                    <div className="aspect-video w-full overflow-hidden">
-                      <img
-                        src={mod.thumbnail_url}
-                        alt={mod.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="aspect-video w-full flex items-center justify-center"
-                      style={{ background: `${mod.accent_color}22` }}
-                    >
-                      <BookOpen className="h-8 w-8" style={{ color: mod.accent_color }} />
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <p className="text-xs font-bold text-gray-900 line-clamp-2 leading-snug">{mod.title}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      {mod.lessons.length} aula{mod.lessons.length !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <BookOpen className="h-5 w-5 text-gray-400" />
+            {/* Content */}
+            <div className="relative z-10 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-[#CC0000] flex items-center justify-center">
+                  <BookOpen className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-[10px] font-bold text-[#CC0000] uppercase tracking-widest">
+                  Conteúdos Exclusivos
+                </span>
               </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">Conteúdos em breve</p>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                  Enquanto seu calendário fica pronto, novos conteúdos sobre manejo sanitário serão disponibilizados aqui.
-                </p>
+              <h2 className="text-lg font-bold text-white leading-tight">
+                Conteúdos Técnicos Exclusivos
+              </h2>
+              <p className="text-xs text-white/60 mt-1.5 leading-relaxed">
+                Aprenda manejos, protocolos e estratégias práticas para melhorar os resultados do seu rebanho.
+              </p>
+              <div className="mt-4 inline-flex items-center gap-1.5 bg-[#CC0000] text-white text-xs font-bold px-4 py-2 rounded-xl">
+                Acessar conteúdos
+                <ChevronRight className="h-3.5 w-3.5" />
               </div>
             </div>
           </div>
-        )}
+        </Link>
 
         {/* ── Quick tools ──────────────────────────────────────────────────── */}
         <div className="space-y-3">
