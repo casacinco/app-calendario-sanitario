@@ -235,9 +235,11 @@ export function ConteudosClient({
 
   return (
     <>
-      {/* Welcome banner — first access only */}
-      {showWelcome && (
-        <div className="max-w-2xl mx-auto px-4 pt-5">
+      {/* ── Player area — flutuante das bordas em ambas as versões ─────── */}
+      <div className="max-w-2xl mx-auto px-3 pt-3">
+
+        {/* Welcome card — topo do player no primeiro acesso */}
+        {showWelcome && (
           <div className="bg-[#111111] rounded-t-2xl px-4 pt-4 pb-0">
             <span className="inline-block text-[10px] font-bold text-[#CC0000] bg-[#CC0000]/10 px-2.5 py-1 rounded-full uppercase tracking-widest">
               Importante
@@ -250,20 +252,22 @@ export function ConteudosClient({
               e aproveitar melhor o aplicativo.
             </p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Player */}
-      <div className={`max-w-2xl mx-auto ${showWelcome ? "px-4" : ""}`}>
-        <div className={`bg-black aspect-video w-full ${showWelcome ? "rounded-b-2xl overflow-hidden" : ""}`}>
+        {/* Vídeo */}
+        <div className={`bg-black aspect-video w-full overflow-hidden ${
+          showWelcome
+            ? "rounded-b-2xl"
+            : activeLesson
+              ? "rounded-t-2xl"
+              : "rounded-2xl"
+        }`}>
           {renderPlayer()}
         </div>
-      </div>
 
-      {/* Lesson info panel */}
-      {activeLesson && (
-        <div className="bg-white shadow-sm">
-          <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+        {/* Info da aula — colado abaixo do player, sem banda branca full-width */}
+        {activeLesson && (
+          <div className="bg-white rounded-b-2xl px-4 py-4 space-y-3 shadow-sm">
 
             <h1 className="text-base font-bold text-gray-900 leading-snug">
               {activeLesson.title}
@@ -282,7 +286,7 @@ export function ConteudosClient({
               </p>
             )}
 
-            {/* Downloadable materials */}
+            {/* Materiais */}
             {activeLesson.files.length > 0 && (
               <div className="space-y-2 pt-1">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -302,9 +306,7 @@ export function ConteudosClient({
                         <Icon className="h-4 w-4 text-[#CC0000]" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">
-                          {file.name}
-                        </p>
+                        <p className="text-sm font-semibold text-gray-800 truncate">{file.name}</p>
                         <p className="text-xs text-gray-400">
                           {FILE_LABEL[file.file_type]} · {FILE_ACTION[file.file_type]}
                         </p>
@@ -316,7 +318,7 @@ export function ConteudosClient({
               </div>
             )}
 
-            {/* Mark as completed */}
+            {/* Marcar como concluída */}
             <div className="pt-1 pb-1">
               {completedSet.has(activeLesson.id) ? (
                 <div className="flex items-center gap-2 text-[#CC0000]">
@@ -334,8 +336,9 @@ export function ConteudosClient({
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
 
       {/* Banners de conteúdos */}
       {banners.length > 0 && (
@@ -429,15 +432,18 @@ export function ConteudosClient({
                     </div>
 
                   {/* Barra de info — abaixo da imagem, continuação do card */}
-                  <div className="bg-[#111111] px-4 h-10 flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-white/70">
+                  <div className="bg-[#111111] px-4 h-13 flex items-center justify-between gap-3 py-3">
+                    <span className="text-base font-semibold text-white/85">
                       {mod.lessons.length} aula{mod.lessons.length !== 1 ? "s" : ""}
                       {" · "}
                       {completedCount}/{mod.lessons.length} concluída{completedCount !== 1 ? "s" : ""}
                     </span>
-                    <ChevronDown className={`h-4 w-4 text-white/50 flex-shrink-0 transition-transform duration-200 ${
-                      isOpen ? "rotate-180" : ""
-                    }`} />
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold transition-colors flex-shrink-0 ${
+                      isOpen ? "bg-white/15 text-white/80" : "bg-[#CC0000] text-white"
+                    }`}>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                      <span>{isOpen ? "Fechar" : "Ver aulas"}</span>
+                    </div>
                   </div>
 
                   {/* Barra de progresso */}
