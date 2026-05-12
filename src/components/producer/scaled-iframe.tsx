@@ -12,8 +12,9 @@ export function ScaledIframe({ src }: { src: string }) {
   useLayoutEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      setScale(entry.contentRect.width / IFRAME_W);
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setScale(entry.contentRect.width / IFRAME_W);
     });
     observer.observe(el);
     return () => observer.disconnect();
