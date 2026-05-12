@@ -3,13 +3,12 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Clock, CheckCircle2, ArrowRightLeft, ChevronRight,
-  BookOpen, Wrench, LogOut, CalendarDays, Bell,
+  Clock, CheckCircle2, ArrowRightLeft, Wrench, LogOut, CalendarDays, Bell,
 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import {
   getUserById,
-  listActiveBanners,
+  listActiveBannersByPlacement,
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
@@ -63,7 +62,7 @@ export default async function DashboardPage() {
     .bind(Number(uid))
     .first<RequestRow>();
 
-  const banners = await listActiveBanners(db);
+  const banners = await listActiveBannersByPlacement(db, "home");
 
   const firstName   = user.name.split(" ")[0];
   const isMigration = request?.solicitation_type === "migration";
@@ -282,37 +281,6 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── Content banner ────────────────────────────────────────────────── */}
-        <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm">
-          <div className="relative bg-[#111111] min-h-[172px] flex flex-col justify-end">
-            {/* Red gradient accent */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#CC0000]/30 via-transparent to-transparent" />
-            {/* Bottom fade */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/60 to-transparent" />
-
-            {/* Content */}
-            <div className="relative z-10 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-lg bg-[#CC0000] flex items-center justify-center">
-                  <BookOpen className="h-3.5 w-3.5 text-white" />
-                </div>
-                <span className="text-[10px] font-bold text-[#CC0000] uppercase tracking-widest">
-                  Conteúdos Exclusivos
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-white leading-tight">
-                Conteúdos Técnicos Exclusivos
-              </h2>
-              <p className="text-xs text-white/60 mt-1.5 leading-relaxed">
-                Aprenda manejos, protocolos e estratégias práticas para melhorar os resultados do seu rebanho.
-              </p>
-              <div className="mt-4 inline-flex items-center gap-1.5 bg-[#CC0000] text-white text-xs font-bold px-4 py-2 rounded-xl">
-                Acessar conteúdos
-                <ChevronRight className="h-3.5 w-3.5" />
-              </div>
-            </div>
-          </div>
-        </Link>
 
         {/* ── Quick tools ──────────────────────────────────────────────────── */}
         <div className="space-y-3">

@@ -1,4 +1,7 @@
 import { updateBanner, deleteBanner } from "@/lib/db";
+import type { BannerPlacement } from "@/lib/db";
+
+const VALID_PLACEMENTS = new Set<BannerPlacement>(["home", "conteudos", "calendario", "ferramentas"]);
 import { getEnv } from "@/lib/cf";
 
 export const runtime = "edge";
@@ -23,6 +26,7 @@ export async function PATCH(
       ...(body.button_link !== undefined && { button_link: body.button_link ? String(body.button_link).trim() : null }),
       ...(body.is_active !== undefined && { is_active: body.is_active === false || body.is_active === 0 ? 0 : 1 }),
       ...(body.sort_order !== undefined && { sort_order: Number(body.sort_order) }),
+      ...(body.placement !== undefined && VALID_PLACEMENTS.has(body.placement as BannerPlacement) && { placement: body.placement as BannerPlacement }),
     });
     return Response.json({ banner });
   } catch (err) {

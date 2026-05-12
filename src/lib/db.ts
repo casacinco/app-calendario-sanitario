@@ -2069,6 +2069,8 @@ export interface ContentLessonFile {
   created_at: string;
 }
 
+export type BannerPlacement = "home" | "conteudos" | "calendario" | "ferramentas";
+
 export interface Banner {
   id: number;
   title: string;
@@ -2078,6 +2080,7 @@ export interface Banner {
   button_link: string | null;
   is_active: number;
   sort_order: number;
+  placement: BannerPlacement;
   created_at: string;
   updated_at: string;
 }
@@ -2416,6 +2419,7 @@ export async function createBanner(
     button_label?: string | null;
     button_link?: string | null;
     is_active?: number;
+    placement?: BannerPlacement;
   },
 ): Promise<Banner> {
   const maxOrder = await db
@@ -2425,8 +2429,8 @@ export async function createBanner(
 
   const row = await db
     .prepare(
-      `INSERT INTO banners (title, description, image_url, button_label, button_link, is_active, sort_order)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) RETURNING *`,
+      `INSERT INTO banners (title, description, image_url, button_label, button_link, is_active, sort_order, placement)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) RETURNING *`,
     )
     .bind(
       input.title,
@@ -2436,6 +2440,7 @@ export async function createBanner(
       input.button_link ?? null,
       input.is_active ?? 1,
       nextOrder,
+      input.placement ?? "home",
     )
     .first<Banner>();
   if (!row) throw new Error("Falha ao criar banner");
@@ -2453,6 +2458,7 @@ export async function updateBanner(
     button_link: string | null;
     is_active: number;
     sort_order: number;
+    placement: BannerPlacement;
   }>,
 ): Promise<Banner> {
   const fields: string[] = ["updated_at = datetime('now')"];
@@ -2465,6 +2471,7 @@ export async function updateBanner(
   if (patch.button_link !== undefined)  { fields.push(`button_link = ?${i++}`);  binds.push(patch.button_link); }
   if (patch.is_active !== undefined)    { fields.push(`is_active = ?${i++}`);    binds.push(patch.is_active); }
   if (patch.sort_order !== undefined)   { fields.push(`sort_order = ?${i++}`);   binds.push(patch.sort_order); }
+  if (patch.placement !== undefined)    { fields.push(`placement = ?${i++}`);    binds.push(patch.placement); }
 
   binds.push(id);
   const row = await db
@@ -2644,6 +2651,19 @@ export async function listActiveBanners(db: D1Database): Promise<Banner[]> {
     .prepare(
       `SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`,
     )
+    .all<Banner>();
+  return result.results;
+}
+
+export async function listActiveBannersByPlacement(
+  db: D1Database,
+  placement: BannerPlacement,
+): Promise<Banner[]> {
+  const result = await db
+    .prepare(
+      `SELECT * FROM banners WHERE is_active = 1 AND placement = ?1 ORDER BY sort_order ASC, id ASC`,
+    )
+    .bind(placement)
     .all<Banner>();
   return result.results;
 }

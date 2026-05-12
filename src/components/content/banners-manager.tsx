@@ -2,20 +2,28 @@
 
 import { useState, useRef } from "react";
 import { Plus, Pencil, Trash2, GripVertical, ToggleLeft, ToggleRight, Image } from "lucide-react";
-import type { Banner } from "@/lib/db";
+import type { Banner, BannerPlacement } from "@/lib/db";
 import { MediaUpload } from "@/components/content/media-upload";
 
 const INPUT = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors";
 const TEXTAREA = "w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:border-text-muted transition-colors resize-none";
 
+const PLACEMENTS: { value: BannerPlacement; label: string }[] = [
+  { value: "home",        label: "Home do produtor" },
+  { value: "conteudos",   label: "Área de Conteúdos" },
+  { value: "calendario",  label: "Calendário" },
+  { value: "ferramentas", label: "Ferramentas" },
+];
+
 interface BannerForm {
   title: string; description: string; image_url: string;
   button_label: string; button_link: string; is_active: boolean;
+  placement: BannerPlacement;
 }
-const EMPTY: BannerForm = { title: "", description: "", image_url: "", button_label: "", button_link: "", is_active: true };
+const EMPTY: BannerForm = { title: "", description: "", image_url: "", button_label: "", button_link: "", is_active: true, placement: "home" };
 
 function formFromBanner(b: Banner): BannerForm {
-  return { title: b.title, description: b.description ?? "", image_url: b.image_url ?? "", button_label: b.button_label ?? "", button_link: b.button_link ?? "", is_active: b.is_active === 1 };
+  return { title: b.title, description: b.description ?? "", image_url: b.image_url ?? "", button_label: b.button_label ?? "", button_link: b.button_link ?? "", is_active: b.is_active === 1, placement: b.placement ?? "home" };
 }
 
 interface Props { initialBanners: Banner[]; }
@@ -44,7 +52,7 @@ export function BannersManager({ initialBanners }: Props) {
       const res = await fetch("/api/admin/banners", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, description: form.description || null, image_url: form.image_url || null, button_label: form.button_label || null, button_link: form.button_link || null, is_active: form.is_active ? 1 : 0 }),
+        body: JSON.stringify({ ...form, description: form.description || null, image_url: form.image_url || null, button_label: form.button_label || null, button_link: form.button_link || null, is_active: form.is_active ? 1 : 0, placement: form.placement }),
       });
       const data = await res.json() as { error?: string; banner?: Banner };
       if (!res.ok) { setErr(data.error ?? "Erro"); return; }
@@ -61,7 +69,7 @@ export function BannersManager({ initialBanners }: Props) {
       const res = await fetch(`/api/admin/banners/${editId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...editForm, description: editForm.description || null, image_url: editForm.image_url || null, button_label: editForm.button_label || null, button_link: editForm.button_link || null, is_active: editForm.is_active ? 1 : 0 }),
+        body: JSON.stringify({ ...editForm, description: editForm.description || null, image_url: editForm.image_url || null, button_label: editForm.button_label || null, button_link: editForm.button_link || null, is_active: editForm.is_active ? 1 : 0, placement: editForm.placement }),
       });
       const data = await res.json() as { error?: string; banner?: Banner };
       if (!res.ok) { setErr(data.error ?? "Erro"); return; }
@@ -140,7 +148,19 @@ export function BannersManager({ initialBanners }: Props) {
         </div>
         <div className="space-y-1">
           <label className="text-xs text-text-muted">Link do botão</label>
-          <input className={INPUT} value={values.button_link} onChange={(e) => onChange({ button_link: e.target.value })} placeholder="https://..." />
+          <input className={INPUT} value={values.button_link} onChange={(e) => onChange({ button_link: e.target.value })} placeholder="https://... ou /dashboard/conteudos" />
+        </div>
+        <div className="space-y-1 md:col-span-2">
+          <label className="text-xs text-text-muted">Local de exibição</label>
+          <select
+            className={INPUT}
+            value={values.placement}
+            onChange={(e) => onChange({ placement: e.target.value as BannerPlacement })}
+          >
+            {PLACEMENTS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
         </div>
       </div>
     );
@@ -193,10 +213,13 @@ export function BannersManager({ initialBanners }: Props) {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-sm truncate">{banner.title}</span>
                     <span className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium border ${banner.is_active ? "bg-green/15 text-green border-green/30" : "bg-text-muted/10 text-text-muted border-border"}`}>
                       {banner.is_active ? "Ativo" : "Inativo"}
+                    </span>
+                    <span className="inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-text/5 text-text-muted border border-border">
+                      {PLACEMENTS.find((p) => p.value === banner.placement)?.label ?? banner.placement}
                     </span>
                   </div>
                   {banner.description && <p className="text-xs text-text-muted mt-0.5 truncate">{banner.description}</p>}
