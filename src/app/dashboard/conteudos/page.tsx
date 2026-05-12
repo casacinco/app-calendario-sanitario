@@ -6,6 +6,7 @@ import {
   getUserAccess,
   listPublishedModulesWithLessons,
   listAllPublishedLessonFiles,
+  listActiveBannersByPlacement,
 } from "@/lib/db";
 import { ConteudosClient } from "@/components/producer/conteudos-client";
 import type { ContentLessonFile } from "@/lib/db";
@@ -32,7 +33,7 @@ export default async function ConteudosPage({
   ]);
   if (!user) redirect("/auth");
 
-  const [modules, allFiles, progressRows] = await Promise.all([
+  const [modules, allFiles, progressRows, banners] = await Promise.all([
     listPublishedModulesWithLessons(db, access),
     listAllPublishedLessonFiles(db),
     db
@@ -44,6 +45,7 @@ export default async function ConteudosPage({
       )
       .bind(Number(uid))
       .all<{ lesson_id: number; completed: number; last_accessed_at: string }>(),
+    listActiveBannersByPlacement(db, "conteudos"),
   ]);
 
   // Build filesByLesson lookup
@@ -119,6 +121,7 @@ export default async function ConteudosPage({
         completedIds={completedIds}
         initialLesson={initialLesson}
         isFirstAccess={isFirstAccess}
+        banners={banners}
       />
     </div>
   );

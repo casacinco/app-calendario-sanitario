@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { CalendarDays, Clock, CheckCircle2, ArrowRightLeft } from "lucide-react";
 import { getEnv } from "@/lib/cf";
-import { getUserById } from "@/lib/db";
+import { getUserById, listActiveBannersByPlacement } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
+import { PlacementBanners } from "@/components/producer/placement-banners";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -40,19 +41,22 @@ export default async function CalendarioPage() {
   const user = await getUserById(db, Number(uid));
   if (!user) redirect("/auth");
 
-  const request = await db
-    .prepare(
-      `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
-              cr.estimated_delivery_date, cr.deadline,
-              c.status AS cal_status, c.id AS cal_id
-       FROM calendar_requests cr
-       LEFT JOIN calendars c ON c.request_id = cr.id
-       WHERE cr.user_id = ?1
-       ORDER BY cr.created_at DESC
-       LIMIT 1`,
-    )
-    .bind(Number(uid))
-    .first<RequestRow>();
+  const [request, banners] = await Promise.all([
+    db
+      .prepare(
+        `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
+                cr.estimated_delivery_date, cr.deadline,
+                c.status AS cal_status, c.id AS cal_id
+         FROM calendar_requests cr
+         LEFT JOIN calendars c ON c.request_id = cr.id
+         WHERE cr.user_id = ?1
+         ORDER BY cr.created_at DESC
+         LIMIT 1`,
+      )
+      .bind(Number(uid))
+      .first<RequestRow>(),
+    listActiveBannersByPlacement(db, "calendario"),
+  ]);
 
   const isMigration = request?.solicitation_type === "migration";
   const migStatus   = request?.migration_status ?? null;
@@ -69,6 +73,8 @@ export default async function CalendarioPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-5 space-y-4">
+
+        <PlacementBanners banners={banners} />
 
         {request ? (
           <>

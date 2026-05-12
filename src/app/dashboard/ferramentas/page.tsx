@@ -1,6 +1,10 @@
 import { Wrench, Calculator, BookOpen, BarChart3 } from "lucide-react";
+import { getEnv } from "@/lib/cf";
+import { listActiveBannersByPlacement } from "@/lib/db";
+import { PlacementBanners } from "@/components/producer/placement-banners";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 const TOOLS = [
   {
@@ -29,7 +33,9 @@ const TOOLS = [
   },
 ];
 
-export default function FerramentasPage() {
+export default async function FerramentasPage() {
+  const banners = await listActiveBannersByPlacement(getEnv().DB, "ferramentas");
+
   return (
     <div className="bg-[#F6F6F6] min-h-screen">
 
@@ -40,6 +46,9 @@ export default function FerramentasPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-5 space-y-3">
+
+        <PlacementBanners banners={banners} />
+
         {TOOLS.map(({ icon: Icon, title, description, badge }) => (
           <div
             key={title}
@@ -59,6 +68,7 @@ export default function FerramentasPage() {
             </div>
           </div>
         ))}
+
       </main>
 
     </div>
