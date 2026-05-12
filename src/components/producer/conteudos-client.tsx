@@ -426,21 +426,22 @@ export function ConteudosClient({
                       </div>
                     )}
 
-                    {/* Barra de info — sobreposta no rodapé da imagem */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent pt-8 pb-3 px-4 flex items-end justify-between gap-3">
-                      <span className="text-xs font-medium text-white/80">
-                        {mod.lessons.length} aula{mod.lessons.length !== 1 ? "s" : ""}
-                        {" · "}
-                        {completedCount}/{mod.lessons.length} concluída{completedCount !== 1 ? "s" : ""}
-                      </span>
-                      <ChevronDown className={`h-4 w-4 text-white/70 flex-shrink-0 transition-transform duration-200 ${
-                        isOpen ? "rotate-180" : ""
-                      }`} />
                     </div>
+
+                  {/* Barra de info — abaixo da imagem, continuação do card */}
+                  <div className="bg-[#111111] px-4 h-10 flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium text-white/70">
+                      {mod.lessons.length} aula{mod.lessons.length !== 1 ? "s" : ""}
+                      {" · "}
+                      {completedCount}/{mod.lessons.length} concluída{completedCount !== 1 ? "s" : ""}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 text-white/50 flex-shrink-0 transition-transform duration-200 ${
+                      isOpen ? "rotate-180" : ""
+                    }`} />
                   </div>
 
-                  {/* Barra de progresso — abaixo da imagem */}
-                  <div className="h-1 bg-black/10">
+                  {/* Barra de progresso */}
+                  <div className="h-0.5 bg-white/10">
                     <div
                       className="h-full bg-[#CC0000] transition-all duration-500"
                       style={{ width: `${progress * 100}%` }}
