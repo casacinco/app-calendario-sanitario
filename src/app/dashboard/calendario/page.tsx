@@ -7,6 +7,7 @@ import { getUserById, listActiveBannersByPlacement } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
 import { BackButton } from "@/components/producer/back-button";
+import { ScaledIframe } from "@/components/producer/scaled-iframe";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -78,7 +79,7 @@ export default async function CalendarioPage() {
             <Link
               href={`/calendarios/${calId}/print`}
               target="_blank"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#CC0000] text-white text-xs font-bold hover:bg-[#AA0000] transition-colors"
             >
               <Printer className="h-3.5 w-3.5" />
               Imprimir / Salvar PDF
@@ -95,24 +96,13 @@ export default async function CalendarioPage() {
           /* ── Calendário inline ────────────────────────────────────────── */
           <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
             {/* Cabeçalho da seção */}
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-[#CC0000]" />
-                <span className="text-sm font-bold text-gray-900">Calendário Sanitário</span>
-              </div>
-              <span className="text-[10px] text-gray-400">Scroll horizontal para visualizar completo</span>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-[#CC0000]" />
+              <span className="text-sm font-bold text-gray-900">Calendário Sanitário</span>
             </div>
 
-            {/* Calendar iframe — scroll horizontal/vertical */}
-            <div className="overflow-auto" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
-              <iframe
-                src={`/calendarios/${calId}/print?embed=1`}
-                title="Calendário Sanitário"
-                scrolling="no"
-                className="border-0 block"
-                style={{ width: "794px", height: "1200px" }}
-              />
-            </div>
+            {/* Calendar iframe — escala para caber na tela sem scroll */}
+            <ScaledIframe src={`/calendarios/${calId}/print?embed=1`} />
 
             {/* Botão de imprimir no rodapé do card */}
             <div className="px-4 py-3 border-t border-gray-100 flex justify-end">
