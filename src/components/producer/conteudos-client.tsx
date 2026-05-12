@@ -254,7 +254,7 @@ export function ConteudosClient({
       )}
 
       {/* Player */}
-      <div className={showWelcome ? "max-w-2xl mx-auto px-4" : ""}>
+      <div className={`max-w-2xl mx-auto ${showWelcome ? "px-4" : ""}`}>
         <div className={`bg-black aspect-video w-full ${showWelcome ? "rounded-b-2xl overflow-hidden" : ""}`}>
           {renderPlayer()}
         </div>
@@ -410,63 +410,41 @@ export function ConteudosClient({
                 {/* Module banner */}
                 <button
                   onClick={() => toggleModule(mod.id)}
-                  className="relative w-full text-left"
-                  style={{ minHeight: 104 }}
+                  className="relative w-full text-left block"
                 >
-                  {/* Background */}
-                  <div className="absolute inset-0">
+                  {/* Image — 16:9, sem título sobreposto */}
+                  <div className="relative aspect-[16/9] overflow-hidden">
                     {mod.thumbnail_url ? (
                       <img
                         src={mod.thumbnail_url}
-                        alt=""
+                        alt={mod.title}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-[#111111]" />
+                      <div className="w-full h-full bg-[#111111] flex items-center justify-center">
+                        <BookOpen className="h-10 w-10 text-white/20" />
+                      </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/30" />
+
+                    {/* Barra de info — sobreposta no rodapé da imagem */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent pt-8 pb-3 px-4 flex items-end justify-between gap-3">
+                      <span className="text-xs font-medium text-white/80">
+                        {mod.lessons.length} aula{mod.lessons.length !== 1 ? "s" : ""}
+                        {" · "}
+                        {completedCount}/{mod.lessons.length} concluída{completedCount !== 1 ? "s" : ""}
+                      </span>
+                      <ChevronDown className={`h-4 w-4 text-white/70 flex-shrink-0 transition-transform duration-200 ${
+                        isOpen ? "rotate-180" : ""
+                      }`} />
+                    </div>
                   </div>
 
-                  {/* Content overlay */}
-                  <div className="relative z-10 px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-semibold text-white/50 uppercase tracking-wider mb-0.5">
-                          {mod.lessons.length} aula{mod.lessons.length !== 1 ? "s" : ""}
-                          {completedCount > 0 && ` · ${completedCount} concluída${completedCount !== 1 ? "s" : ""}`}
-                        </p>
-                        <h3 className="text-base font-bold text-white leading-snug">
-                          {mod.title}
-                        </h3>
-                        {mod.description && (
-                          <p className="text-xs text-white/50 mt-1 line-clamp-1">
-                            {mod.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                        isOpen ? "bg-white/20" : "bg-white/10"
-                      }`}>
-                        <ChevronDown className={`h-4 w-4 text-white transition-transform duration-200 ${
-                          isOpen ? "rotate-180" : ""
-                        }`} />
-                      </div>
-                    </div>
-
-                    {/* Progress bar */}
-                    {completedCount > 0 && (
-                      <div className="mt-3">
-                        <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[#CC0000] rounded-full transition-all duration-500"
-                            style={{ width: `${progress * 100}%` }}
-                          />
-                        </div>
-                        <p className="text-[10px] text-white/40 mt-1 text-right">
-                          {Math.round(progress * 100)}%
-                        </p>
-                      </div>
-                    )}
+                  {/* Barra de progresso — abaixo da imagem */}
+                  <div className="h-1 bg-black/10">
+                    <div
+                      className="h-full bg-[#CC0000] transition-all duration-500"
+                      style={{ width: `${progress * 100}%` }}
+                    />
                   </div>
                 </button>
 
