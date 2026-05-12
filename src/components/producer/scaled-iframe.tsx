@@ -3,11 +3,12 @@
 import { useRef, useLayoutEffect, useState } from "react";
 
 const IFRAME_W = 794;
-const IFRAME_H = 1800;
+const IFRAME_H_DEFAULT = 1800;
 
 export function ScaledIframe({ src }: { src: string }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [iframeH, setIframeH] = useState(IFRAME_H_DEFAULT);
 
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -20,15 +21,23 @@ export function ScaledIframe({ src }: { src: string }) {
     return () => observer.disconnect();
   }, []);
 
+  function handleLoad(e: React.SyntheticEvent<HTMLIFrameElement>) {
+    try {
+      const h = e.currentTarget.contentDocument?.documentElement.scrollHeight;
+      if (h && h > 0) setIframeH(h);
+    } catch {}
+  }
+
   return (
-    <div ref={wrapperRef} style={{ width: "100%", height: IFRAME_H * scale, overflow: "hidden" }}>
+    <div ref={wrapperRef} style={{ width: "100%", height: iframeH * scale, overflow: "hidden" }}>
       <iframe
         src={src}
         title="Calendário Sanitário"
         scrolling="no"
+        onLoad={handleLoad}
         style={{
           width: IFRAME_W,
-          height: IFRAME_H,
+          height: iframeH,
           border: "none",
           display: "block",
           transform: `scale(${scale})`,
