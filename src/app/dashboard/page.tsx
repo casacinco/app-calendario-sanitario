@@ -239,12 +239,13 @@ export default async function DashboardPage() {
         {/* ── Content navigation banner ────────────────────────────────── */}
         <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm focus:outline-none">
           {contentBannerUrl ? (
-            <img
-              src={contentBannerUrl}
-              alt="Conteúdos Técnicos Exclusivos"
-              className="w-full object-cover"
-              style={{ display: "block" }}
-            />
+            <div className="aspect-[16/9]">
+              <img
+                src={contentBannerUrl}
+                alt="Conteúdos Técnicos Exclusivos"
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
             <div className="bg-[#111111] p-5 space-y-3">
               <div>
@@ -267,11 +268,11 @@ export default async function DashboardPage() {
             {banners.map((banner) => (
               <div key={banner.id} className="rounded-2xl overflow-hidden shadow-sm">
                 {banner.image_url ? (
-                  <div className="relative">
+                  <div className="relative aspect-[16/9]">
                     <img
                       src={banner.image_url}
                       alt={banner.title}
-                      className="w-full object-cover max-h-44"
+                      className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4">

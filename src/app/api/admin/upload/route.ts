@@ -3,7 +3,7 @@ import { getEnv } from "@/lib/cf";
 export const runtime = "edge";
 
 const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg", "image/jpg", "image/png", "image/webp",
+  "image/jpeg", "image/jpg", "image/png",
 ]);
 
 const ALLOWED_DOC_TYPES = new Set([
@@ -42,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!isImage && !isDoc) {
     return Response.json(
-      { error: "Formato não permitido. Use: JPG, PNG, WEBP, PDF, XLS, XLSX, CSV, DOC ou DOCX." },
+      { error: "Formato não permitido. Use: JPG, PNG, PDF, XLS, XLSX, CSV, DOC ou DOCX." },
       { status: 400 },
     );
   }

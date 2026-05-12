@@ -3,11 +3,11 @@
 import { useRef, useState } from "react";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 
-const ACCEPT = "image/jpeg,image/jpg,image/png,image/webp";
+const ACCEPT = "image/jpeg,image/jpg,image/png";
 
 const HINT: Record<"thumbnail" | "banner", string> = {
-  thumbnail: "1280 × 720px recomendado · JPG, PNG ou WEBP · máx. 5 MB",
-  banner:    "1920 × 550px recomendado · JPG, PNG ou WEBP · máx. 5 MB",
+  thumbnail: "1280 × 720px recomendado · JPG ou PNG · máx. 5 MB",
+  banner:    "1280 × 720px recomendado · JPG ou PNG · máx. 5 MB",
 };
 
 interface Props {
@@ -63,9 +63,7 @@ export function MediaUpload({ value, onChange, folder = "uploads", aspect = "thu
     handleFile(e.dataTransfer.files[0]);
   }
 
-  const aspectClass = aspect === "banner"
-    ? "aspect-[21/6]"
-    : "aspect-[16/9]";
+  const aspectClass = "aspect-[16/9]";
 
   return (
     <div className="space-y-1.5">
