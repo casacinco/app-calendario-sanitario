@@ -296,12 +296,12 @@ export function CalendarPrint({ blocks, ownerName, farmName, location, createdAt
         .pw { display: flex; flex-direction: column; min-height: 283mm; }
         @media screen {
           body { background: #e0e0e0 !important; }
-          .pw  { max-width: 210mm; margin: 16px auto; background: #ffffff; padding: 7mm 8mm; }
+          .pw  { max-width: 210mm; margin: 16px auto; background: #ffffff; padding: 7mm 8mm; min-height: 0; }
         }
         @media print { .no-print { display: none !important; } }
       `}</style>
 
-      <div className="pw">
+      <div id="cal-pw" className="pw">
 
         {/* Botão de impressão — só na tela, oculto no modo embed */}
         {!hideActions && (

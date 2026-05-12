@@ -23,7 +23,10 @@ export function ScaledIframe({ src }: { src: string }) {
 
   function handleLoad(e: React.SyntheticEvent<HTMLIFrameElement>) {
     try {
-      const h = e.currentTarget.contentDocument?.documentElement.scrollHeight;
+      const doc = e.currentTarget.contentDocument;
+      const pw  = doc?.getElementById("cal-pw") as HTMLElement | null;
+      // offsetTop (top margin) + offsetHeight (content) + same margin at bottom
+      const h = pw ? pw.offsetTop + pw.offsetHeight + pw.offsetTop : doc?.documentElement.scrollHeight;
       if (h && h > 0) setIframeH(h);
     } catch {}
   }
