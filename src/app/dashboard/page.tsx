@@ -240,12 +240,18 @@ export default async function DashboardPage() {
         {/* ── Content navigation banner ────────────────────────────────── */}
         <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm focus:outline-none">
           {contentBannerUrl ? (
-            <div className="aspect-[16/9]">
+            <div className="relative aspect-[16/9]">
               <img
                 src={contentBannerUrl}
                 alt="Conteúdos Técnicos Exclusivos"
                 className="w-full h-full object-cover"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <span className="inline-block px-4 py-2.5 rounded-xl bg-[#CC0000] text-white text-sm font-bold shadow-lg">
+                  Acessar conteúdos
+                </span>
+              </div>
             </div>
           ) : (
             <div className="bg-[#111111] p-5 space-y-3">
