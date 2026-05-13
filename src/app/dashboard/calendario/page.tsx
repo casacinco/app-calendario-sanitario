@@ -8,6 +8,8 @@ import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
 import { BackButton } from "@/components/producer/back-button";
 import { ScaledIframe } from "@/components/producer/scaled-iframe";
+import { ManejoDashboard } from "@/components/producer/manejo-dashboard";
+import { getEventsForCurrentMonth } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -44,7 +46,7 @@ export default async function CalendarioPage() {
   const user = await getUserById(db, Number(uid));
   if (!user) redirect("/auth");
 
-  const [request, banners] = await Promise.all([
+  const [request, banners, monthEvents] = await Promise.all([
     db
       .prepare(
         `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
@@ -59,6 +61,7 @@ export default async function CalendarioPage() {
       .bind(Number(uid))
       .first<RequestRow>(),
     listActiveBannersByPlacement(db, "calendario"),
+    getEventsForCurrentMonth(db, Number(uid)),
   ]);
 
   const isMigration = request?.solicitation_type === "migration";
@@ -93,7 +96,15 @@ export default async function CalendarioPage() {
         <PlacementBanners banners={banners} />
 
         {isDelivered && calId && calPublished ? (
-          /* ── Calendário inline ────────────────────────────────────────── */
+          /* ── Resumo operacional do mês + calendário visual ─────────────── */
+          <>
+          {(monthEvents.thisMonth.length > 0 || monthEvents.continuous.length > 0) && (
+            <ManejoDashboard
+              scheduled={monthEvents.thisMonth}
+              continuous={monthEvents.continuous}
+            />
+          )}
+
           <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
             {/* Cabeçalho da seção */}
             <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
@@ -116,6 +127,7 @@ export default async function CalendarioPage() {
               </Link>
             </div>
           </div>
+          </>
 
         ) : request ? (
           /* ── Status / progresso ───────────────────────────────────────── */

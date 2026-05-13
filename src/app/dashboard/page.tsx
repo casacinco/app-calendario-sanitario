@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Clock, CheckCircle2, ArrowRightLeft, Wrench, LogOut, CalendarDays, Bell,
-  ChevronRight, AlertCircle,
+  ChevronRight,
 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import {
@@ -14,6 +14,8 @@ import {
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
+import { ManejoDashboard } from "@/components/producer/manejo-dashboard";
+import { getEventsByUser } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -62,9 +64,12 @@ export default async function DashboardPage() {
     .bind(Number(uid))
     .first<RequestRow>();
 
-  const [banners, contentBannerUrl] = await Promise.all([
+  const _firstViewed = !!request?.first_viewed_at;
+
+  const [banners, contentBannerUrl, events] = await Promise.all([
     listActiveBannersByPlacement(db, "home"),
     getSetting(db, "content_home_banner_url"),
+    _firstViewed ? getEventsByUser(db, Number(uid)) : Promise.resolve(null),
   ]);
 
   const firstName    = user.name.split(" ")[0];
@@ -166,24 +171,11 @@ export default async function DashboardPage() {
               <ChevronRight className="h-4 w-4 text-white/30 flex-shrink-0" />
             </Link>
 
-            {/* Próximos manejos */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Próximos manejos</p>
-              <div className="flex flex-col items-center py-3 gap-1">
-                <CalendarDays className="h-8 w-8 text-gray-200" />
-                <p className="text-sm text-gray-400">Em breve nesta área</p>
-                <p className="text-xs text-gray-300">Consulte seu calendário para os manejos programados.</p>
-              </div>
-            </div>
-
-            {/* Alertas */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Alertas</p>
-              <div className="flex items-center gap-3 py-2">
-                <AlertCircle className="h-5 w-5 text-gray-200 flex-shrink-0" />
-                <p className="text-sm text-gray-400">Nenhum alerta no momento.</p>
-              </div>
-            </div>
+            {/* Manejos e protocolos */}
+            <ManejoDashboard
+              scheduled={events?.scheduled ?? []}
+              continuous={events?.continuous ?? []}
+            />
 
           </div>
         )}

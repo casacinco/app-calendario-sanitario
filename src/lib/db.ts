@@ -4,6 +4,8 @@
 // Funções de criação dos recursos principais do onboarding.
 // Cada função recebe a binding D1Database (definida em wrangler.toml como `DB`).
 
+export type { CalendarEvent, CalendarEventType, CalendarEventStatus } from "@/lib/calendar-events";
+
 export type UserRole         = "user" | "admin";
 export type SubscriptionType = "free" | "basic" | "premium";
 export type AccessType       = "public" | "restricted" | "premium";

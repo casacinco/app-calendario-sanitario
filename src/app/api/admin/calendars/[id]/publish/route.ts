@@ -1,4 +1,5 @@
 import { getOrCreateSystemAdmin, publishCalendar } from "@/lib/db";
+import { generateCalendarEvents } from "@/lib/calendar-events";
 import { getEnv } from "@/lib/cf";
 
 export const runtime = "edge";
@@ -32,6 +33,10 @@ export async function POST(request: Request, context: RouteContext) {
       calendar_id: calendarId,
       admin_id: adminId,
     });
+    // Gera eventos executáveis a partir das barras (não bloqueia resposta em caso de erro)
+    generateCalendarEvents(db, calendarId).catch((err) =>
+      console.error("generateCalendarEvents failed:", err),
+    );
     return Response.json({ calendar });
   } catch (err) {
     return Response.json(
