@@ -145,7 +145,8 @@ export async function generateCalendarEvents(
   }
 }
 
-// Busca eventos para o dashboard do produtor (separados por tipo)
+// Busca eventos para o dashboard do produtor (separados por tipo).
+// Se não houver eventos mas existir um calendário publicado, gera automaticamente.
 export async function getEventsByUser(
   db: D1Database,
   userId: number,
@@ -160,6 +161,35 @@ export async function getEventsByUser(
     .bind(userId)
     .all<CalendarEvent>();
 
+  // Auto-geração para calendários publicados antes desta feature
+  if (results.length === 0) {
+    const cal = await db
+      .prepare(
+        `SELECT c.id FROM calendars c
+         JOIN calendar_requests cr ON cr.id = c.request_id
+         WHERE cr.user_id = ?1 AND c.status = 'published'
+         ORDER BY c.published_at DESC LIMIT 1`,
+      )
+      .bind(userId)
+      .first<{ id: number }>();
+
+    if (cal) {
+      await generateCalendarEvents(db, cal.id);
+      const { results: fresh } = await db
+        .prepare(
+          `SELECT * FROM calendar_events
+           WHERE user_id = ?1
+             AND status NOT IN ('completed','skipped')
+           ORDER BY event_type, due_date, id`,
+        )
+        .bind(userId)
+        .all<CalendarEvent>();
+      const scheduled  = fresh.filter((e) => e.event_type === "scheduled");
+      const continuous = fresh.filter((e) => e.event_type === "continuous");
+      return { scheduled, continuous };
+    }
+  }
+
   const scheduled  = results.filter((e) => e.event_type === "scheduled");
   const continuous = results.filter((e) => e.event_type === "continuous");
   return { scheduled, continuous };
@@ -171,18 +201,7 @@ export async function getEventsForCurrentMonth(
   userId: number,
 ): Promise<{ thisMonth: CalendarEvent[]; continuous: CalendarEvent[] }> {
   const currentMonth = new Date().getMonth() + 1;
-
-  const { results } = await db
-    .prepare(
-      `SELECT * FROM calendar_events
-       WHERE user_id = ?1
-         AND status NOT IN ('completed','skipped')
-       ORDER BY event_type, due_date, id`,
-    )
-    .bind(userId)
-    .all<CalendarEvent>();
-
-  const thisMonth  = results.filter((e) => e.event_type === "scheduled" && e.month === currentMonth);
-  const continuous = results.filter((e) => e.event_type === "continuous");
+  const { scheduled, continuous } = await getEventsByUser(db, userId);
+  const thisMonth = scheduled.filter((e) => e.month === currentMonth);
   return { thisMonth, continuous };
 }
