@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, ChevronDown, ChevronUp, X } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar-events";
 
@@ -69,6 +70,7 @@ export function ManejosOperacional({
   continuous, curMonthName, nextMonthName,
 }: ManejosOperacionalProps) {
 
+  const router = useRouter();
   const cur = new Date().getMonth() + 1;
   const nxt = inm[0]?.month ?? null;
 
@@ -157,6 +159,7 @@ export function ManejosOperacional({
           reforcoDate: data.reforco.due_date,
           title:      capturedModal.event.title,
         });
+        router.refresh();
       }
     }
   }
