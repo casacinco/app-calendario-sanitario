@@ -14,7 +14,6 @@ import {
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
-import { AvisoImportante } from "@/components/producer/aviso-importante";
 import { ManejoResumo } from "@/components/producer/manejo-resumo";
 import { getEventCounts } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
@@ -32,7 +31,6 @@ interface RequestRow {
   cal_status: string | null;
   cal_id: number | null;
   first_viewed_at: string | null;
-  calendar_intro_confirmed: number | null;
 }
 
 const MIGRATION_LABEL: Record<MigrationStatus, string> = {
@@ -56,7 +54,6 @@ export default async function DashboardPage() {
     .prepare(
       `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
               cr.estimated_delivery_date, cr.deadline, cr.first_viewed_at,
-              cr.calendar_intro_confirmed,
               c.status AS cal_status, c.id AS cal_id
        FROM calendar_requests cr
        LEFT JOIN calendars c ON c.request_id = cr.id
@@ -73,8 +70,6 @@ export default async function DashboardPage() {
   const migDone     = migStatus === "published" || migStatus === "delivered";
   const isDelivered = request?.status === "delivered" || migDone;
   const firstViewed = !!request?.first_viewed_at;
-  const introConfirmed = !!request?.calendar_intro_confirmed;
-  const showAviso = isDelivered && firstViewed && !isMigration && !introConfirmed;
 
   const [banners, contentBannerUrl, counts] = await Promise.all([
     listActiveBannersByPlacement(db, "home"),
@@ -226,10 +221,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── 2. Aviso importante ───────────────────────────────────────────── */}
-        {showAviso && <AvisoImportante />}
-
-        {/* ── 3. Resumo operacional ─────────────────────────────────────────── */}
+        {/* ── 2. Resumo operacional ─────────────────────────────────────────── */}
         {firstViewed && counts && (
           <ManejoResumo
             overdue={counts.overdue}
