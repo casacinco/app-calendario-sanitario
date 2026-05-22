@@ -2,58 +2,24 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, ChevronDown, ChevronUp, X, AlertCircle } from "lucide-react";
+import { CheckCircle2, Clock, ChevronDown, X, AlertCircle } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar-events";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 type ActionType = "complete" | "postpone" | "skip";
 type SectionId  = "atrasados" | "este-mes" | "proximo-mes";
 
-// Tema visual por bloco
 type SectionTheme = {
-  header:    string;   // fundo do cabeçalho
-  border:    string;   // separador cabeçalho / conteúdo
-  label:     string;   // cor do título
-  badge:     string;   // badge de contagem
-  toggle:    string;   // botão ver/fechar
-  toggleTxt: string;
-  dot:       string;   // bolinha do evento
-  content:   string;   // fundo do conteúdo
+  accent:   string;  // hex color for left border and dot
+  badgeBg:  string;
+  badgeTxt: string;
+  dot:      string;  // tailwind bg-* class (used in purged context)
 };
 
-// Nota: bg-red-* e bg-green-* não funcionam pois o tailwind.config.ts sobrescreve
-// os paletes red e green com CSS vars de cor única. Usamos valores arbitrários.
 const THEMES: Record<SectionId, SectionTheme> = {
-  "atrasados": {
-    header:    "bg-[#FEE2E2]",
-    border:    "border-[#FECACA]",
-    label:     "text-[#991B1B]",
-    badge:     "bg-[#FECACA] text-[#7F1D1D]",
-    toggle:    "bg-[#FECACA] hover:bg-[#FCA5A5]",
-    toggleTxt: "text-[#991B1B]",
-    dot:       "bg-[#EF4444]",
-    content:   "bg-[#FEF2F2]",
-  },
-  "este-mes": {
-    header:    "bg-amber-100",
-    border:    "border-amber-200",
-    label:     "text-amber-900",
-    badge:     "bg-amber-200 text-amber-900",
-    toggle:    "bg-amber-200 hover:bg-amber-300",
-    toggleTxt: "text-amber-800",
-    dot:       "bg-amber-500",
-    content:   "bg-amber-50",
-  },
-  "proximo-mes": {
-    header:    "bg-[#DCFCE7]",
-    border:    "border-[#BBF7D0]",
-    label:     "text-[#14532D]",
-    badge:     "bg-[#BBF7D0] text-[#14532D]",
-    toggle:    "bg-[#BBF7D0] hover:bg-[#86EFAC]",
-    toggleTxt: "text-[#166534]",
-    dot:       "bg-[#22C55E]",
-    content:   "bg-[#F0FDF4]",
-  },
+  "atrasados":   { accent: "#EF4444", badgeBg: "bg-[#FEF2F2]", badgeTxt: "text-[#DC2626]", dot: "bg-[#EF4444]" },
+  "este-mes":    { accent: "#FBBF24", badgeBg: "bg-amber-50",  badgeTxt: "text-amber-700", dot: "bg-amber-400" },
+  "proximo-mes": { accent: "#22C55E", badgeBg: "bg-[#F0FDF4]", badgeTxt: "text-[#16A34A]", dot: "bg-[#22C55E]" },
 };
 
 interface ManejosOperacionalProps {
@@ -75,16 +41,16 @@ export function ManejosOperacional({
   const cur = new Date().getMonth() + 1;
   const nxt = inm[0]?.month ?? null;
 
-  const [events,      setEvents]      = useState(() => [...io, ...itm, ...inm]);
-  const [implEvents,  setImplEvents]  = useState(() => [...iimpl]);
-  // Cada seção tem seu próprio estado aberto/fechado — independentes entre si
+  const [events,     setEvents]     = useState(() => [...io, ...itm, ...inm]);
+  const [implEvents, setImplEvents] = useState(() => [...iimpl]);
+
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     "atrasados":   false,
     "este-mes":    true,
     "proximo-mes": false,
   });
-  const [modal,   setModal]   = useState<{ type: ActionType; event: CalendarEvent } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [modal,       setModal]       = useState<{ type: ActionType; event: CalendarEvent } | null>(null);
+  const [loading,     setLoading]     = useState(false);
   const [notes,       setNotes]       = useState("");
   const [completedAt, setCompletedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [postponedTo, setPostponedTo] = useState("");
@@ -111,9 +77,7 @@ export function ManejosOperacional({
   const thisMonthEvs = events.filter((e) => e.month === cur);
   const nextMonthEvs = nxt !== null ? events.filter((e) => e.month === nxt) : [];
 
-  function toggle(id: SectionId) {
-    setOpen((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
+  function toggle(id: SectionId) { setOpen((prev) => ({ ...prev, [id]: !prev[id] })); }
 
   function removeEvent(id: number) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -127,10 +91,8 @@ export function ManejosOperacional({
     setPostponedTo("");
   }
 
-  // Detecta protocolo de duas etapas — reforços já gerados não criam outro reforço
   function isDoseReforco(event: CalendarEvent) {
-    return !event.is_reforco &&
-      (event.recommendation ?? "").toUpperCase().includes("DOSE + REFORÇO");
+    return !event.is_reforco && (event.recommendation ?? "").toUpperCase().includes("DOSE + REFORÇO");
   }
 
   function fmtDateBR(iso: string) {
@@ -155,7 +117,6 @@ export function ManejosOperacional({
       const capturedModal = modal;
       removeEvent(capturedModal.event.id);
       setModal(null);
-      // Mostra confirmação de dose+reforço quando aplicável
       if (data.reforco && isDoseReforco(capturedModal.event)) {
         setReforcoConfirm({
           appDate:    completedAt,
@@ -168,19 +129,19 @@ export function ManejosOperacional({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
 
-      {/* ── Ação imediata (implantação sanitária) ── */}
+      {/* ── Ação imediata ── */}
       {implEvents.length > 0 && (
-        <div className="rounded-2xl overflow-hidden shadow-sm border border-[#FECACA]">
-          <div className="px-4 py-3.5 bg-[#B91C1C] flex items-center gap-2.5">
-            <AlertCircle className="h-4 w-4 text-white flex-shrink-0" />
-            <span className="text-sm font-bold text-white tracking-wide">Ação imediata recomendada</span>
-            <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
+        <div style={{ borderLeftColor: "#B91C1C" }} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 border-l-[3px]">
+          <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-100">
+            <AlertCircle className="h-3.5 w-3.5 text-[#B91C1C] flex-shrink-0" />
+            <span className="text-sm font-bold text-gray-900">Ação imediata recomendada</span>
+            <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">
               {implEvents.length}
             </span>
           </div>
-          <div className="bg-[#FEF2F2] border-t border-[#FECACA] px-4 py-2 space-y-1 pb-3">
+          <div className="px-4 divide-y divide-gray-50">
             {implEvents.map((e) => (
               <ImplantacaoRow key={e.id} event={e} onAction={openModal} />
             ))}
@@ -209,7 +170,8 @@ export function ManejosOperacional({
         id="este-mes"
         ref={refs["este-mes"]}
         theme={THEMES["este-mes"]}
-        label={`${curMonthName} — este mês`}
+        label={`${curMonthName}`}
+        sublabel="este mês"
         count={thisMonthEvs.length}
         open={open["este-mes"]}
         onToggle={() => toggle("este-mes")}
@@ -226,7 +188,8 @@ export function ManejosOperacional({
           id="proximo-mes"
           ref={refs["proximo-mes"]}
           theme={THEMES["proximo-mes"]}
-          label={`Próximo manejo: ${nextMonthName}`}
+          label={nextMonthName}
+          sublabel="próximo manejo"
           count={nextMonthEvs.length}
           open={open["proximo-mes"]}
           onToggle={() => toggle("proximo-mes")}
@@ -237,38 +200,37 @@ export function ManejosOperacional({
           ))}
         </Section>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-2.5">
-          <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0" />
+        <div className="bg-white rounded-2xl shadow-sm px-4 py-3.5 flex items-center gap-2.5 border border-gray-100">
+          <CheckCircle2 className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
           <p className="text-sm text-gray-400">Nenhum manejo futuro programado no calendário.</p>
         </div>
       )}
 
-
       {/* ── Confirmação de dose+reforço ── */}
       {reforcoConfirm && (
-        <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl px-4 py-3 flex items-start gap-3">
+        <div style={{ borderLeftColor: "#16A34A" }} className="bg-white rounded-2xl shadow-sm px-4 py-3.5 flex items-start gap-3 border border-gray-100 border-l-[3px]">
           <CheckCircle2 className="h-4 w-4 text-[#16A34A] flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-bold text-[#14532D]">Dose registrada com sucesso!</p>
-            <p className="text-xs text-[#166534] mt-0.5">
-              Dose registrada em {fmtDateBR(reforcoConfirm.appDate)}.
+            <p className="text-sm font-bold text-gray-900">Dose registrada com sucesso</p>
+            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+              Aplicado em {fmtDateBR(reforcoConfirm.appDate)}.
               Reforço programado para {fmtDateBR(reforcoConfirm.reforcoDate)}.
             </p>
           </div>
-          <button onClick={() => setReforcoConfirm(null)} className="text-[#16A34A] hover:text-[#14532D] flex-shrink-0">
+          <button onClick={() => setReforcoConfirm(null)} className="text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* ── Modal de confirmação ── */}
+      {/* ── Modal ── */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setModal(null)} />
-          <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-sm p-6 space-y-4 shadow-xl">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setModal(null)} />
+          <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-sm p-6 space-y-4 shadow-2xl">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                   {modal.type === "complete" && isDoseReforco(modal.event)
                     ? "Registrar aplicação da dose"
                     : modal.type === "complete" ? "Confirmar realização"
@@ -278,7 +240,7 @@ export function ManejosOperacional({
                 <h3 className="text-base font-bold text-gray-900 mt-0.5 leading-snug">{modal.event.title}</h3>
                 <p className="text-xs text-gray-400 mt-0.5">{modal.event.category_name}</p>
               </div>
-              <button onClick={() => setModal(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 flex-shrink-0">
+              <button onClick={() => setModal(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 flex-shrink-0 transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -289,7 +251,7 @@ export function ManejosOperacional({
                   {isDoseReforco(modal.event) ? "Data da aplicação" : "Data da realização"}
                 </label>
                 <input type="date" value={completedAt} onChange={(e) => setCompletedAt(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000]/30" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
                 {isDoseReforco(modal.event) && (
                   <p className="text-[11px] text-gray-400 mt-1.5">
                     O reforço será programado automaticamente após a confirmação.
@@ -303,7 +265,7 @@ export function ManejosOperacional({
                 <label className="text-xs font-bold text-gray-600 block mb-1.5">Adiar para</label>
                 <input type="date" value={postponedTo} onChange={(e) => setPostponedTo(e.target.value)}
                   min={new Date().toISOString().slice(0, 10)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000]/30" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
               </div>
             )}
 
@@ -312,8 +274,8 @@ export function ManejosOperacional({
                 Observações <span className="font-normal text-gray-400">(opcional)</span>
               </label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-                placeholder="Ex: Aplicado por João, produto X..."
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#CC0000]/30" />
+                placeholder="Ex: aplicado por João, produto X..."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-200" />
             </div>
 
             <div className="flex gap-2">
@@ -323,7 +285,7 @@ export function ManejosOperacional({
               </button>
               <button onClick={handleConfirm}
                 disabled={loading || (modal.type === "postpone" && !postponedTo)}
-                className="flex-1 py-3 rounded-xl bg-[#CC0000] text-white text-sm font-bold disabled:opacity-50 hover:bg-[#AA0000] transition-colors">
+                className="flex-1 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold disabled:opacity-40 hover:bg-gray-700 transition-colors">
                 {loading
                   ? "Salvando..."
                   : modal.type === "complete" && isDoseReforco(modal.event)
@@ -341,59 +303,64 @@ export function ManejosOperacional({
 // ── Section ───────────────────────────────────────────────────────────────────
 
 interface SectionProps {
-  id:       SectionId;
-  theme:    SectionTheme;
-  label:    string;
-  count:    number;
-  open:     boolean;
-  onToggle: () => void;
-  empty:    string;
-  children: React.ReactNode;
+  id:        SectionId;
+  theme:     SectionTheme;
+  label:     string;
+  sublabel?: string;
+  count:     number;
+  open:      boolean;
+  onToggle:  () => void;
+  empty:     string;
+  children:  React.ReactNode;
 }
 
 const Section = React.forwardRef<HTMLDivElement, SectionProps>(
-  function Section({ id, theme, label, count, open, onToggle, empty, children }, ref) {
+  function Section({ id, theme, label, sublabel, count, open, onToggle, empty, children }, ref) {
     return (
-      <div id={id} ref={ref} className="rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-
-        {/* Cabeçalho clicável */}
+      <div
+        id={id}
+        ref={ref}
+        style={{ borderLeftColor: theme.accent }}
+        className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 border-l-[3px]"
+      >
+        {/* Header */}
         <button
           onClick={onToggle}
-          className={`w-full flex items-center justify-between px-4 py-3.5 transition-colors ${theme.header} hover:brightness-95`}
+          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors text-left"
         >
-          <div className="flex items-center gap-2.5">
-            <span className={`text-sm font-bold ${theme.label}`}>{label}</span>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${theme.dot} flex-shrink-0`} />
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-sm font-bold text-gray-900">{label}</span>
+              {sublabel && <span className="text-xs text-gray-400">{sublabel}</span>}
+            </div>
             {count > 0 && (
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${theme.badge}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${theme.badgeBg} ${theme.badgeTxt}`}>
                 {count}
               </span>
             )}
           </div>
-
-          {/* Botão de toggle explícito */}
-          <span className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${theme.toggle} ${theme.toggleTxt}`}>
-            {open
-              ? <><ChevronUp className="h-3.5 w-3.5" />Fechar</>
-              : <><ChevronDown className="h-3.5 w-3.5" />Ver</>
-            }
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-gray-400 font-medium">{open ? "fechar" : "ver"}</span>
+            <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+          </div>
         </button>
 
-        {/* Conteúdo */}
-        {open && (
-          <div className={`border-t ${theme.border} ${theme.content}`}>
+        {/* Content */}
+        <div className={`overflow-hidden transition-all duration-200 ease-in-out ${open ? "max-h-[2000px]" : "max-h-0"}`}>
+          <div className="border-t border-gray-100">
             {count === 0 ? (
               <div className="px-4 py-4 flex items-center gap-2.5">
-                <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0" />
-                <p className="text-sm text-gray-500">{empty}</p>
+                <CheckCircle2 className="h-3.5 w-3.5 text-gray-300 flex-shrink-0" />
+                <p className="text-sm text-gray-400">{empty}</p>
               </div>
             ) : (
-              <div className="px-4 py-2 space-y-1 pb-3">
+              <div className="px-4 divide-y divide-gray-50">
                 {children}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     );
   },
@@ -406,23 +373,23 @@ function ImplantacaoRow({ event, onAction }: {
   onAction: (type: ActionType, event: CalendarEvent) => void;
 }) {
   return (
-    <div className="py-3 border-b border-[#FECACA]/40 last:border-0">
-      <div className="flex items-start gap-2 mb-2.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#B91C1C] flex-shrink-0 mt-2" />
+    <div className="py-3.5 last:pb-3">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#B91C1C] flex-shrink-0 mt-[7px]" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900 leading-snug">{event.title}</p>
           <p className="text-xs text-gray-400 mt-0.5">{event.category_name}</p>
           {event.recommendation && (
-            <p className="text-xs text-[#991B1B] font-semibold mt-1">{event.recommendation}</p>
+            <p className="text-[11px] text-[#B91C1C] font-semibold mt-1">{event.recommendation}</p>
           )}
         </div>
       </div>
-      <div className="pl-3.5">
+      <div className="pl-4">
         <button
           onClick={() => onAction("complete", event)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#B91C1C] text-white text-xs font-bold hover:bg-[#991B1B] transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gray-900 text-white text-[11px] font-bold hover:bg-gray-700 transition-colors"
         >
-          <CheckCircle2 className="h-3.5 w-3.5" />
+          <CheckCircle2 className="h-3 w-3" />
           Registrar aplicação
         </button>
       </div>
@@ -440,30 +407,30 @@ function EventRow({ event, dot, onAction }: {
   const monthLabel = event.month ? MONTHS[event.month - 1] : null;
 
   return (
-    <div className="py-3 border-b border-gray-100/60 last:border-0">
-      <div className="flex items-start gap-2 mb-2.5">
-        <div className={`w-1.5 h-1.5 rounded-full ${dot} flex-shrink-0 mt-2`} />
+    <div className="py-3.5 last:pb-3">
+      <div className="flex items-start gap-3 mb-3">
+        <div className={`w-1.5 h-1.5 rounded-full ${dot} flex-shrink-0 mt-[7px]`} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900 leading-snug">{event.title}</p>
           <p className="text-xs text-gray-400 mt-0.5">
             {event.category_name}{monthLabel ? ` · ${monthLabel}` : ""}
           </p>
           {event.recommendation && (
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">{event.recommendation}</p>
+            <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{event.recommendation}</p>
           )}
         </div>
       </div>
-      <div className="flex gap-2 pl-3.5">
+      <div className="flex gap-1.5 pl-4">
         <button onClick={() => onAction("complete", event)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#CC0000]/10 text-[#CC0000] text-xs font-bold hover:bg-[#CC0000]/20 transition-colors">
-          <CheckCircle2 className="h-3.5 w-3.5" />Realizado
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-900 text-white text-[11px] font-bold hover:bg-gray-700 transition-colors">
+          <CheckCircle2 className="h-3 w-3" />Realizado
         </button>
         <button onClick={() => onAction("postpone", event)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200 transition-colors">
-          <Clock className="h-3.5 w-3.5" />Adiar
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 text-[11px] font-bold hover:bg-gray-50 transition-colors">
+          <Clock className="h-3 w-3" />Adiar
         </button>
         <button onClick={() => onAction("skip", event)}
-          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 text-xs font-bold hover:bg-gray-200 transition-colors">
+          className="px-3 py-1.5 rounded-full text-gray-400 text-[11px] font-medium hover:text-gray-600 transition-colors">
           Não realizado
         </button>
       </div>
