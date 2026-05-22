@@ -26,6 +26,10 @@ export interface CalendarEvent {
   completed_at: string | null;
   postponed_to: string | null;
   notes: string | null;
+  parent_event_id: number | null;
+  is_reforco: number;
+  generated_automatically: number;
+  application_date: string | null;
   created_at: string;
   updated_at: string;
 }

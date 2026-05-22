@@ -84,6 +84,9 @@ export function ManejosOperacional({
   const [notes,       setNotes]       = useState("");
   const [completedAt, setCompletedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [postponedTo, setPostponedTo] = useState("");
+  const [reforcoConfirm, setReforcoConfirm] = useState<{
+    appDate: string; reforcoDate: string; title: string;
+  } | null>(null);
 
   const refs: Record<SectionId, React.RefObject<HTMLDivElement | null>> = {
     "atrasados":   useRef(null),
@@ -119,6 +122,17 @@ export function ManejosOperacional({
     setPostponedTo("");
   }
 
+  // Detecta protocolo de duas etapas — reforços já gerados não criam outro reforço
+  function isDoseReforco(event: CalendarEvent) {
+    return !event.is_reforco &&
+      (event.recommendation ?? "").toUpperCase().includes("DOSE + REFORÇO");
+  }
+
+  function fmtDateBR(iso: string) {
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
   async function handleConfirm() {
     if (!modal) return;
     setLoading(true);
@@ -132,8 +146,18 @@ export function ManejosOperacional({
     });
     setLoading(false);
     if (res.ok) {
-      removeEvent(modal.event.id);
+      const data = await res.json() as { reforco?: { created: boolean; due_date: string } };
+      const capturedModal = modal;
+      removeEvent(capturedModal.event.id);
       setModal(null);
+      // Mostra confirmação de dose+reforço quando aplicável
+      if (data.reforco && isDoseReforco(capturedModal.event)) {
+        setReforcoConfirm({
+          appDate:    completedAt,
+          reforcoDate: data.reforco.due_date,
+          title:      capturedModal.event.title,
+        });
+      }
     }
   }
 
@@ -196,6 +220,23 @@ export function ManejosOperacional({
       )}
 
 
+      {/* ── Confirmação de dose+reforço ── */}
+      {reforcoConfirm && (
+        <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl px-4 py-3 flex items-start gap-3">
+          <CheckCircle2 className="h-4 w-4 text-[#16A34A] flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-[#14532D]">Dose registrada com sucesso!</p>
+            <p className="text-xs text-[#166534] mt-0.5">
+              Dose registrada em {fmtDateBR(reforcoConfirm.appDate)}.
+              Reforço programado para {fmtDateBR(reforcoConfirm.reforcoDate)}.
+            </p>
+          </div>
+          <button onClick={() => setReforcoConfirm(null)} className="text-[#16A34A] hover:text-[#14532D] flex-shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* ── Modal de confirmação ── */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
@@ -204,7 +245,9 @@ export function ManejosOperacional({
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
-                  {modal.type === "complete" ? "Confirmar realização"
+                  {modal.type === "complete" && isDoseReforco(modal.event)
+                    ? "Registrar aplicação da dose"
+                    : modal.type === "complete" ? "Confirmar realização"
                     : modal.type === "postpone" ? "Adiar manejo"
                     : "Não realizado"}
                 </p>
@@ -218,9 +261,16 @@ export function ManejosOperacional({
 
             {modal.type === "complete" && (
               <div>
-                <label className="text-xs font-bold text-gray-600 block mb-1.5">Data da realização</label>
+                <label className="text-xs font-bold text-gray-600 block mb-1.5">
+                  {isDoseReforco(modal.event) ? "Data da aplicação" : "Data da realização"}
+                </label>
                 <input type="date" value={completedAt} onChange={(e) => setCompletedAt(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC0000]/30" />
+                {isDoseReforco(modal.event) && (
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    O reforço será programado automaticamente após a confirmação.
+                  </p>
+                )}
               </div>
             )}
 
@@ -250,7 +300,11 @@ export function ManejosOperacional({
               <button onClick={handleConfirm}
                 disabled={loading || (modal.type === "postpone" && !postponedTo)}
                 className="flex-1 py-3 rounded-xl bg-[#CC0000] text-white text-sm font-bold disabled:opacity-50 hover:bg-[#AA0000] transition-colors">
-                {loading ? "Salvando..." : "Confirmar"}
+                {loading
+                  ? "Salvando..."
+                  : modal.type === "complete" && isDoseReforco(modal.event)
+                    ? "Confirmar aplicação"
+                    : "Confirmar"}
               </button>
             </div>
           </div>
