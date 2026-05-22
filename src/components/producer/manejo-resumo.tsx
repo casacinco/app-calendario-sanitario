@@ -36,7 +36,7 @@ export function ManejoResumo({ overdue, thisMonth, nextMonth }: ManejoResumoProp
         <MetricLink
           href="/dashboard/calendario#este-mes"
           count={thisMonth}
-          label={MONTHS[cur]}
+          label={MONTHS[cur]!}
           activeColor="text-[#CC0000]"
           activeBg=""
           active={thisMonth > 0}
@@ -44,7 +44,7 @@ export function ManejoResumo({ overdue, thisMonth, nextMonth }: ManejoResumoProp
         <MetricLink
           href="/dashboard/calendario#proximo-mes"
           count={nextMonth}
-          label={MONTHS[nxt]}
+          label={MONTHS[nxt]!}
           activeColor="text-gray-700"
           activeBg=""
           active={nextMonth > 0}
