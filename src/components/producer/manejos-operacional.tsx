@@ -24,7 +24,8 @@ export function ManejosOperacional({
 
   // Flat state — filtramos por grupo no render
   const cur = new Date().getMonth() + 1;
-  const nxt = cur === 12 ? 1 : cur + 1;
+  // nxt = mês real do próximo manejo (vindo do server), não necessariamente cur+1
+  const nxt = inm[0]?.month ?? null;
 
   const [events,  setEvents]  = useState(() => [...io, ...itm, ...inm]);
   const [open,    setOpen]    = useState<SectionId>("este-mes");
@@ -49,9 +50,9 @@ export function ManejosOperacional({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const overdue   = events.filter((e) => (e.month ?? 0) < cur);
+  const overdue      = events.filter((e) => (e.month ?? 0) < cur);
   const thisMonthEvs = events.filter((e) => e.month === cur);
-  const nextMonthEvs = events.filter((e) => e.month === nxt);
+  const nextMonthEvs = nxt !== null ? events.filter((e) => e.month === nxt) : [];
 
   function removeEvent(id: number) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
