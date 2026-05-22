@@ -422,7 +422,7 @@ function EventRow({ event, dot, onAction }: {
       </div>
       <div className="flex gap-1.5 pl-4">
         <button onClick={() => onAction("complete", event)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-900 text-white text-[11px] font-bold hover:bg-gray-700 transition-colors">
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#16A34A] text-white text-[11px] font-bold hover:bg-[#15803D] transition-colors">
           <CheckCircle2 className="h-3 w-3" />Realizado
         </button>
         <button onClick={() => onAction("postpone", event)}
@@ -430,7 +430,7 @@ function EventRow({ event, dot, onAction }: {
           <Clock className="h-3 w-3" />Adiar
         </button>
         <button onClick={() => onAction("skip", event)}
-          className="px-3 py-1.5 rounded-full text-gray-400 text-[11px] font-medium hover:text-gray-600 transition-colors">
+          className="px-3 py-1.5 rounded-full text-[#DC2626] text-[11px] font-medium hover:text-[#B91C1C] transition-colors">
           Não realizado
         </button>
       </div>
