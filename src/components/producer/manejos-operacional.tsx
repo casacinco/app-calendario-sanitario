@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { CheckCircle2, Clock, ChevronDown, ChevronUp, X, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, ChevronDown, ChevronUp, X } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar-events";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -137,13 +137,6 @@ export function ManejosOperacional({
     }
   }
 
-  const categories = [
-    ...new Set([
-      ...events.map((e) => e.category_name),
-      ...continuous.map((e) => e.category_name),
-    ].filter(Boolean)),
-  ] as string[];
-
   return (
     <div className="space-y-3">
 
@@ -202,23 +195,6 @@ export function ManejosOperacional({
         </div>
       )}
 
-      {/* ── Categorias de manejo ── */}
-      {categories.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Categorias de manejo</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <span key={cat} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-xs font-bold text-gray-600">
-                <RefreshCw className="h-3 w-3 text-gray-400" />
-                {cat}
-              </span>
-            ))}
-          </div>
-          <p className="text-[11px] text-gray-400 leading-relaxed">
-            Protocolos contínuos — aplicar conforme nascimentos e necessidades do rebanho.
-          </p>
-        </div>
-      )}
 
       {/* ── Modal de confirmação ── */}
       {modal && (
