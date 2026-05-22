@@ -76,10 +76,8 @@ export default async function CalendarioPage() {
   const introConfirmed = !!request?.calendar_intro_confirmed;
   const showAviso    = isDelivered && !isMigration && !introConfirmed;
 
-  const cur = new Date().getMonth();       // 0-based
-  const nxt = cur === 11 ? 0 : cur + 1;   // 0-based
-  const curMonthName  = MONTHS[cur]!;
-  const nextMonthName = MONTHS[nxt]!;
+  const cur = new Date().getMonth();  // 0-based
+  const curMonthName = MONTHS[cur]!;
 
   // Busca eventos apenas se o calendário está publicado
   const events = (isDelivered && calPublished)
@@ -122,7 +120,7 @@ export default async function CalendarioPage() {
               nextMonth={events.nextMonth}
               continuous={events.continuous}
               curMonthName={curMonthName}
-              nextMonthName={nextMonthName}
+              nextMonthName={events.nextMonthIndex !== null ? MONTHS[events.nextMonthIndex - 1]! : null}
             />
 
             {/* ── 6. Calendário visual ── */}

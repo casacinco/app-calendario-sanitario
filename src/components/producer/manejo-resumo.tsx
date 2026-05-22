@@ -3,15 +3,16 @@ import Link from "next/link";
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 interface ManejoResumoProps {
-  overdue:   number;
-  thisMonth: number;
-  nextMonth: number;
+  overdue:        number;
+  thisMonth:      number;
+  nextMonth:      number;
+  nextMonthIndex: number | null;  // mês real do próximo manejo (1-12), null se não houver
 }
 
-export function ManejoResumo({ overdue, thisMonth, nextMonth }: ManejoResumoProps) {
-  const cur     = new Date().getMonth();       // 0-based
-  const nxt     = cur === 11 ? 0 : cur + 1;   // 0-based
-  const allZero = overdue === 0 && thisMonth === 0 && nextMonth === 0;
+export function ManejoResumo({ overdue, thisMonth, nextMonth, nextMonthIndex }: ManejoResumoProps) {
+  const cur          = new Date().getMonth();       // 0-based
+  const nextMonthLabel = nextMonthIndex !== null ? MONTHS[nextMonthIndex - 1]! : "—";
+  const allZero      = overdue === 0 && thisMonth === 0 && nextMonth === 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -44,7 +45,7 @@ export function ManejoResumo({ overdue, thisMonth, nextMonth }: ManejoResumoProp
         <MetricLink
           href="/dashboard/calendario#proximo-mes"
           count={nextMonth}
-          label={MONTHS[nxt]!}
+          label={nextMonthLabel}
           activeColor="text-gray-700"
           activeBg=""
           active={nextMonth > 0}

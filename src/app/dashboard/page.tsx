@@ -227,6 +227,7 @@ export default async function DashboardPage() {
             overdue={counts.overdue}
             thisMonth={counts.thisMonth}
             nextMonth={counts.nextMonth}
+            nextMonthIndex={counts.nextMonthIndex}
           />
         )}
 

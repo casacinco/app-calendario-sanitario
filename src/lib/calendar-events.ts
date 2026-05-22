@@ -236,20 +236,36 @@ function isVisible(month: number, activationMonth: number, cur: number): boolean
   return true;
 }
 
+// Retorna o primeiro mês futuro (> cur) com eventos visíveis, ou null se não houver.
+function findNextEventMonth(
+  visible: CalendarEvent[],
+  cur: number,
+): number | null {
+  const months = [
+    ...new Set(
+      visible
+        .filter((e) => e.month !== null && e.month > cur)
+        .map((e) => e.month as number),
+    ),
+  ].sort((a, b) => a - b);
+  return months[0] ?? null;
+}
+
 // Contagens para o card resumo na home
 export async function getEventCounts(
   db: D1Database,
   userId: number,
-): Promise<{ overdue: number; thisMonth: number; nextMonth: number }> {
-  const cur            = new Date().getMonth() + 1;
-  const nxt            = cur === 12 ? 1 : cur + 1;
+): Promise<{ overdue: number; thisMonth: number; nextMonth: number; nextMonthIndex: number | null }> {
+  const cur             = new Date().getMonth() + 1;
   const activationMonth = await getActivationMonth(db, userId);
-  const { scheduled }  = await getEventsByUser(db, userId);
-  const visible        = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
+  const { scheduled }   = await getEventsByUser(db, userId);
+  const visible         = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
+  const nextMonthIndex  = findNextEventMonth(visible, cur);
   return {
-    overdue:   visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)).length,
-    thisMonth: visible.filter((e) => e.month === cur).length,
-    nextMonth: visible.filter((e) => e.month === nxt && isVisible(nxt, activationMonth, cur)).length,
+    overdue:        visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)).length,
+    thisMonth:      visible.filter((e) => e.month === cur).length,
+    nextMonth:      nextMonthIndex !== null ? visible.filter((e) => e.month === nextMonthIndex).length : 0,
+    nextMonthIndex,
   };
 }
 
@@ -258,20 +274,22 @@ export async function getEventsGrouped(
   db: D1Database,
   userId: number,
 ): Promise<{
-  overdue:    CalendarEvent[];
-  thisMonth:  CalendarEvent[];
-  nextMonth:  CalendarEvent[];
-  continuous: CalendarEvent[];
+  overdue:        CalendarEvent[];
+  thisMonth:      CalendarEvent[];
+  nextMonth:      CalendarEvent[];
+  nextMonthIndex: number | null;
+  continuous:     CalendarEvent[];
 }> {
   const cur             = new Date().getMonth() + 1;
-  const nxt             = cur === 12 ? 1 : cur + 1;
   const activationMonth = await getActivationMonth(db, userId);
   const { scheduled, continuous } = await getEventsByUser(db, userId);
-  const visible = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
+  const visible        = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
+  const nextMonthIndex = findNextEventMonth(visible, cur);
   return {
-    overdue:   visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)),
-    thisMonth: visible.filter((e) => e.month === cur),
-    nextMonth: visible.filter((e) => e.month === nxt && isVisible(nxt, activationMonth, cur)),
+    overdue:        visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)),
+    thisMonth:      visible.filter((e) => e.month === cur),
+    nextMonth:      nextMonthIndex !== null ? visible.filter((e) => e.month === nextMonthIndex) : [],
+    nextMonthIndex,
     continuous,
   };
 }

@@ -14,7 +14,7 @@ interface ManejosOperacionalProps {
   nextMonth:      CalendarEvent[];
   continuous:     CalendarEvent[];
   curMonthName:   string;
-  nextMonthName:  string;
+  nextMonthName:  string | null;  // null = nenhum mês futuro com manejo
 }
 
 export function ManejosOperacional({
@@ -125,21 +125,28 @@ export function ManejosOperacional({
         {thisMonthEvs.map((e) => <EventRow key={e.id} event={e} onAction={openModal} />)}
       </Section>
 
-      {/* ── Próximo mês ── */}
-      <Section
-        id="proximo-mes"
-        ref={refs["proximo-mes"]}
-        label={`${nextMonthName} — próximo mês`}
-        count={nextMonthEvs.length}
-        labelColor="text-gray-700"
-        countBg="bg-gray-100 text-gray-600"
-        defaultOpen={false}
-        open={open === "proximo-mes"}
-        onToggle={() => setOpen((p) => p === "proximo-mes" ? "este-mes" : "proximo-mes")}
-        empty="Nenhum manejo previsto para o próximo mês."
-      >
-        {nextMonthEvs.map((e) => <EventRow key={e.id} event={e} onAction={openModal} />)}
-      </Section>
+      {/* ── Próximo manejo ── */}
+      {nextMonthName ? (
+        <Section
+          id="proximo-mes"
+          ref={refs["proximo-mes"]}
+          label={`Próximo manejo: ${nextMonthName}`}
+          count={nextMonthEvs.length}
+          labelColor="text-gray-700"
+          countBg="bg-gray-100 text-gray-600"
+          defaultOpen={false}
+          open={open === "proximo-mes"}
+          onToggle={() => setOpen((p) => p === "proximo-mes" ? "este-mes" : "proximo-mes")}
+          empty="Nenhum manejo previsto."
+        >
+          {nextMonthEvs.map((e) => <EventRow key={e.id} event={e} onAction={openModal} />)}
+        </Section>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-2.5">
+          <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0" />
+          <p className="text-sm text-gray-400">Nenhum manejo futuro programado no calendário.</p>
+        </div>
+      )}
 
       {/* ── Categorias de manejo ── */}
       {categories.length > 0 && (
