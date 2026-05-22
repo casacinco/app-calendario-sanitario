@@ -8,7 +8,7 @@ import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
 import { BackButton } from "@/components/producer/back-button";
 import { ScaledIframe } from "@/components/producer/scaled-iframe";
-import { AvisoImportante } from "@/components/producer/aviso-importante";
+import { OnboardingSanitario } from "@/components/producer/aviso-importante";
 import { ManejosOperacional } from "@/components/producer/manejos-operacional";
 import { getEventsGrouped } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
@@ -110,10 +110,11 @@ export default async function CalendarioPage() {
 
         {isDelivered && calId && calPublished && events ? (
           <>
-            {/* ── 1. Aviso importante ── */}
-            {showAviso && <AvisoImportante />}
+            {/* ── Onboarding sanitário inicial — oculta tudo até ser concluído ── */}
+            {showAviso ? <OnboardingSanitario /> : (
+            <>
 
-            {/* ── 2-5. Atrasados / Este mês / Próximo mês / Categorias ── */}
+            {/* ── Manejos operacionais ── */}
             <ManejosOperacional
               overdue={events.overdue}
               thisMonth={events.thisMonth}
@@ -124,7 +125,7 @@ export default async function CalendarioPage() {
               nextMonthName={events.nextMonthIndex !== null ? MONTHS[events.nextMonthIndex - 1]! : null}
             />
 
-            {/* ── 6. Calendário visual ── */}
+            {/* ── Calendário visual ── */}
             <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-[#CC0000]" />
@@ -144,6 +145,8 @@ export default async function CalendarioPage() {
                 </Link>
               </div>
             </div>
+            </>
+            )}
           </>
 
         ) : request ? (

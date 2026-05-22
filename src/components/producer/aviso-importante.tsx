@@ -2,28 +2,25 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
+import { CalendarDays, CheckCircle2 } from "lucide-react";
 
 type ChecklistKey = "clostridiose" | "pasteurelose" | "vermifugo" | "suplementacao";
 type ChecklistVal = "done" | "pending" | null;
 
-const ITEMS: { key: ChecklistKey; label: string; sub: string }[] = [
-  { key: "clostridiose",  label: "Clostridiose",            sub: "Dose + Reforço" },
-  { key: "pasteurelose",  label: "Pasteurelose",            sub: "Dose + Reforço" },
-  { key: "vermifugo",     label: "Vermífugo",               sub: "Dose + Reforço" },
-  { key: "suplementacao", label: "Suplementação (Catofós)", sub: "Dose" },
+const ITEMS: {
+  key:        ChecklistKey;
+  label:      string;
+  indication: string;
+  sub:        string;
+}[] = [
+  { key: "clostridiose",  label: "Vacina contra Clostridiose",  indication: "DOSE + REFORÇO", sub: "Vacinação" },
+  { key: "pasteurelose",  label: "Vacina contra Pasteurelose",  indication: "DOSE + REFORÇO", sub: "Vacinação" },
+  { key: "vermifugo",     label: "Manejo de Vermifugação",      indication: "DOSE + REFORÇO", sub: "Vermifugação" },
+  { key: "suplementacao", label: "Manejo de Suplementação",     indication: "DOSE (Catofós)", sub: "Suplementação" },
 ];
 
-const URGENTES = [
-  "Vacina contra Clostridiose — DOSE + REFORÇO",
-  "Vacina contra Pasteurelose — DOSE + REFORÇO",
-  "Manejo de Vermifugação — DOSE + REFORÇO",
-  "Manejo de Suplementação — DOSE (Catofós)",
-];
-
-export function AvisoImportante() {
+export function OnboardingSanitario() {
   const router = useRouter();
-  const [step, setStep] = useState<0 | 1>(0);
   const [checklist, setChecklist] = useState<Record<ChecklistKey, ChecklistVal>>({
     clostridiose:  null,
     pasteurelose:  null,
@@ -49,112 +46,139 @@ export function AvisoImportante() {
     router.refresh();
   }
 
-  // ── Etapa 0: aviso ────────────────────────────────────────────────────────
-  if (step === 0) {
-    return (
-      <div className="rounded-2xl overflow-hidden shadow-sm border border-amber-200 bg-amber-50">
-        <div className="px-4 py-3 border-b border-amber-200 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-          <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
-            Importante — leia antes de utilizar o calendário
-          </p>
-        </div>
-
-        <div className="px-4 py-4 space-y-4">
-          <p className="text-sm text-amber-800 leading-relaxed">
-            Este calendário sanitário foi elaborado exclusivamente para o seu rebanho,
-            considerando suas condições específicas de criação, região e histórico sanitário.
-          </p>
-          <p className="text-sm text-amber-800 leading-relaxed">
-            Caso o rebanho ainda não utilize nenhum calendário sanitário ou não tenham sido
-            realizados manejos preventivos nos últimos 3 meses, siga imediatamente as
-            recomendações abaixo em{" "}
-            <strong>todos os animais com idade acima de 3 meses</strong>.
-          </p>
-
-          <div className="bg-amber-100 rounded-xl px-3 py-3 space-y-2">
-            {URGENTES.map((item) => (
-              <div key={item} className="flex items-center gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 flex-shrink-0" />
-                <span className="text-sm font-semibold text-amber-900">{item}</span>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setStep(1)}
-            className="flex items-center gap-2 w-full justify-center py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            LI E COMPREENDI
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Etapa 1: checklist ────────────────────────────────────────────────────
   return (
-    <div className="rounded-2xl overflow-hidden shadow-sm border border-amber-200 bg-amber-50">
-      <div className="px-4 py-3 border-b border-amber-200 flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-        <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
-          Ação imediata recomendada
+    <div className="py-4 space-y-6">
+
+      {/* ── Cabeçalho ── */}
+      <div className="text-center space-y-3 px-2">
+        <div className="w-12 h-12 rounded-2xl bg-[#CC0000]/10 flex items-center justify-center mx-auto">
+          <CalendarDays className="h-6 w-6 text-[#CC0000]" />
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-[#CC0000] uppercase tracking-widest mb-1">
+            Configuração inicial
+          </p>
+          <h1 className="text-xl font-bold text-gray-900 leading-snug">
+            Ativação do calendário sanitário
+          </h1>
+        </div>
+        <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto">
+          Seu calendário foi elaborado considerando as características específicas do seu
+          rebanho, região e sistema de manejo. Antes de iniciar, precisamos validar a
+          situação sanitária atual dos animais.
         </p>
       </div>
 
-      <div className="px-4 py-4 space-y-4">
-        <p className="text-sm font-semibold text-amber-800">
-          Esses manejos já foram realizados nos últimos 3 meses?
+      {/* ── Contexto ── */}
+      <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100">
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Caso o rebanho ainda não utilize nenhum calendário sanitário ou não tenham sido
+          realizados manejos preventivos nos últimos 3 meses, os itens abaixo devem ser
+          aplicados imediatamente em{" "}
+          <strong className="text-gray-800">todos os animais acima de 3 meses</strong>.
         </p>
+      </div>
 
-        <div className="space-y-2.5">
-          {ITEMS.map((item) => {
-            const val = checklist[item.key];
-            return (
-              <div key={item.key} className="bg-white rounded-xl px-3 py-3 border border-amber-100">
-                <div className="flex items-center justify-between gap-3">
+      {/* ── Checklist ── */}
+      <div className="space-y-3">
+        {ITEMS.map((item) => {
+          const val = checklist[item.key];
+          return (
+            <div
+              key={item.key}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+            >
+              {/* Item header */}
+              <div className="px-4 pt-4 pb-3 border-b border-gray-50">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-gray-900">{item.label}</p>
-                    <p className="text-xs text-gray-400">{item.sub}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => mark(item.key, "done")}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        val === "done"
-                          ? "bg-[#16A34A] text-white"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      Já realizei
-                    </button>
-                    <button
-                      onClick={() => mark(item.key, "pending")}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        val === "pending"
-                          ? "bg-[#CC0000] text-white"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      NÃO realizei
-                    </button>
-                  </div>
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 whitespace-nowrap flex-shrink-0 mt-0.5">
+                    {item.indication}
+                  </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        <button
-          onClick={handleConfirm}
-          disabled={!allAnswered || loading}
-          className="flex items-center gap-2 w-full justify-center py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 disabled:opacity-50 transition-colors"
-        >
-          <CheckCircle2 className="h-4 w-4" />
-          {loading ? "Salvando..." : "Confirmar situação sanitária"}
-        </button>
+              {/* Radio options */}
+              <div>
+                {/* Opção: Já realizado */}
+                <button
+                  onClick={() => mark(item.key, "done")}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors border-b border-gray-50 ${
+                    val === "done" ? "bg-[#F0FDF4]" : "hover:bg-gray-50/70"
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      val === "done" ? "border-[#16A34A] bg-[#16A34A]" : "border-gray-300"
+                    }`}
+                  >
+                    {val === "done" && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm transition-colors ${
+                      val === "done"
+                        ? "font-semibold text-[#15803D]"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    Já realizado nos últimos 3 meses
+                  </span>
+                  {val === "done" && (
+                    <CheckCircle2 className="h-4 w-4 text-[#16A34A] ml-auto flex-shrink-0" />
+                  )}
+                </button>
+
+                {/* Opção: Ainda não realizado */}
+                <button
+                  onClick={() => mark(item.key, "pending")}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                    val === "pending" ? "bg-[#FEF2F2]" : "hover:bg-gray-50/70"
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      val === "pending" ? "border-[#DC2626] bg-[#DC2626]" : "border-gray-300"
+                    }`}
+                  >
+                    {val === "pending" && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm transition-colors ${
+                      val === "pending"
+                        ? "font-semibold text-[#DC2626]"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    Ainda não realizado
+                  </span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* ── Botão confirmar ── */}
+      <button
+        onClick={handleConfirm}
+        disabled={!allAnswered || loading}
+        className="w-full py-4 rounded-2xl bg-[#CC0000] text-white text-sm font-bold tracking-wide hover:bg-[#AA0000] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+      >
+        {loading ? "Salvando..." : "CONFIRMAR SITUAÇÃO SANITÁRIA"}
+      </button>
+
+      {!allAnswered && (
+        <p className="text-center text-xs text-gray-400">
+          Responda todos os itens para continuar
+        </p>
+      )}
     </div>
   );
 }
