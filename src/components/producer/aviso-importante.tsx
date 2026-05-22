@@ -15,10 +15,10 @@ const ITEMS: { key: ChecklistKey; label: string; sub: string }[] = [
 ];
 
 const URGENTES = [
-  "Clostridiose — DOSE + REFORÇO",
-  "Pasteurelose — DOSE + REFORÇO",
-  "Vermífugo — DOSE + REFORÇO",
-  "Suplementação — DOSE (Catofós)",
+  "Vacina contra Clostridiose — DOSE + REFORÇO",
+  "Vacina contra Pasteurelose — DOSE + REFORÇO",
+  "Manejo de Vermifugação — DOSE + REFORÇO",
+  "Manejo de Suplementação — DOSE (Catofós)",
 ];
 
 export function AvisoImportante() {
@@ -66,10 +66,10 @@ export function AvisoImportante() {
             considerando suas condições específicas de criação, região e histórico sanitário.
           </p>
           <p className="text-sm text-amber-800 leading-relaxed">
-            Caso o rebanho ainda não utilize nenhum calendário sanitário e{" "}
-            <strong>não tenha sido realizada vacinação contra clostridiose e pasteurelose
-            nos últimos 3 meses</strong>, siga imediatamente a recomendação abaixo em
-            todos os animais com idade acima de 3 meses.
+            Caso o rebanho ainda não utilize nenhum calendário sanitário ou não tenham sido
+            realizados manejos preventivos nos últimos 3 meses, siga imediatamente as
+            recomendações abaixo em{" "}
+            <strong>todos os animais com idade acima de 3 meses</strong>.
           </p>
 
           <div className="bg-amber-100 rounded-xl px-3 py-3 space-y-2">
@@ -86,7 +86,7 @@ export function AvisoImportante() {
             className="flex items-center gap-2 w-full justify-center py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-colors"
           >
             <CheckCircle2 className="h-4 w-4" />
-            Li e compreendi
+            LI E COMPREENDI
           </button>
         </div>
       </div>
