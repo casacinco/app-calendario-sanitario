@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, ChevronDown, ChevronUp, X } from "lucide-react";
+import { CheckCircle2, Clock, ChevronDown, ChevronUp, X, AlertCircle } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar-events";
 
 const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -61,20 +61,22 @@ interface ManejosOperacionalProps {
   thisMonth:     CalendarEvent[];
   nextMonth:     CalendarEvent[];
   continuous:    CalendarEvent[];
+  implantacao:   CalendarEvent[];
   curMonthName:  string;
   nextMonthName: string | null;
 }
 
 export function ManejosOperacional({
   overdue: io, thisMonth: itm, nextMonth: inm,
-  continuous, curMonthName, nextMonthName,
+  continuous, implantacao: iimpl, curMonthName, nextMonthName,
 }: ManejosOperacionalProps) {
 
   const router = useRouter();
   const cur = new Date().getMonth() + 1;
   const nxt = inm[0]?.month ?? null;
 
-  const [events,  setEvents]  = useState(() => [...io, ...itm, ...inm]);
+  const [events,      setEvents]      = useState(() => [...io, ...itm, ...inm]);
+  const [implEvents,  setImplEvents]  = useState(() => [...iimpl]);
   // Cada seção tem seu próprio estado aberto/fechado — independentes entre si
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     "atrasados":   false,
@@ -115,6 +117,7 @@ export function ManejosOperacional({
 
   function removeEvent(id: number) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
+    setImplEvents((prev) => prev.filter((e) => e.id !== id));
   }
 
   function openModal(type: ActionType, event: CalendarEvent) {
@@ -166,6 +169,24 @@ export function ManejosOperacional({
 
   return (
     <div className="space-y-3">
+
+      {/* ── Ação imediata (implantação sanitária) ── */}
+      {implEvents.length > 0 && (
+        <div className="rounded-2xl overflow-hidden shadow-sm border border-[#FECACA]">
+          <div className="px-4 py-3.5 bg-[#B91C1C] flex items-center gap-2.5">
+            <AlertCircle className="h-4 w-4 text-white flex-shrink-0" />
+            <span className="text-sm font-bold text-white tracking-wide">Ação imediata recomendada</span>
+            <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">
+              {implEvents.length}
+            </span>
+          </div>
+          <div className="bg-[#FEF2F2] border-t border-[#FECACA] px-4 py-2 space-y-1 pb-3">
+            {implEvents.map((e) => (
+              <ImplantacaoRow key={e.id} event={e} onAction={openModal} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Atrasados ── */}
       <Section
@@ -377,6 +398,37 @@ const Section = React.forwardRef<HTMLDivElement, SectionProps>(
     );
   },
 );
+
+// ── ImplantacaoRow ────────────────────────────────────────────────────────────
+
+function ImplantacaoRow({ event, onAction }: {
+  event:    CalendarEvent;
+  onAction: (type: ActionType, event: CalendarEvent) => void;
+}) {
+  return (
+    <div className="py-3 border-b border-[#FECACA]/40 last:border-0">
+      <div className="flex items-start gap-2 mb-2.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#B91C1C] flex-shrink-0 mt-2" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-gray-900 leading-snug">{event.title}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{event.category_name}</p>
+          {event.recommendation && (
+            <p className="text-xs text-[#991B1B] font-semibold mt-1">{event.recommendation}</p>
+          )}
+        </div>
+      </div>
+      <div className="pl-3.5">
+        <button
+          onClick={() => onAction("complete", event)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#B91C1C] text-white text-xs font-bold hover:bg-[#991B1B] transition-colors"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Registrar aplicação
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ── EventRow ─────────────────────────────────────────────────────────────────
 

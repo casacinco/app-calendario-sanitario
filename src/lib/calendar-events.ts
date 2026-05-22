@@ -30,6 +30,7 @@ export interface CalendarEvent {
   is_reforco: number;
   generated_automatically: number;
   application_date: string | null;
+  event_origin: string; // 'calendar' | 'implantacao'
   created_at: string;
   updated_at: string;
 }
@@ -255,7 +256,7 @@ function findNextEventMonth(
   return months[0] ?? null;
 }
 
-// Contagens para o card resumo na home
+// Contagens para o card resumo na home (exclui eventos de implantação)
 export async function getEventCounts(
   db: D1Database,
   userId: number,
@@ -263,7 +264,8 @@ export async function getEventCounts(
   const cur             = new Date().getMonth() + 1;
   const activationMonth = await getActivationMonth(db, userId);
   const { scheduled }   = await getEventsByUser(db, userId);
-  const visible         = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
+  const regular         = scheduled.filter((e) => e.event_origin !== "implantacao");
+  const visible         = regular.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
   const nextMonthIndex  = findNextEventMonth(visible, cur);
   return {
     overdue:        visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)).length,
@@ -273,7 +275,8 @@ export async function getEventCounts(
   };
 }
 
-// Eventos agrupados para a aba Calendário (visão operacional completa)
+// Eventos agrupados para a aba Calendário (visão operacional completa).
+// Eventos de implantação são retornados separadamente — não entram como atrasados.
 export async function getEventsGrouped(
   db: D1Database,
   userId: number,
@@ -283,11 +286,16 @@ export async function getEventsGrouped(
   nextMonth:      CalendarEvent[];
   nextMonthIndex: number | null;
   continuous:     CalendarEvent[];
+  implantacao:    CalendarEvent[];
 }> {
   const cur             = new Date().getMonth() + 1;
   const activationMonth = await getActivationMonth(db, userId);
   const { scheduled, continuous } = await getEventsByUser(db, userId);
-  const visible        = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
+
+  const implantacao = scheduled.filter((e) => e.event_origin === "implantacao");
+  const regular     = scheduled.filter((e) => e.event_origin !== "implantacao");
+
+  const visible        = regular.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
   const nextMonthIndex = findNextEventMonth(visible, cur);
   return {
     overdue:        visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)),
@@ -295,5 +303,6 @@ export async function getEventsGrouped(
     nextMonth:      nextMonthIndex !== null ? visible.filter((e) => e.month === nextMonthIndex) : [],
     nextMonthIndex,
     continuous,
+    implantacao,
   };
 }

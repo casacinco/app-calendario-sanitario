@@ -119,6 +119,7 @@ export default async function CalendarioPage() {
               thisMonth={events.thisMonth}
               nextMonth={events.nextMonth}
               continuous={events.continuous}
+              implantacao={events.implantacao}
               curMonthName={curMonthName}
               nextMonthName={events.nextMonthIndex !== null ? MONTHS[events.nextMonthIndex - 1]! : null}
             />
