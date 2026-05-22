@@ -1366,8 +1366,9 @@ export async function publishCalendar(
       .prepare(
         `UPDATE calendars
          SET status = 'published',
-             published_at = datetime('now'),
-             updated_at  = datetime('now')
+             published_at    = datetime('now'),
+             activation_month = CAST(strftime('%m', 'now') AS INTEGER),
+             updated_at      = datetime('now')
          WHERE id = ?1`,
       )
       .bind(input.calendar_id),

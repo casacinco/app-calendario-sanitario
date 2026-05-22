@@ -195,19 +195,61 @@ export async function getEventsByUser(
   return { scheduled, continuous };
 }
 
+// Busca o activation_month do calendário publicado do usuário.
+// activation_month define o ponto de início do protocolo sanitário —
+// eventos em meses anteriores não são atrasados, simplesmente não existem para este ciclo.
+async function getActivationMonth(db: D1Database, userId: number): Promise<number> {
+  const row = await db
+    .prepare(
+      `SELECT c.activation_month
+       FROM calendars c
+       JOIN calendar_requests cr ON cr.id = c.request_id
+       WHERE cr.user_id = ?1 AND c.status = 'published'
+       ORDER BY c.published_at DESC LIMIT 1`,
+    )
+    .bind(userId)
+    .first<{ activation_month: number | null }>();
+  // Fallback: janeiro (comportamento conservador se a coluna ainda não foi preenchida)
+  return row?.activation_month ?? 1;
+}
+
+// Determina se um evento de determinado mês é "atrasado" com base no mês de ativação.
+// Trata corretamente o caso de virada de ano (ex: ativação em nov, consulta em fev).
+function isOverdue(month: number, activationMonth: number, cur: number): boolean {
+  if (cur >= activationMonth) {
+    // Mesmo ciclo anual: atrasado se >= ativação e < mês atual
+    return month >= activationMonth && month < cur;
+  } else {
+    // Virada de ano (ex: ativação nov=11, agora fev=2):
+    // atrasado se está no fim do ano anterior (>= ativação) OU no começo do ano atual (< mês atual)
+    return month >= activationMonth || month < cur;
+  }
+}
+
+// Determina se um evento deve ser exibido (oculta meses anteriores ao início do protocolo).
+function isVisible(month: number, activationMonth: number, cur: number): boolean {
+  if (cur >= activationMonth) {
+    // Sem virada: oculta meses anteriores à ativação
+    return month >= activationMonth;
+  }
+  // Com virada de ano: todos os meses são relevantes
+  return true;
+}
+
 // Contagens para o card resumo na home
 export async function getEventCounts(
   db: D1Database,
   userId: number,
 ): Promise<{ overdue: number; thisMonth: number; nextMonth: number }> {
-  const now       = new Date();
-  const cur       = now.getMonth() + 1;
-  const nxt       = cur === 12 ? 1 : cur + 1;
-  const { scheduled } = await getEventsByUser(db, userId);
+  const cur            = new Date().getMonth() + 1;
+  const nxt            = cur === 12 ? 1 : cur + 1;
+  const activationMonth = await getActivationMonth(db, userId);
+  const { scheduled }  = await getEventsByUser(db, userId);
+  const visible        = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
   return {
-    overdue:   scheduled.filter((e) => (e.month ?? 0) < cur).length,
-    thisMonth: scheduled.filter((e) => e.month === cur).length,
-    nextMonth: scheduled.filter((e) => e.month === nxt).length,
+    overdue:   visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)).length,
+    thisMonth: visible.filter((e) => e.month === cur).length,
+    nextMonth: visible.filter((e) => e.month === nxt && isVisible(nxt, activationMonth, cur)).length,
   };
 }
 
@@ -221,13 +263,15 @@ export async function getEventsGrouped(
   nextMonth:  CalendarEvent[];
   continuous: CalendarEvent[];
 }> {
-  const cur = new Date().getMonth() + 1;
-  const nxt = cur === 12 ? 1 : cur + 1;
+  const cur             = new Date().getMonth() + 1;
+  const nxt             = cur === 12 ? 1 : cur + 1;
+  const activationMonth = await getActivationMonth(db, userId);
   const { scheduled, continuous } = await getEventsByUser(db, userId);
+  const visible = scheduled.filter((e) => e.month === null || isVisible(e.month, activationMonth, cur));
   return {
-    overdue:   scheduled.filter((e) => (e.month ?? 0) < cur),
-    thisMonth: scheduled.filter((e) => e.month === cur),
-    nextMonth: scheduled.filter((e) => e.month === nxt),
+    overdue:   visible.filter((e) => e.month !== null && isOverdue(e.month, activationMonth, cur)),
+    thisMonth: visible.filter((e) => e.month === cur),
+    nextMonth: visible.filter((e) => e.month === nxt && isVisible(nxt, activationMonth, cur)),
     continuous,
   };
 }
