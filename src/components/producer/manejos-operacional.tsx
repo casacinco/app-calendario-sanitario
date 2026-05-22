@@ -430,7 +430,7 @@ function EventRow({ event, dot, onAction }: {
           <Clock className="h-3 w-3" />Adiar
         </button>
         <button onClick={() => onAction("skip", event)}
-          className="px-3 py-1.5 rounded-full text-[#DC2626] text-[11px] font-medium hover:text-[#B91C1C] transition-colors">
+          className="px-3 py-1.5 rounded-full border border-[#DC2626] text-[#DC2626] text-[11px] font-bold hover:bg-[#FEF2F2] transition-colors">
           Não realizado
         </button>
       </div>
