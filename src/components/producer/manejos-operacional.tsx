@@ -20,16 +20,18 @@ type SectionTheme = {
   content:   string;   // fundo do conteúdo
 };
 
+// Nota: bg-red-* e bg-green-* não funcionam pois o tailwind.config.ts sobrescreve
+// os paletes red e green com CSS vars de cor única. Usamos valores arbitrários.
 const THEMES: Record<SectionId, SectionTheme> = {
   "atrasados": {
-    header:    "bg-red-100",
-    border:    "border-red-200",
-    label:     "text-red-800",
-    badge:     "bg-red-200 text-red-900",
-    toggle:    "bg-red-200 hover:bg-red-300",
-    toggleTxt: "text-red-800",
-    dot:       "bg-red-500",
-    content:   "bg-red-50",
+    header:    "bg-[#FEE2E2]",
+    border:    "border-[#FECACA]",
+    label:     "text-[#991B1B]",
+    badge:     "bg-[#FECACA] text-[#7F1D1D]",
+    toggle:    "bg-[#FECACA] hover:bg-[#FCA5A5]",
+    toggleTxt: "text-[#991B1B]",
+    dot:       "bg-[#EF4444]",
+    content:   "bg-[#FEF2F2]",
   },
   "este-mes": {
     header:    "bg-amber-100",
@@ -42,14 +44,14 @@ const THEMES: Record<SectionId, SectionTheme> = {
     content:   "bg-amber-50",
   },
   "proximo-mes": {
-    header:    "bg-green-100",
-    border:    "border-green-200",
-    label:     "text-green-900",
-    badge:     "bg-green-200 text-green-900",
-    toggle:    "bg-green-200 hover:bg-green-300",
-    toggleTxt: "text-green-800",
-    dot:       "bg-green-500",
-    content:   "bg-green-50",
+    header:    "bg-[#DCFCE7]",
+    border:    "border-[#BBF7D0]",
+    label:     "text-[#14532D]",
+    badge:     "bg-[#BBF7D0] text-[#14532D]",
+    toggle:    "bg-[#BBF7D0] hover:bg-[#86EFAC]",
+    toggleTxt: "text-[#166534]",
+    dot:       "bg-[#22C55E]",
+    content:   "bg-[#F0FDF4]",
   },
 };
 
