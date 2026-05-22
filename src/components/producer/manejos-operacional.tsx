@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, Clock, ChevronDown, ChevronUp, X, RefreshCw } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar-events";
 
@@ -8,13 +8,58 @@ const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov
 type ActionType = "complete" | "postpone" | "skip";
 type SectionId  = "atrasados" | "este-mes" | "proximo-mes";
 
+// Tema visual por bloco
+type SectionTheme = {
+  header:    string;   // fundo do cabeçalho
+  border:    string;   // separador cabeçalho / conteúdo
+  label:     string;   // cor do título
+  badge:     string;   // badge de contagem
+  toggle:    string;   // botão ver/fechar
+  toggleTxt: string;
+  dot:       string;   // bolinha do evento
+  content:   string;   // fundo do conteúdo
+};
+
+const THEMES: Record<SectionId, SectionTheme> = {
+  "atrasados": {
+    header:    "bg-red-50",
+    border:    "border-red-100",
+    label:     "text-red-700",
+    badge:     "bg-red-100 text-red-700",
+    toggle:    "bg-red-100 hover:bg-red-200",
+    toggleTxt: "text-red-700",
+    dot:       "bg-red-500",
+    content:   "bg-red-50/30",
+  },
+  "este-mes": {
+    header:    "bg-amber-50",
+    border:    "border-amber-100",
+    label:     "text-amber-800",
+    badge:     "bg-amber-100 text-amber-800",
+    toggle:    "bg-amber-100 hover:bg-amber-200",
+    toggleTxt: "text-amber-700",
+    dot:       "bg-amber-500",
+    content:   "bg-amber-50/30",
+  },
+  "proximo-mes": {
+    header:    "bg-green-50",
+    border:    "border-green-100",
+    label:     "text-green-800",
+    badge:     "bg-green-100 text-green-800",
+    toggle:    "bg-green-100 hover:bg-green-200",
+    toggleTxt: "text-green-700",
+    dot:       "bg-green-500",
+    content:   "bg-green-50/30",
+  },
+};
+
 interface ManejosOperacionalProps {
-  overdue:        CalendarEvent[];
-  thisMonth:      CalendarEvent[];
-  nextMonth:      CalendarEvent[];
-  continuous:     CalendarEvent[];
-  curMonthName:   string;
-  nextMonthName:  string | null;  // null = nenhum mês futuro com manejo
+  overdue:       CalendarEvent[];
+  thisMonth:     CalendarEvent[];
+  nextMonth:     CalendarEvent[];
+  continuous:    CalendarEvent[];
+  curMonthName:  string;
+  nextMonthName: string | null;
 }
 
 export function ManejosOperacional({
@@ -22,18 +67,21 @@ export function ManejosOperacional({
   continuous, curMonthName, nextMonthName,
 }: ManejosOperacionalProps) {
 
-  // Flat state — filtramos por grupo no render
   const cur = new Date().getMonth() + 1;
-  // nxt = mês real do próximo manejo (vindo do server), não necessariamente cur+1
   const nxt = inm[0]?.month ?? null;
 
   const [events,  setEvents]  = useState(() => [...io, ...itm, ...inm]);
-  const [open,    setOpen]    = useState<SectionId>("este-mes");
+  // Cada seção tem seu próprio estado aberto/fechado — independentes entre si
+  const [open, setOpen] = useState<Record<SectionId, boolean>>({
+    "atrasados":   false,
+    "este-mes":    true,
+    "proximo-mes": false,
+  });
   const [modal,   setModal]   = useState<{ type: ActionType; event: CalendarEvent } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [notes,        setNotes]        = useState("");
-  const [completedAt,  setCompletedAt]  = useState(() => new Date().toISOString().slice(0, 10));
-  const [postponedTo,  setPostponedTo]  = useState("");
+  const [notes,       setNotes]       = useState("");
+  const [completedAt, setCompletedAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [postponedTo, setPostponedTo] = useState("");
 
   const refs: Record<SectionId, React.RefObject<HTMLDivElement | null>> = {
     "atrasados":   useRef(null),
@@ -44,15 +92,19 @@ export function ManejosOperacional({
   useEffect(() => {
     const hash = window.location.hash.replace("#", "") as SectionId;
     if (hash && refs[hash]) {
-      setOpen(hash);
+      setOpen((prev) => ({ ...prev, [hash]: true }));
       setTimeout(() => refs[hash].current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const overdue      = events.filter((e) => (e.month ?? 0) < cur);
+  const overdueEvs   = events.filter((e) => (e.month ?? 0) < cur);
   const thisMonthEvs = events.filter((e) => e.month === cur);
   const nextMonthEvs = nxt !== null ? events.filter((e) => e.month === nxt) : [];
+
+  function toggle(id: SectionId) {
+    setOpen((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
   function removeEvent(id: number) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -83,7 +135,6 @@ export function ManejosOperacional({
     }
   }
 
-  // Categorias únicas (contínuos + scheduled)
   const categories = [
     ...new Set([
       ...events.map((e) => e.category_name),
@@ -98,32 +149,32 @@ export function ManejosOperacional({
       <Section
         id="atrasados"
         ref={refs["atrasados"]}
+        theme={THEMES["atrasados"]}
         label="Atrasados"
-        count={overdue.length}
-        labelColor="text-amber-600"
-        countBg="bg-amber-100 text-amber-700"
-        defaultOpen={false}
-        open={open === "atrasados"}
-        onToggle={() => setOpen((p) => p === "atrasados" ? "este-mes" : "atrasados")}
+        count={overdueEvs.length}
+        open={open["atrasados"]}
+        onToggle={() => toggle("atrasados")}
         empty="Nenhum manejo atrasado."
       >
-        {overdue.map((e) => <EventRow key={e.id} event={e} onAction={openModal} />)}
+        {overdueEvs.map((e) => (
+          <EventRow key={e.id} event={e} dot={THEMES["atrasados"].dot} onAction={openModal} />
+        ))}
       </Section>
 
       {/* ── Este mês ── */}
       <Section
         id="este-mes"
         ref={refs["este-mes"]}
+        theme={THEMES["este-mes"]}
         label={`${curMonthName} — este mês`}
         count={thisMonthEvs.length}
-        labelColor="text-[#CC0000]"
-        countBg="bg-[#CC0000]/10 text-[#CC0000]"
-        defaultOpen
-        open={open === "este-mes"}
-        onToggle={() => setOpen((p) => p === "este-mes" ? "atrasados" : "este-mes")}
+        open={open["este-mes"]}
+        onToggle={() => toggle("este-mes")}
         empty="Nenhum manejo programado para este mês."
       >
-        {thisMonthEvs.map((e) => <EventRow key={e.id} event={e} onAction={openModal} />)}
+        {thisMonthEvs.map((e) => (
+          <EventRow key={e.id} event={e} dot={THEMES["este-mes"].dot} onAction={openModal} />
+        ))}
       </Section>
 
       {/* ── Próximo manejo ── */}
@@ -131,16 +182,16 @@ export function ManejosOperacional({
         <Section
           id="proximo-mes"
           ref={refs["proximo-mes"]}
+          theme={THEMES["proximo-mes"]}
           label={`Próximo manejo: ${nextMonthName}`}
           count={nextMonthEvs.length}
-          labelColor="text-gray-700"
-          countBg="bg-gray-100 text-gray-600"
-          defaultOpen={false}
-          open={open === "proximo-mes"}
-          onToggle={() => setOpen((p) => p === "proximo-mes" ? "este-mes" : "proximo-mes")}
+          open={open["proximo-mes"]}
+          onToggle={() => toggle("proximo-mes")}
           empty="Nenhum manejo previsto."
         >
-          {nextMonthEvs.map((e) => <EventRow key={e.id} event={e} onAction={openModal} />)}
+          {nextMonthEvs.map((e) => (
+            <EventRow key={e.id} event={e} dot={THEMES["proximo-mes"].dot} onAction={openModal} />
+          ))}
         </Section>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-2.5">
@@ -155,10 +206,7 @@ export function ManejosOperacional({
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Categorias de manejo</p>
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
-              <span
-                key={cat}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-xs font-bold text-gray-600"
-              >
+              <span key={cat} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-xs font-bold text-gray-600">
                 <RefreshCw className="h-3 w-3 text-gray-400" />
                 {cat}
               </span>
@@ -236,47 +284,52 @@ export function ManejosOperacional({
 
 // ── Section ───────────────────────────────────────────────────────────────────
 
-import React from "react";
-
 interface SectionProps {
-  id: SectionId;
-  label: string;
-  count: number;
-  labelColor: string;
-  countBg: string;
-  defaultOpen: boolean;
-  open: boolean;
+  id:       SectionId;
+  theme:    SectionTheme;
+  label:    string;
+  count:    number;
+  open:     boolean;
   onToggle: () => void;
-  empty: string;
+  empty:    string;
   children: React.ReactNode;
 }
 
 const Section = React.forwardRef<HTMLDivElement, SectionProps>(
-  function Section({ id, label, count, labelColor, countBg, open, onToggle, empty, children }, ref) {
+  function Section({ id, theme, label, count, open, onToggle, empty, children }, ref) {
     return (
-      <div id={id} ref={ref} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div id={id} ref={ref} className="rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+
+        {/* Cabeçalho clicável */}
         <button
           onClick={onToggle}
-          className="w-full flex items-center justify-between px-4 py-4 hover:bg-gray-50/60 transition-colors"
+          className={`w-full flex items-center justify-between px-4 py-3.5 transition-colors ${theme.header} hover:brightness-95`}
         >
-          <div className="flex items-center gap-3">
-            <span className={`text-sm font-bold ${labelColor}`}>{label}</span>
+          <div className="flex items-center gap-2.5">
+            <span className={`text-sm font-bold ${theme.label}`}>{label}</span>
             {count > 0 && (
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${countBg}`}>{count}</span>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${theme.badge}`}>
+                {count}
+              </span>
             )}
           </div>
-          {open
-            ? <ChevronUp className="h-4 w-4 text-gray-400" />
-            : <ChevronDown className="h-4 w-4 text-gray-400" />
-          }
+
+          {/* Botão de toggle explícito */}
+          <span className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${theme.toggle} ${theme.toggleTxt}`}>
+            {open
+              ? <><ChevronUp className="h-3.5 w-3.5" />Fechar</>
+              : <><ChevronDown className="h-3.5 w-3.5" />Ver</>
+            }
+          </span>
         </button>
 
+        {/* Conteúdo */}
         {open && (
-          <div className="border-t border-gray-100">
+          <div className={`border-t ${theme.border} ${theme.content}`}>
             {count === 0 ? (
               <div className="px-4 py-4 flex items-center gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-green-400 flex-shrink-0" />
-                <p className="text-sm text-gray-400">{empty}</p>
+                <p className="text-sm text-gray-500">{empty}</p>
               </div>
             ) : (
               <div className="px-4 py-2 space-y-1 pb-3">
@@ -292,16 +345,17 @@ const Section = React.forwardRef<HTMLDivElement, SectionProps>(
 
 // ── EventRow ─────────────────────────────────────────────────────────────────
 
-function EventRow({ event, onAction }: {
-  event: CalendarEvent;
+function EventRow({ event, dot, onAction }: {
+  event:    CalendarEvent;
+  dot:      string;
   onAction: (type: ActionType, event: CalendarEvent) => void;
 }) {
   const monthLabel = event.month ? MONTHS[event.month - 1] : null;
 
   return (
-    <div className="py-3 border-b border-gray-50 last:border-0">
+    <div className="py-3 border-b border-gray-100/60 last:border-0">
       <div className="flex items-start gap-2 mb-2.5">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#CC0000] flex-shrink-0 mt-2" />
+        <div className={`w-1.5 h-1.5 rounded-full ${dot} flex-shrink-0 mt-2`} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-gray-900 leading-snug">{event.title}</p>
           <p className="text-xs text-gray-400 mt-0.5">
