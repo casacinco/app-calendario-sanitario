@@ -195,13 +195,39 @@ export async function getEventsByUser(
   return { scheduled, continuous };
 }
 
-// Busca eventos para o mês atual (aba calendário)
-export async function getEventsForCurrentMonth(
+// Contagens para o card resumo na home
+export async function getEventCounts(
   db: D1Database,
   userId: number,
-): Promise<{ thisMonth: CalendarEvent[]; continuous: CalendarEvent[] }> {
-  const currentMonth = new Date().getMonth() + 1;
+): Promise<{ overdue: number; thisMonth: number; nextMonth: number }> {
+  const now       = new Date();
+  const cur       = now.getMonth() + 1;
+  const nxt       = cur === 12 ? 1 : cur + 1;
+  const { scheduled } = await getEventsByUser(db, userId);
+  return {
+    overdue:   scheduled.filter((e) => (e.month ?? 0) < cur).length,
+    thisMonth: scheduled.filter((e) => e.month === cur).length,
+    nextMonth: scheduled.filter((e) => e.month === nxt).length,
+  };
+}
+
+// Eventos agrupados para a aba Calendário (visão operacional completa)
+export async function getEventsGrouped(
+  db: D1Database,
+  userId: number,
+): Promise<{
+  overdue:    CalendarEvent[];
+  thisMonth:  CalendarEvent[];
+  nextMonth:  CalendarEvent[];
+  continuous: CalendarEvent[];
+}> {
+  const cur = new Date().getMonth() + 1;
+  const nxt = cur === 12 ? 1 : cur + 1;
   const { scheduled, continuous } = await getEventsByUser(db, userId);
-  const thisMonth = scheduled.filter((e) => e.month === currentMonth);
-  return { thisMonth, continuous };
+  return {
+    overdue:   scheduled.filter((e) => (e.month ?? 0) < cur),
+    thisMonth: scheduled.filter((e) => e.month === cur),
+    nextMonth: scheduled.filter((e) => e.month === nxt),
+    continuous,
+  };
 }

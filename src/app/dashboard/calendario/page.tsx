@@ -8,12 +8,15 @@ import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
 import { BackButton } from "@/components/producer/back-button";
 import { ScaledIframe } from "@/components/producer/scaled-iframe";
-import { ManejoDashboard } from "@/components/producer/manejo-dashboard";
-import { getEventsForCurrentMonth } from "@/lib/calendar-events";
+import { AvisoImportante } from "@/components/producer/aviso-importante";
+import { ManejosOperacional } from "@/components/producer/manejos-operacional";
+import { getEventsGrouped } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
+
+const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 interface RequestRow {
   id: number;
@@ -24,6 +27,7 @@ interface RequestRow {
   deadline: string | null;
   cal_status: string | null;
   cal_id: number | null;
+  calendar_intro_confirmed: number | null;
 }
 
 const MIGRATION_LABEL: Record<MigrationStatus, string> = {
@@ -46,11 +50,11 @@ export default async function CalendarioPage() {
   const user = await getUserById(db, Number(uid));
   if (!user) redirect("/auth");
 
-  const [request, banners, monthEvents] = await Promise.all([
+  const [request, banners] = await Promise.all([
     db
       .prepare(
         `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
-                cr.estimated_delivery_date, cr.deadline,
+                cr.estimated_delivery_date, cr.deadline, cr.calendar_intro_confirmed,
                 c.status AS cal_status, c.id AS cal_id
          FROM calendar_requests cr
          LEFT JOIN calendars c ON c.request_id = cr.id
@@ -61,15 +65,26 @@ export default async function CalendarioPage() {
       .bind(Number(uid))
       .first<RequestRow>(),
     listActiveBannersByPlacement(db, "calendario"),
-    getEventsForCurrentMonth(db, Number(uid)),
   ]);
 
-  const isMigration = request?.solicitation_type === "migration";
-  const migStatus   = request?.migration_status ?? null;
-  const migDone     = migStatus === "published" || migStatus === "delivered";
-  const isDelivered = request?.status === "delivered" || migDone;
-  const calId       = request?.cal_id ?? null;
+  const isMigration  = request?.solicitation_type === "migration";
+  const migStatus    = request?.migration_status ?? null;
+  const migDone      = migStatus === "published" || migStatus === "delivered";
+  const isDelivered  = request?.status === "delivered" || migDone;
+  const calId        = request?.cal_id ?? null;
   const calPublished = request?.cal_status === "published";
+  const introConfirmed = !!request?.calendar_intro_confirmed;
+  const showAviso    = isDelivered && !isMigration && !introConfirmed;
+
+  const cur = new Date().getMonth();       // 0-based
+  const nxt = cur === 11 ? 0 : cur + 1;   // 0-based
+  const curMonthName  = MONTHS[cur]!;
+  const nextMonthName = MONTHS[nxt]!;
+
+  // Busca eventos apenas se o calendário está publicado
+  const events = (isDelivered && calPublished)
+    ? await getEventsGrouped(db, Number(uid))
+    : null;
 
   return (
     <div className="bg-[#F6F6F6] min-h-screen">
@@ -95,42 +110,45 @@ export default async function CalendarioPage() {
 
         <PlacementBanners banners={banners} />
 
-        {isDelivered && calId && calPublished ? (
-          /* ── Resumo operacional do mês + calendário visual ─────────────── */
+        {isDelivered && calId && calPublished && events ? (
           <>
-          {(monthEvents.thisMonth.length > 0 || monthEvents.continuous.length > 0) && (
-            <ManejoDashboard
-              scheduled={monthEvents.thisMonth}
-              continuous={monthEvents.continuous}
+            {/* ── 1. Aviso importante ── */}
+            {showAviso && <AvisoImportante />}
+
+            {/* ── 2-5. Atrasados / Este mês / Próximo mês / Categorias ── */}
+            <ManejosOperacional
+              overdue={events.overdue}
+              thisMonth={events.thisMonth}
+              nextMonth={events.nextMonth}
+              continuous={events.continuous}
+              curMonthName={curMonthName}
+              nextMonthName={nextMonthName}
             />
-          )}
 
-          <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
-            {/* Cabeçalho da seção */}
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-[#CC0000]" />
-              <span className="text-sm font-bold text-gray-900">Calendário Sanitário</span>
+            {/* ── 6. Calendário visual ── */}
+            <div className="rounded-2xl overflow-hidden shadow-sm bg-white">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-[#CC0000]" />
+                <span className="text-sm font-bold text-gray-900">Calendário Sanitário</span>
+              </div>
+
+              <ScaledIframe src={`/calendarios/${calId}/print?embed=1`} />
+
+              <div className="px-4 py-3 border-t border-gray-100 flex justify-end">
+                <Link
+                  href={`/calendarios/${calId}/print`}
+                  target="_blank"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#CC0000] text-white text-sm font-bold hover:bg-[#AA0000] transition-colors"
+                >
+                  <Printer className="h-4 w-4" />
+                  Imprimir / Salvar PDF
+                </Link>
+              </div>
             </div>
-
-            {/* Calendar iframe — escala para caber na tela sem scroll */}
-            <ScaledIframe src={`/calendarios/${calId}/print?embed=1`} />
-
-            {/* Botão de imprimir no rodapé do card */}
-            <div className="px-4 py-3 border-t border-gray-100 flex justify-end">
-              <Link
-                href={`/calendarios/${calId}/print`}
-                target="_blank"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#CC0000] text-white text-sm font-bold hover:bg-[#AA0000] transition-colors"
-              >
-                <Printer className="h-4 w-4" />
-                Imprimir / Salvar PDF
-              </Link>
-            </div>
-          </div>
           </>
 
         ) : request ? (
-          /* ── Status / progresso ───────────────────────────────────────── */
+          /* ── Status / progresso ── */
           <>
             <div className="bg-[#111111] rounded-2xl overflow-hidden shadow-sm">
               <div className="p-5 space-y-4">
@@ -158,7 +176,6 @@ export default async function CalendarioPage() {
                       </h2>
                     </div>
                   </div>
-
                   {isMigration && migStatus && !migDone && (
                     <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white/10 text-white/70 border border-white/15 whitespace-nowrap">
                       {MIGRATION_LABEL[migStatus]}
@@ -171,12 +188,6 @@ export default async function CalendarioPage() {
                     {isMigration
                       ? "Nossa equipe irá localizar o PDF do seu calendário existente, transcrevê-lo e publicá-lo aqui para você."
                       : "Recebemos suas informações e nossa equipe já está trabalhando na criação do seu calendário sanitário personalizado."}
-                  </p>
-                )}
-
-                {isDelivered && (
-                  <p className="text-sm text-white/55 leading-relaxed">
-                    Seu calendário sanitário personalizado está pronto e disponível para uso.
                   </p>
                 )}
 
@@ -193,7 +204,6 @@ export default async function CalendarioPage() {
                 )}
               </div>
 
-              {/* Progress bar migração */}
               {isMigration && !migDone && migStatus && (
                 <div className="bg-white/5 px-5 py-4">
                   <div className="flex justify-between items-center mb-2">
@@ -201,18 +211,14 @@ export default async function CalendarioPage() {
                     <span className="text-[10px] text-white/30">{STEP_KEYS.indexOf(migStatus) + 1}/4</span>
                   </div>
                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#CC0000] rounded-full transition-all"
-                      style={{ width: `${(STEP_KEYS.indexOf(migStatus) + 1) * 25}%` }}
-                    />
+                    <div className="h-full bg-[#CC0000] rounded-full transition-all"
+                      style={{ width: `${(STEP_KEYS.indexOf(migStatus) + 1) * 25}%` }} />
                   </div>
                   <div className="flex justify-between mt-2">
                     {STEPS.map((step, i) => {
                       const currentIdx = STEP_KEYS.indexOf(migStatus ?? "awaiting_migration" as MigrationStatus);
                       return (
-                        <span key={step} className={`text-[9px] ${i <= currentIdx ? "text-white/50" : "text-white/20"}`}>
-                          {step}
-                        </span>
+                        <span key={step} className={`text-[9px] ${i <= currentIdx ? "text-white/50" : "text-white/20"}`}>{step}</span>
                       );
                     })}
                   </div>
@@ -224,12 +230,7 @@ export default async function CalendarioPage() {
               <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
                 <p className="text-xs font-bold text-gray-700">O que está incluído no seu calendário?</p>
                 <ul className="space-y-1.5">
-                  {[
-                    "Cronograma de vacinações por espécie",
-                    "Vermifugações e controles parasitários",
-                    "Datas de manejo e eventos sanitários",
-                    "Protocolos personalizados para seu rebanho",
-                  ].map((item) => (
+                  {["Cronograma de vacinações por espécie","Vermifugações e controles parasitários","Datas de manejo e eventos sanitários","Protocolos personalizados para seu rebanho"].map((item) => (
                     <li key={item} className="flex items-start gap-2 text-xs text-gray-500">
                       <span className="w-1 h-1 rounded-full bg-[#CC0000] flex-shrink-0 mt-1.5" />
                       {item}
@@ -241,7 +242,6 @@ export default async function CalendarioPage() {
           </>
 
         ) : (
-          /* ── Sem solicitação ─────────────────────────────────────────── */
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
             <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <CalendarDays className="h-6 w-6 text-gray-400" />
