@@ -132,11 +132,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       });
     }
 
-    const delay       = reforcoDelayDays(existing.category_name);
-    const reforcoDate = addDays(completedAt, delay);
+    const delay        = reforcoDelayDays(existing.category_name);
+    const reforcoDate  = addDays(completedAt, delay);
     const reforcoMonth = new Date(reforcoDate + "T00:00:00Z").getUTCMonth() + 1;
     const reforcoTitle = `${existing.title} — REFORÇO`;
-    const reforcoYear  = new Date(reforcoDate + "T00:00:00Z").getUTCFullYear();
 
     const reforco = await db
       .prepare(
@@ -158,7 +157,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         existing.category_name,
         reforcoTitle,
         reforcoMonth,
-        `${reforcoYear}-${String(reforcoMonth).padStart(2, "0")}-01`,
+        reforcoDate,
         eventId,
         completedAt,
       )
