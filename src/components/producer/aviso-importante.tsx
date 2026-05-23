@@ -80,9 +80,9 @@ export function OnboardingSanitario() {
       </div>
 
       {/* ── Contexto ── */}
-      <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 space-y-2">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-          Por que isso é importante
+      <div className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 space-y-2.5">
+        <p className="text-sm font-bold text-gray-900">
+          Por que isso é importante?
         </p>
         <p className="text-sm text-gray-600 leading-relaxed">
           Se algum manejo preventivo{" "}
