@@ -251,7 +251,7 @@ export function ManejosOperacional({
                   {isDoseReforco(modal.event) ? "Data da aplicação" : "Data da realização"}
                 </label>
                 <input type="date" value={completedAt} onChange={(e) => setCompletedAt(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200" />
                 {isDoseReforco(modal.event) && (
                   <p className="text-[11px] text-gray-400 mt-1.5">
                     O reforço será programado automaticamente após a confirmação.
@@ -265,7 +265,7 @@ export function ManejosOperacional({
                 <label className="text-xs font-bold text-gray-600 block mb-1.5">Adiar para</label>
                 <input type="date" value={postponedTo} onChange={(e) => setPostponedTo(e.target.value)}
                   min={new Date().toISOString().slice(0, 10)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200" />
               </div>
             )}
 
@@ -275,7 +275,7 @@ export function ManejosOperacional({
               </label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
                 placeholder="Ex: aplicado por João, produto X..."
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-200" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-gray-200" />
             </div>
 
             <div className="flex gap-2">
