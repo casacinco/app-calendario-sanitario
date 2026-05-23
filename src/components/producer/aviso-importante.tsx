@@ -70,11 +70,11 @@ export function OnboardingSanitario() {
             rebanho, região e sistema de manejo.
           </p>
           <p className="text-gray-700 leading-relaxed">
-            Antes de liberar o painel operacional,{" "}
+            Antes de liberar seu calendário sanitário,{" "}
             <span className="font-semibold text-gray-900">
-              valide a situação sanitária atual
+              valide a situação sanitária atual dos seus animais
             </span>{" "}
-            dos seus animais respondendo abaixo.
+            respondendo abaixo.
           </p>
         </div>
       </div>
