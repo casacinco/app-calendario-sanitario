@@ -55,14 +55,9 @@ export function OnboardingSanitario() {
           <CalendarDays className="h-6 w-6 text-[#CC0000]" />
         </div>
 
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold text-[#CC0000] uppercase tracking-widest">
-            Configuração inicial
-          </p>
-          <h1 className="text-xl font-bold text-gray-900 leading-snug">
-            Ativação do calendário sanitário
-          </h1>
-        </div>
+        <h1 className="text-xl font-bold text-gray-900 leading-snug">
+          Ativação do calendário sanitário
+        </h1>
 
         <div className="space-y-2 text-sm max-w-md mx-auto">
           <p className="text-gray-400 leading-relaxed">
