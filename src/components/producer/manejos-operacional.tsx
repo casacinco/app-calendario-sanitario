@@ -134,12 +134,17 @@ export function ManejosOperacional({
       {/* ── Ação imediata ── */}
       {implEvents.length > 0 && (
         <div style={{ borderLeftColor: "#B91C1C" }} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 border-l-[3px]">
-          <div className="px-4 py-3.5 flex items-center gap-2.5 border-b border-gray-100">
-            <AlertCircle className="h-3.5 w-3.5 text-[#B91C1C] flex-shrink-0" />
-            <span className="text-sm font-bold text-gray-900">Ação imediata recomendada</span>
-            <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">
-              {implEvents.length}
-            </span>
+          <div className="px-4 py-3.5 border-b border-gray-100">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="h-3.5 w-3.5 text-[#B91C1C] flex-shrink-0" />
+              <span className="text-sm font-bold text-gray-900">Ação imediata recomendada</span>
+              <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">
+                {implEvents.length}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed pl-5">
+              Realizar todos os manejos no mesmo dia e seguir as orientações e recomendações descritas no seu calendário sanitário.
+            </p>
           </div>
           <div className="px-4 divide-y divide-gray-50">
             {implEvents.map((e) => (
