@@ -257,10 +257,17 @@ function findNextEventMonth(
 }
 
 // Contagens para o card resumo na home (exclui eventos de implantação)
+export interface EventCounts {
+  overdue: number;
+  thisMonth: number;
+  nextMonth: number;
+  nextMonthIndex: number | null;
+}
+
 export async function getEventCounts(
   db: D1Database,
   userId: number,
-): Promise<{ overdue: number; thisMonth: number; nextMonth: number; nextMonthIndex: number | null }> {
+): Promise<EventCounts> {
   const cur             = new Date().getMonth() + 1;
   const activationMonth = await getActivationMonth(db, userId);
   const { scheduled }   = await getEventsByUser(db, userId);
