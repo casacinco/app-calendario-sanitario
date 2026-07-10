@@ -15,7 +15,6 @@ import {
 import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
 import { CentralDeManejo } from "@/components/producer/central-manejo";
-import { getEventCounts } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
 export const runtime = "edge";
@@ -77,10 +76,9 @@ export default async function DashboardPage() {
   const centralEnabled = !!request?.central_management_enabled;
   const centralState = !isDelivered || !calPublished ? "producing" : centralEnabled ? "active" : "preview";
 
-  const [banners, contentBannerUrl, counts] = await Promise.all([
+  const [banners, contentBannerUrl] = await Promise.all([
     listActiveBannersByPlacement(db, "home"),
     getSetting(db, "content_home_banner_url"),
-    (isDelivered && calPublished) ? getEventCounts(db, Number(uid)) : Promise.resolve(null),
   ]);
 
   return (
@@ -228,7 +226,7 @@ export default async function DashboardPage() {
         )}
 
         {/* ── 2. Central de Manejo ──────────────────────────────────────────── */}
-        <CentralDeManejo state={centralState} counts={counts} />
+        <CentralDeManejo state={centralState} />
 
         {/* ── 4. Banner conteúdos ───────────────────────────────────────────── */}
         <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm focus:outline-none">
