@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Clock, CheckCircle2, ArrowRightLeft, Wrench, LogOut, CalendarDays, Bell,
-  ChevronRight, BarChart3,
+  ChevronRight,
 } from "lucide-react";
 import { getEnv } from "@/lib/cf";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/lib/db";
 import { formatDateBR } from "@/lib/format";
 import { PlacementBanners } from "@/components/producer/placement-banners";
-import { CentralDeManejo } from "@/components/producer/central-manejo";
+import { ManejoResumo } from "@/components/producer/manejo-resumo";
 import { getEventCounts } from "@/lib/calendar-events";
 import type { RequestStatus, SolicitationType, MigrationStatus } from "@/lib/db";
 
@@ -31,8 +31,6 @@ interface RequestRow {
   cal_status: string | null;
   cal_id: number | null;
   first_viewed_at: string | null;
-  central_management_enabled: number;
-  central_management_subscription_status: string;
 }
 
 const MIGRATION_LABEL: Record<MigrationStatus, string> = {
@@ -56,7 +54,6 @@ export default async function DashboardPage() {
     .prepare(
       `SELECT cr.id, cr.status, cr.solicitation_type, cr.migration_status,
               cr.estimated_delivery_date, cr.deadline, cr.first_viewed_at,
-              cr.central_management_enabled, cr.central_management_subscription_status,
               c.status AS cal_status, c.id AS cal_id
        FROM calendar_requests cr
        LEFT JOIN calendars c ON c.request_id = cr.id
@@ -73,14 +70,11 @@ export default async function DashboardPage() {
   const migDone     = migStatus === "published" || migStatus === "delivered";
   const isDelivered = request?.status === "delivered" || migDone;
   const firstViewed = !!request?.first_viewed_at;
-  const calPublished = request?.cal_status === "published";
-  const centralEnabled = !!request?.central_management_enabled;
-  const centralState = !isDelivered || !calPublished ? "producing" : centralEnabled ? "active" : "preview";
 
   const [banners, contentBannerUrl, counts] = await Promise.all([
     listActiveBannersByPlacement(db, "home"),
     getSetting(db, "content_home_banner_url"),
-    (isDelivered && calPublished) ? getEventCounts(db, Number(uid)) : Promise.resolve(null),
+    firstViewed ? getEventCounts(db, Number(uid)) : Promise.resolve(null),
   ]);
 
   return (
@@ -227,8 +221,15 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── 2. Central de Manejo ──────────────────────────────────────────── */}
-        <CentralDeManejo state={centralState} counts={counts} />
+        {/* ── 2. Resumo operacional ─────────────────────────────────────────── */}
+        {firstViewed && counts && (
+          <ManejoResumo
+            overdue={counts.overdue}
+            thisMonth={counts.thisMonth}
+            nextMonth={counts.nextMonth}
+            nextMonthIndex={counts.nextMonthIndex}
+          />
+        )}
 
         {/* ── 4. Banner conteúdos ───────────────────────────────────────────── */}
         <Link href="/dashboard/conteudos" className="block rounded-2xl overflow-hidden shadow-sm focus:outline-none">
@@ -264,7 +265,7 @@ export default async function DashboardPage() {
         {/* ── 5. Ferramentas ───────────────────────────────────────────────── */}
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Ferramentas</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Link href="/dashboard/ferramentas"
               className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow">
               <div className="w-9 h-9 rounded-xl bg-[#CC0000]/10 flex items-center justify-center flex-shrink-0">
@@ -285,15 +286,6 @@ export default async function DashboardPage() {
                 <p className="text-[10px] text-gray-400">Manejos e eventos</p>
               </div>
             </Link>
-            <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3 opacity-60">
-              <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="h-4.5 w-4.5 text-gray-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-gray-900 leading-snug">Indicadores</p>
-                <p className="text-[10px] text-gray-400">Em breve</p>
-              </div>
-            </div>
           </div>
         </div>
 
