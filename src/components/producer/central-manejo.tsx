@@ -8,14 +8,18 @@ interface CentralDeManejoProps {
 }
 
 const BENEFITS = [
-  { icon: Bell,          title: "Lembretes automáticos",             sub: "Nunca mais perca um manejo" },
-  { icon: CalendarClock, title: "Organização automática dos manejos", sub: "Tudo no lugar certo, na hora certa" },
-  { icon: Calculator,    title: "Calculadora de doses",               sub: "Cálculo rápido e seguro" },
-  { icon: History,       title: "Histórico completo dos manejos",     sub: "Registro e acompanhamento de tudo que foi feito" },
-  { icon: FileCheck2,    title: "Protocolos sanitários complementares", sub: "Protocolos exclusivos para apoiar seu manejo" },
+  { icon: Bell,          title: "Lembretes automáticos" },
+  { icon: CalendarClock, title: "Organização automática dos manejos" },
+  { icon: Calculator,    title: "Calculadora de doses" },
+  { icon: History,       title: "Histórico completo dos manejos" },
+  { icon: FileCheck2,    title: "Protocolos sanitários complementares" },
 ];
 
 const CARD = "rounded-3xl overflow-hidden shadow-lg bg-[#111111]";
+const MOCKUP_SRC = "/mockups/central-manejo-mockup-sf-cutout.png";
+// Dimensões reais do asset — preserva a proporção original ao redimensionar via CSS.
+const MOCKUP_W = 1755;
+const MOCKUP_H = 3120;
 
 export function CentralDeManejo({ state }: CentralDeManejoProps) {
   if (state === "producing") {
@@ -58,42 +62,49 @@ export function CentralDeManejo({ state }: CentralDeManejoProps) {
   }
 
   // state === "preview"
-  // Fundo preto puro (não o #111111 dos outros cards): o PNG do mockup não tem
-  // canal alpha, seu fundo é rgb(0,0,0) opaco — só some sem emenda visível sobre preto puro.
   return (
-    <div className="rounded-3xl overflow-hidden shadow-lg bg-black relative">
-      <div className="pointer-events-none absolute -right-10 top-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-[#CC0000] opacity-[0.15] blur-3xl" />
+    <div className="rounded-3xl overflow-hidden shadow-lg bg-[#111111] p-6 sm:p-8">
+      <div className="sm:flex sm:items-start sm:gap-8">
 
-      <div className="relative flex flex-col sm:flex-row sm:items-center gap-8 p-6 sm:p-8">
-        {/* ── Texto ── */}
-        <div className="flex-1 min-w-0 space-y-7">
-          <div className="space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#CC0000]/15 flex items-center justify-center">
-              <ClipboardCheck className="h-7 w-7 text-[#CC0000]" />
+        {/* ── Coluna de texto ── */}
+        <div className="flex-1 min-w-0 space-y-5">
+
+          {/* Ícone + mockup mobile (canto superior direito) */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#CC0000]/15 flex items-center justify-center flex-shrink-0">
+              <ClipboardCheck className="h-6 w-6 sm:h-7 sm:w-7 text-[#CC0000]" />
             </div>
-            <div className="space-y-2.5">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[#CC0000]/15 text-[#CC0000] text-[10px] font-bold uppercase tracking-widest">
-                Novo recurso
-              </span>
-              <h2 className="text-2xl font-bold text-white leading-tight">Central de Manejo</h2>
-              <p className="text-sm text-white/55 leading-relaxed max-w-sm">
-                Organize, acompanhe e registre todos os manejos sanitários do seu
-                rebanho em um único lugar.
-              </p>
+            <div className="relative w-20 flex-shrink-0 sm:hidden">
+              <div className="absolute -inset-3 rounded-full bg-[#CC0000] opacity-[0.12] blur-2xl" />
+              <Image
+                src={MOCKUP_SRC}
+                alt="Tela da Central de Manejo no aplicativo"
+                width={MOCKUP_W}
+                height={MOCKUP_H}
+                className="relative w-full h-auto rotate-3"
+              />
             </div>
           </div>
 
+          <div className="space-y-2.5">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[#CC0000]/15 text-[#CC0000] text-[10px] font-bold uppercase tracking-widest">
+              Novo recurso
+            </span>
+            <h2 className="text-2xl font-bold text-white leading-tight">Central de Manejo</h2>
+            <p className="text-sm text-white/55 leading-relaxed max-w-sm">
+              Organize, acompanhe e registre todos os manejos sanitários do seu
+              rebanho em um único lugar.
+            </p>
+          </div>
+
           {/* ── Benefícios ── */}
-          <div className="space-y-4">
-            {BENEFITS.map(({ icon: Icon, title, sub }) => (
-              <div key={title} className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-4 w-4 text-[#CC0000]" />
+          <div className="space-y-2.5">
+            {BENEFITS.map(({ icon: Icon, title }) => (
+              <div key={title} className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                  <Icon className="h-3.5 w-3.5 text-[#CC0000]" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white leading-snug">{title}</p>
-                  <p className="text-xs text-white/45 leading-snug">{sub}</p>
-                </div>
+                <span className="text-sm font-medium text-white/85 leading-snug">{title}</span>
               </div>
             ))}
           </div>
@@ -102,21 +113,23 @@ export function CentralDeManejo({ state }: CentralDeManejoProps) {
           <button
             type="button"
             disabled
-            className="w-full py-4 px-6 rounded-2xl bg-[#CC0000] hover:bg-[#AA0000] transition-colors flex items-center justify-between"
+            className="w-full py-3.5 px-6 rounded-2xl bg-[#CC0000] hover:bg-[#AA0000] transition-colors flex items-center justify-between"
           >
             <span className="text-base font-bold text-white">Ativar Central de Manejo</span>
             <ChevronRight className="h-5 w-5 text-white flex-shrink-0" />
           </button>
         </div>
 
-        {/* ── Mockup ── */}
-        <div className="relative w-44 sm:w-52 mx-auto sm:mx-0 flex-shrink-0">
+        {/* ── Mockup desktop (coluna direita, alinhado ao topo) ── */}
+        <div className="relative hidden sm:block sm:w-[38%] flex-shrink-0 self-start">
+          <div className="absolute -inset-6 rounded-full bg-[#CC0000] opacity-[0.12] blur-3xl" />
           <Image
-            src="/mockups/central-manejo-mockup.png"
+            src={MOCKUP_SRC}
             alt="Tela da Central de Manejo no aplicativo"
-            width={1024}
-            height={1536}
-            className="relative w-full h-auto"
+            width={MOCKUP_W}
+            height={MOCKUP_H}
+            className="relative w-full h-auto rotate-3"
+            priority
           />
         </div>
       </div>
