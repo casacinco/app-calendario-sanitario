@@ -7,24 +7,41 @@ interface CentralDeManejoProps {
   state: CentralManejoState;
 }
 
-const BENEFITS = [
-  { icon: Bell,          title: "Lembretes automáticos" },
-  { icon: CalendarClock, title: "Organização automática dos manejos" },
-  { icon: Calculator,    title: "Calculadora de doses" },
-  { icon: History,       title: "Histórico completo dos manejos" },
-  { icon: FileCheck2,    title: "Protocolos sanitários complementares" },
+const BENEFITS_LEFT = [
+  { icon: Bell,          title: "Lembretes automáticos",             sub: "Nunca mais perca um manejo" },
+  { icon: CalendarClock, title: "Organização automática dos manejos", sub: "Tudo no lugar certo, na hora certa" },
+  { icon: Calculator,    title: "Calculadora de doses",               sub: "Cálculo rápido e seguro" },
 ];
 
-const CARD = "rounded-3xl overflow-hidden shadow-lg bg-[#111111]";
+const BENEFITS_RIGHT = [
+  { icon: History,    title: "Histórico completo dos manejos",       sub: "Registro e acompanhamento de tudo que foi feito" },
+  { icon: FileCheck2, title: "Protocolos sanitários complementares", sub: "Protocolos exclusivos para apoiar seu manejo" },
+];
+
+const CARD = "rounded-3xl shadow-lg bg-[#111111]";
 const MOCKUP_SRC = "/mockups/central-manejo-mockup-sf-cutout.png";
 // Dimensões reais do asset — preserva a proporção original ao redimensionar via CSS.
 const MOCKUP_W = 1755;
 const MOCKUP_H = 3120;
 
+function BenefitItem({ icon: Icon, title, sub }: { icon: typeof Bell; title: string; sub: string }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+        <Icon className="h-4 w-4 text-[#CC0000]" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-white leading-snug">{title}</p>
+        <p className="text-xs text-white/45 leading-snug">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
 export function CentralDeManejo({ state }: CentralDeManejoProps) {
   if (state === "producing") {
     return (
-      <div className={`${CARD} p-6 space-y-4`}>
+      <div className={`${CARD} overflow-hidden p-6 space-y-4`}>
         <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">Central de Manejo</p>
         <p className="text-sm text-white/55 leading-relaxed">
           Sua Central de Manejo será liberada automaticamente quando seu calendário
@@ -44,7 +61,7 @@ export function CentralDeManejo({ state }: CentralDeManejoProps) {
 
   if (state === "active") {
     return (
-      <div className={`${CARD} p-6 space-y-4`}>
+      <div className={`${CARD} overflow-hidden p-6 space-y-4`}>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
           <h2 className="text-base font-bold text-white leading-tight">Central de Manejo ativa</h2>
@@ -62,20 +79,21 @@ export function CentralDeManejo({ state }: CentralDeManejoProps) {
   }
 
   // state === "preview"
+  // overflow visível de propósito: o mockup vaza a borda direita do card (ver seção MOCKUP do pedido).
   return (
-    <div className="rounded-3xl overflow-hidden shadow-lg bg-[#111111] p-6 sm:p-8">
-      <div className="sm:flex sm:items-start sm:gap-8">
+    <div className={`${CARD} relative p-6 sm:p-8`}>
+      <div className="sm:flex sm:items-start sm:gap-4">
 
-        {/* ── Coluna de texto ── */}
+        {/* ── Coluna de texto (lado esquerdo) ── */}
         <div className="flex-1 min-w-0 space-y-5">
 
-          {/* Ícone + mockup mobile (canto superior direito) */}
+          {/* Ícone + mockup mobile (canto superior direito, contido) */}
           <div className="flex items-start justify-between gap-4">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#CC0000]/15 flex items-center justify-center flex-shrink-0">
               <ClipboardCheck className="h-6 w-6 sm:h-7 sm:w-7 text-[#CC0000]" />
             </div>
-            <div className="relative w-20 flex-shrink-0 sm:hidden">
-              <div className="absolute -inset-3 rounded-full bg-[#CC0000] opacity-[0.12] blur-2xl" />
+            <div className="relative w-28 flex-shrink-0 sm:hidden">
+              <div className="absolute -inset-4 rounded-full bg-[#CC0000] opacity-[0.12] blur-2xl" />
               <Image
                 src={MOCKUP_SRC}
                 alt="Tela da Central de Manejo no aplicativo"
@@ -91,25 +109,23 @@ export function CentralDeManejo({ state }: CentralDeManejoProps) {
               Novo recurso
             </span>
             <h2 className="text-2xl font-bold text-white leading-tight">Central de Manejo</h2>
-            <p className="text-sm text-white/55 leading-relaxed max-w-sm">
+            <p className="text-sm text-white/55 leading-relaxed">
               Organize, acompanhe e registre todos os manejos sanitários do seu
               rebanho em um único lugar.
             </p>
           </div>
 
-          {/* ── Benefícios ── */}
-          <div className="space-y-2.5">
-            {BENEFITS.map(({ icon: Icon, title }) => (
-              <div key={title} className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-3.5 w-3.5 text-[#CC0000]" />
-                </div>
-                <span className="text-sm font-medium text-white/85 leading-snug">{title}</span>
-              </div>
-            ))}
+          {/* ── Benefícios: 2 colunas (3 esquerda / 2 direita), sem reordenar ── */}
+          <div className="flex gap-4">
+            <div className="flex-1 min-w-0 space-y-4">
+              {BENEFITS_LEFT.map((b) => <BenefitItem key={b.title} {...b} />)}
+            </div>
+            <div className="flex-1 min-w-0 space-y-4">
+              {BENEFITS_RIGHT.map((b) => <BenefitItem key={b.title} {...b} />)}
+            </div>
           </div>
 
-          {/* ── CTA ── */}
+          {/* ── CTA (largura da coluna de texto, não do card inteiro) ── */}
           <button
             type="button"
             disabled
@@ -120,9 +136,9 @@ export function CentralDeManejo({ state }: CentralDeManejoProps) {
           </button>
         </div>
 
-        {/* ── Mockup desktop (coluna direita, alinhado ao topo) ── */}
-        <div className="relative hidden sm:block sm:w-[38%] flex-shrink-0 self-start">
-          <div className="absolute -inset-6 rounded-full bg-[#CC0000] opacity-[0.12] blur-3xl" />
+        {/* ── Mockup desktop (lado direito, único elemento, vaza a borda) ── */}
+        <div className="relative hidden sm:block sm:w-[44%] flex-shrink-0 self-start sm:-mr-[72px] sm:-mt-2">
+          <div className="absolute -inset-8 rounded-full bg-[#CC0000] opacity-[0.12] blur-3xl" />
           <Image
             src={MOCKUP_SRC}
             alt="Tela da Central de Manejo no aplicativo"

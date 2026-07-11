@@ -109,7 +109,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-5 space-y-4">
+      <main className="max-w-2xl mx-auto px-4 py-5 space-y-4 overflow-x-hidden">
 
         {/* ── 1. Card do calendário ─────────────────────────────────────────── */}
 
